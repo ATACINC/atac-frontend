@@ -1,0 +1,90 @@
+{
+  "app": {
+    "name": "ATAC Global CX",
+    "tagline": "Certification Platform"
+  },
+  "auth": {
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "email": "Email Address",
+    "password": "Password",
+    "fullName": "Full Name",
+    "emailPlaceholder": "jane@email.com",
+    "passwordPlaceholder": "••••••••",
+    "namePlaceholder": "Jane Doe",
+    "signingIn": "Please wait...",
+    "creating": "Please wait..."
+  },
+  "dashboard": {
+    "myCredentials": "My Credentials",
+    "yourCertificate": "Your Certificate",
+    "startAssessment": "Start Assessment — CRSA",
+    "newAssessment": "Start New Assessment",
+    "copyLink": "Copy Verification Link",
+    "copied": "✓ Copied!",
+    "addLinkedIn": "Add to LinkedIn Profile",
+    "signOut": "Sign Out",
+    "noCredentials": "No credentials issued yet.",
+    "completeAssessment": "Complete your assessment to earn your certificate.",
+    "loading": "Loading...",
+    "valid": "Valid",
+    "issued": "Issued",
+    "credentialId": "Credential ID",
+    "issueDate": "Issue Date",
+    "status": "Status",
+    "expires": "Expires"
+  },
+  "assessment": {
+    "title": "Certified Remote Service Agent",
+    "eyebrow": "Remote CX Readiness Assessment™",
+    "description": "40 questions across 5 CX domains. 20-minute time limit. Score 70% or higher to pass and proceed to the Call Readiness Simulator™.",
+    "questions": "Questions",
+    "minutes": "Minutes",
+    "passMark": "Pass Mark",
+    "begin": "Begin Assessment",
+    "starting": "Starting...",
+    "submitting": "Scoring your assessment...",
+    "submitWait": "Please wait. Do not close this window.",
+    "previous": "← Previous",
+    "next": "Next →",
+    "submit": "Submit Assessment",
+    "answered": "answered",
+    "of": "of",
+    "pass": "Congratulations! You passed. Proceed to the Call Readiness Simulator™.",
+    "fail": "The pass mark is 70% (28/40). Review the feedback and retake when ready."
+  },
+  "simulator": {
+    "title": "ATAC Call Readiness Simulator™",
+    "live": "Live Session",
+    "complete": "Complete",
+    "liveCall": "Live",
+    "briefing": {
+      "begin": "Begin Call Simulation",
+      "yourRole": "Your role",
+      "objective": "Objective"
+    },
+    "sidebar": {
+      "liveScore": "Live Score",
+      "coachingTip": "Coaching Tip"
+    },
+    "result": {
+      "title": "Post-Call Report",
+      "passed": "✓ Passed",
+      "failed": "✗ Not Passed",
+      "issueCredential": "✓ Issue My Credential — CRSA",
+      "issuing": "Issuing...",
+      "viewDashboard": "View Dashboard"
+    }
+  },
+  "languages": {
+    "active": "Available Now",
+    "coming_soon": "Coming Soon",
+    "planned": "Planned"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong. Please try again.",
+    "verify": "Verify at",
+    "blockchain": "ERC-721 Blockchain Credential · Polygon Mainnet"
+  }
+}
