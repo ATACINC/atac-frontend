@@ -73,13 +73,19 @@ setPhase('assessment');
 localStorage.setItem('atac_session', res.data.sessionId);
 localStorage.setItem('atac_assessment', res.data.assessmentId);
     console.error('Start assessment error:', err);
+} catch (err) {
+  console.error('Start assessment error:', err);
 
-    if (err.response?.status === 403) {
-      alert('Payment required before starting the assessment.');
-      navigate('/dashboard');
-    } else {
-      alert('Failed to start assessment. Please try again.');
-    }
+  alert(
+    err?.response?.data?.error ||
+    err?.message ||
+    `Start failed (${err?.response?.status || 'no-status'})`
+  );
+
+  if (err?.response?.status === 403) {
+    navigate('/dashboard');
+  }
+}
 
   } finally {
     setLoading(false);
