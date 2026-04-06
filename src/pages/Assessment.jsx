@@ -43,58 +43,53 @@ export default function Assessment() {
   const [loading, setLoading] = useState(false);
 
   const startAssessment = async () => {
-  setLoading(true);
+    setLoading(true);
+    try {
+      // Step 1: Verify payment
+      const meRes = await API.get('/api/auth/me');
+      const candidateData = meRes.data.candidate || {};
 
-  try {
-    // 🔒 Step 1: Verify payment first
-    const meRes = await API.get('/api/auth/me');
-    const candidateData = meRes.data.candidate || {};
+      if (!candidateData.payment_verified) {
+        alert('You must complete payment before starting the assessment.');
+        navigate('/payment');
+        return;
+      }
 
-    if (!candidateData.payment_verified) {
-      alert('You must complete payment before starting the assessment.');
-      navigate('/dashboard');
-      return;
+      // Step 2: Start assessment with candidateId and tier
+      const tier        = candidateData.payment_tier || 'standard';
+      const candidateId = candidateData.id || candidate.id;
+
+      const res = await API.post('/api/assessment/start', {
+        candidateId,
+        program: 'CRSA',
+        tier
+      });
+
+      if (!res.data || !res.data.sessionId) {
+        throw new Error('Invalid session response from server');
+      }
+
+      setSessionId(res.data.sessionId);
+      setAssessmentId(res.data.assessmentId);
+      setPhase('assessment');
+
+      localStorage.setItem('atac_session',     res.data.sessionId);
+      localStorage.setItem('atac_assessment',  res.data.assessmentId);
+
+    } catch (err) {
+      console.error('Start assessment error:', err);
+      alert(
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to start assessment. Please try again.'
+      );
+      if (err?.response?.status === 402) {
+        navigate('/payment');
+      }
+    } finally {
+      setLoading(false);
     }
-
-    // ✅ Step 2: Use REAL tier from DB
-    const tier = candidateData.payment_tier || 'standard';
-    const candidateId = candidateData.id || candidate.id;
-
-    const res = await API.post('/api/assessment/start', {
-      candidateId,
-      program: 'CRSA',
-      tier
-    });
-
-    if (!res.data || !res.data.sessionId) {
-      throw new Error('Invalid session response');
-    }
-
-    setSessionId(res.data.sessionId);
-    setAssessmentId(res.data.assessmentId);
-    setPhase('assessment');
-
-    localStorage.setItem('atac_session', res.data.sessionId);
-    localStorage.setItem('atac_assessment', res.data.assessmentId);
-
-  } catch (err) {
-  console.error('Start assessment error:', err);
-
-  alert(
-    err?.response?.data?.error ||
-    err?.message ||
-    `Start failed (${err?.response?.status || 'no-status'})`
-  );
-
-  if (err?.response?.status === 403) {
-    navigate('/dashboard');
-  }
-}
-
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const loadQuestion = useCallback(async (qNum) => {
     if (!sessionId) return;
