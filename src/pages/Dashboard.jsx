@@ -31,6 +31,11 @@ const s = {
   dimName: { fontSize: 12, color: 'rgba(245,243,238,0.5)', width: 170, flexShrink: 0 },
   dimTrack: { flex: 1, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3 },
   noCredCard: { textAlign: 'center', padding: '40px 20px' },
+  payGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 16 },
+  payCard: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,243,238,0.08)', borderRadius: 8, padding: '16px' },
+  payTitle: { fontSize: 13, fontWeight: 700, marginBottom: 4 },
+  payPrice: { fontFamily: 'Georgia, serif', fontSize: 24, color: '#D4A843', marginBottom: 8 },
+  payCopy: { fontSize: 12, lineHeight: 1.5, color: 'rgba(245,243,238,0.6)', marginBottom: 12 },
 };
 
 const DIM_COLORS = ['#5DCAA5', '#378ADD', '#D4A843', '#D85A30', '#D4537E', '#7F77DD'];
@@ -40,20 +45,122 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const result = JSON.parse(localStorage.getItem('atac_result') || 'null');
+
   const [credentials, setCredentials] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentCancelled, setPaymentCancelled] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [paymentTier, setPaymentTier] = useState('');
+  const [startingAssessment, setStartingAssessment] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState('');
 
   useEffect(() => {
-    if (candidate.id) loadCredentials();
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('payment') === 'success') {
+      setPaymentSuccess(true);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+
+    if (params.get('payment') === 'cancelled') {
+      setPaymentCancelled(true);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+
+    if (candidate.id) {
+      loadCredentials();
+      checkPaymentStatus();
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  const checkPaymentStatus = async () => {
+    try {
+      const res = await API.get('/api/auth/me');
+      const dbCandidate = res.data.candidate || {};
+
+      setPaymentVerified(!!dbCandidate.payment_verified);
+      setPaymentTier(dbCandidate.payment_tier || '');
+    } catch (err) {
+      console.error('Payment status check error', err);
+    }
+  };
+
+  const handleCheckout = async (tier) => {
+    try {
+      setCheckoutLoading(tier);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Your session has expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+
+      const res = await fetch(
+        'https://atac-backend-production.up.railway.app/api/stripe/checkout',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ tier }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start checkout');
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      throw new Error('Stripe checkout URL was not returned');
+    } catch (err) {
+      console.error('Checkout error', err);
+      alert(err.message || 'Failed to start checkout');
+    } finally {
+      setCheckoutLoading('');
+    }
+  };
+
+  const startAssessment = async () => {
+    setStartingAssessment(true);
+    try {
+      const tier = paymentTier || localStorage.getItem('atac_payment_tier') || 'standard';
+
+      const res = await API.post('/api/assessment/start', {
+        candidateId: candidate.id,
+        program: 'CRSA',
+        tier
+      });
+
+      localStorage.setItem('atac_session', JSON.stringify(res.data));
+      navigate('/assessment');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to start assessment';
+      alert(msg);
+      setStartingAssessment(false);
+    }
+  };
 
   const loadCredentials = async () => {
     try {
       const res = await API.get(`/api/credentials/candidate/${candidate.id}`);
       setCredentials(res.data.credentials || []);
-    } catch (err) { console.error('Load credentials error', err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('Load credentials error', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const copyLink = (credId) => {
@@ -75,9 +182,122 @@ export default function Dashboard() {
       <div style={s.header}>
         <div style={s.brand}>ATAC Global CX</div>
         <div style={{ fontSize: 13 }}>{candidate.name}</div>
-        <button onClick={logout} style={{ background: 'none', border: '1px solid rgba(245,243,238,0.2)', color: 'rgba(245,243,238,0.6)', borderRadius: 5, padding: '5px 12px', fontSize: 11, cursor: 'pointer' }}>Sign Out</button>
+        <button
+          onClick={logout}
+          style={{
+            background: 'none',
+            border: '1px solid rgba(245,243,238,0.2)',
+            color: 'rgba(245,243,238,0.6)',
+            borderRadius: 5,
+            padding: '5px 12px',
+            fontSize: 11,
+            cursor: 'pointer'
+          }}
+        >
+          Sign Out
+        </button>
       </div>
+
       <div style={s.body}>
+        {paymentSuccess && (
+          <div
+            style={{
+              background: 'rgba(29,158,117,0.12)',
+              border: '1px solid rgba(29,158,117,0.35)',
+              borderRadius: 8,
+              padding: '16px 20px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#26B589', marginBottom: 4 }}>
+                ✓ Payment confirmed — you're ready to begin
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
+                Your assessment session is ready. Click below to start your 20-minute timed assessment.
+              </div>
+            </div>
+            <button
+              style={{
+                ...s.btnTeal,
+                width: 'auto',
+                padding: '12px 24px',
+                whiteSpace: 'nowrap',
+                marginBottom: 0,
+                opacity: startingAssessment ? 0.7 : 1,
+                cursor: startingAssessment ? 'not-allowed' : 'pointer'
+              }}
+              onClick={startAssessment}
+              disabled={startingAssessment}
+            >
+              {startingAssessment ? 'Starting...' : 'Start Assessment →'}
+            </button>
+          </div>
+        )}
+
+        {paymentCancelled && (
+          <div
+            style={{
+              background: 'rgba(216,90,48,0.10)',
+              border: '1px solid rgba(216,90,48,0.30)',
+              borderRadius: 8,
+              padding: '16px 20px',
+              marginBottom: 20
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#D85A30', marginBottom: 4 }}>
+              Payment was cancelled
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
+              No charge was made. You can restart checkout whenever you're ready.
+            </div>
+          </div>
+        )}
+
+        {!paymentSuccess && paymentVerified && !result && credentials.length === 0 && (
+          <div
+            style={{
+              background: 'rgba(55,138,221,0.1)',
+              border: '1px solid rgba(55,138,221,0.3)',
+              borderRadius: 8,
+              padding: '16px 20px',
+              marginBottom: 20,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#378ADD', marginBottom: 4 }}>
+                Your assessment is ready
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
+                Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.
+              </div>
+            </div>
+            <button
+              style={{
+                ...s.btnGold,
+                width: 'auto',
+                padding: '12px 24px',
+                whiteSpace: 'nowrap',
+                marginBottom: 0,
+                opacity: startingAssessment ? 0.7 : 1,
+                cursor: startingAssessment ? 'not-allowed' : 'pointer'
+              }}
+              onClick={startAssessment}
+              disabled={startingAssessment}
+            >
+              {startingAssessment ? 'Starting...' : 'Start Assessment →'}
+            </button>
+          </div>
+        )}
+
         {result && (
           <div style={{ ...s.card, borderColor: result.passed ? 'rgba(29,158,117,0.3)' : 'rgba(226,75,74,0.3)', marginBottom: 20 }}>
             <div style={s.eyebrow}>Latest Assessment Result</div>
@@ -87,22 +307,35 @@ export default function Dashboard() {
               <div style={s.statBox}><div style={{ ...s.scoreNum, fontSize: 18, paddingTop: 4, color: result.passed ? '#26B589' : '#E24B4A' }}>{result.passed ? 'PASS' : 'FAIL'}</div><div style={s.scoreLbl}>Status</div></div>
               <div style={s.statBox}><div style={s.scoreNum}>28</div><div style={s.scoreLbl}>Pass Mark</div></div>
             </div>
+
             {Object.keys(dims).length > 0 && (
               <>
                 <div style={{ ...s.eyebrow, marginBottom: 10 }}>Performance by Dimension</div>
                 {DIM_LABELS.map((label, i) => {
                   const key = Object.keys(dims)[i];
                   const pct = dims[key] || 0;
+
                   return (
                     <div key={i} style={s.dimRow}>
                       <div style={s.dimName}>{label}</div>
-                      <div style={s.dimTrack}><div style={{ height: 5, width: pct + '%', background: DIM_COLORS[i], borderRadius: 3, transition: 'width 0.8s ease' }}></div></div>
+                      <div style={s.dimTrack}>
+                        <div
+                          style={{
+                            height: 5,
+                            width: `${pct}%`,
+                            background: DIM_COLORS[i],
+                            borderRadius: 3,
+                            transition: 'width 0.8s ease'
+                          }}
+                        />
+                      </div>
                       <div style={{ fontSize: 12, color: '#F5F3EE', width: 34, textAlign: 'right' }}>{pct}%</div>
                     </div>
                   );
                 })}
               </>
             )}
+
             {result.passed && credentials.length === 0 && (
               <button style={{ ...s.btnGold, marginTop: 16 }} onClick={() => navigate('/simulator')}>
                 Proceed to Call Readiness Simulator™ →
@@ -115,37 +348,157 @@ export default function Dashboard() {
           <div>
             <div style={s.card}>
               <div style={s.eyebrow}>My Credentials</div>
+
               {loading ? (
                 <div style={{ color: 'rgba(245,243,238,0.4)', fontSize: 13 }}>Loading...</div>
               ) : credentials.length === 0 ? (
                 <div style={s.noCredCard}>
-                  <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>No credentials issued yet.</div>
-                  <button style={{ ...s.btnGold, width: 'auto', padding: '12px 24px' }} onClick={() => navigate('/assessment')}>
-                    Start Assessment →
-                  </button>
+                  <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>
+                    No credentials issued yet.
+                  </div>
+
+                  {paymentVerified ? (
+                    <button style={{ ...s.btnGold, width: 'auto', padding: '12px 24px' }} onClick={startAssessment}>
+                      Start Assessment →
+                    </button>
+                  ) : (
+                    <div style={s.payGrid}>
+                      <div style={s.payCard}>
+                        <div style={s.payTitle}>Standard</div>
+                        <div style={s.payPrice}>$29</div>
+                        <div style={s.payCopy}>
+                          Full assessment access with credential pathway and dashboard unlock.
+                        </div>
+                        <button
+                          style={{ ...s.btnGold, marginBottom: 0 }}
+                          onClick={() => handleCheckout('standard')}
+                          disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
+                        >
+                          {checkoutLoading === 'standard' ? 'Redirecting...' : 'Buy Standard'}
+                        </button>
+                      </div>
+
+                      <div style={s.payCard}>
+                        <div style={s.payTitle}>Pro</div>
+                        <div style={s.payPrice}>$59</div>
+                        <div style={s.payCopy}>
+                          Pro tier assessment access with higher-value paid path and premium positioning.
+                        </div>
+                        <button
+                          style={{ ...s.btnTeal, marginBottom: 0 }}
+                          onClick={() => handleCheckout('pro')}
+                          disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
+                        >
+                          {checkoutLoading === 'pro' ? 'Redirecting...' : 'Buy Pro'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 credentials.map((cred, i) => (
-                  <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,243,238,0.08)', borderRadius: 7, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(29,158,117,0.15)', border: '1px solid rgba(29,158,117,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div
+                    key={i}
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(245,243,238,0.08)',
+                      borderRadius: 7,
+                      padding: '12px 16px',
+                      marginBottom: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 6,
+                        background: 'rgba(29,158,117,0.15)',
+                        border: '1px solid rgba(29,158,117,0.25)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
                       <span style={{ fontSize: 12, color: '#26B589' }}>✓</span>
                     </div>
+
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{cred.program}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.5)', marginTop: 1 }}>{cred.credentialId} · Issued {new Date(cred.issuedAt).toLocaleDateString()}</div>
+                      <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.5)', marginTop: 1 }}>
+                        {cred.credentialId} · Issued {new Date(cred.issuedAt).toLocaleDateString()}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 10, color: '#26B589', background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)', borderRadius: 10, padding: '2px 8px' }}>Valid</div>
+
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: '#26B589',
+                        background: 'rgba(29,158,117,0.1)',
+                        border: '1px solid rgba(29,158,117,0.2)',
+                        borderRadius: 10,
+                        padding: '2px 8px'
+                      }}
+                    >
+                      Valid
+                    </div>
                   </div>
                 ))
               )}
             </div>
-            {!result && credentials.length === 0 && (
+
+            {!result && credentials.length === 0 && !paymentVerified && (
               <div style={s.card}>
                 <div style={s.eyebrow}>Get Started</div>
                 <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
-                  Complete the Remote CX Readiness Assessment™ to earn your blockchain-verified professional credential.
+                  Choose your assessment tier to unlock the Remote CX Readiness Assessment™ and begin your certification path.
                 </div>
-                <button style={s.btnGold} onClick={() => navigate('/assessment')}>Start Assessment — CRSA</button>
+
+                <div style={s.payGrid}>
+                  <div style={s.payCard}>
+                    <div style={s.payTitle}>Standard</div>
+                    <div style={s.payPrice}>$29</div>
+                    <div style={s.payCopy}>
+                      Core assessment access for candidates ready to prove their remote CX readiness.
+                    </div>
+                    <button
+                      style={{ ...s.btnGold, marginBottom: 0 }}
+                      onClick={() => handleCheckout('standard')}
+                      disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
+                    >
+                      {checkoutLoading === 'standard' ? 'Redirecting...' : 'Buy Standard'}
+                    </button>
+                  </div>
+
+                  <div style={s.payCard}>
+                    <div style={s.payTitle}>Pro</div>
+                    <div style={s.payPrice}>$59</div>
+                    <div style={s.payCopy}>
+                      Premium candidate path for stronger positioning and higher-value assessment access.
+                    </div>
+                    <button
+                      style={{ ...s.btnTeal, marginBottom: 0 }}
+                      onClick={() => handleCheckout('pro')}
+                      disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
+                    >
+                      {checkoutLoading === 'pro' ? 'Redirecting...' : 'Buy Pro'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!result && credentials.length === 0 && paymentVerified && (
+              <div style={s.card}>
+                <div style={s.eyebrow}>Get Started</div>
+                <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
+                  Your payment is verified. Launch the Remote CX Readiness Assessment™ when you're ready.
+                </div>
+                <button style={s.btnGold} onClick={startAssessment}>
+                  Start Assessment — CRSA
+                </button>
               </div>
             )}
           </div>
@@ -162,41 +515,78 @@ export default function Dashboard() {
                     </div>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #D4A843', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>★</div>
                   </div>
+
                   <div style={s.credTitle}>Certificate of Achievement</div>
                   <div style={{ fontSize: 11, color: '#8a7040', textAlign: 'center', marginBottom: 4 }}>Proudly Presented To</div>
                   <div style={s.credName}>{candidate.name}</div>
-                  <div style={s.credDesig}>{latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}</div>
-                  <div style={s.metaGrid}>
-                    <div><div style={s.metaKey}>Credential ID</div><div style={s.metaVal}>{latestCred.credentialId}</div></div>
-                    <div><div style={s.metaKey}>Issue Date</div><div style={s.metaVal}>{new Date(latestCred.issuedAt).toLocaleDateString()}</div></div>
-                    <div><div style={s.metaKey}>Status</div><div style={{ ...s.metaVal, color: '#0F6E56' }}>Valid</div></div>
-                    <div><div style={s.metaKey}>Expires</div><div style={s.metaVal}>{new Date(latestCred.expiresAt).toLocaleDateString()}</div></div>
+                  <div style={s.credDesig}>
+                    {latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}
                   </div>
+
+                  <div style={s.metaGrid}>
+                    <div>
+                      <div style={s.metaKey}>Credential ID</div>
+                      <div style={s.metaVal}>{latestCred.credentialId}</div>
+                    </div>
+                    <div>
+                      <div style={s.metaKey}>Issue Date</div>
+                      <div style={s.metaVal}>{new Date(latestCred.issuedAt).toLocaleDateString()}</div>
+                    </div>
+                    <div>
+                      <div style={s.metaKey}>Status</div>
+                      <div style={{ ...s.metaVal, color: '#0F6E56' }}>Valid</div>
+                    </div>
+                    <div>
+                      <div style={s.metaKey}>Expires</div>
+                      <div style={s.metaVal}>{new Date(latestCred.expiresAt).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #e0d5b0', paddingTop: 10 }}>
-                    <div style={{ fontSize: 9, color: '#8a7040' }}>Verify at<br /><strong style={{ fontSize: 10, color: '#3d2e0a' }}>atacglobalcx.com/verify</strong></div>
+                    <div style={{ fontSize: 9, color: '#8a7040' }}>
+                      Verify at
+                      <br />
+                      <strong style={{ fontSize: 10, color: '#3d2e0a' }}>atacglobalcx.com/verify</strong>
+                    </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ width: 60, height: 1, background: '#8a7040', marginBottom: 3, marginLeft: 'auto' }}></div>
+                      <div style={{ width: 60, height: 1, background: '#8a7040', marginBottom: 3, marginLeft: 'auto' }} />
                       <div style={{ fontSize: 9, fontWeight: 600, color: '#3d2e0a' }}>Tugreofia Smith</div>
                       <div style={{ fontSize: 8, color: '#8a7040' }}>CEO & Lead Instructor</div>
                     </div>
                   </div>
-                  <div style={s.chainRow}><div style={s.chainDot}></div>ERC-721 Blockchain Credential · Polygon Mainnet</div>
+
+                  <div style={s.chainRow}>
+                    <div style={s.chainDot} />
+                    ERC-721 Blockchain Credential · Polygon Mainnet
+                  </div>
                 </div>
+
                 <div style={{ marginTop: 12 }}>
                   <button style={s.btnGold} onClick={() => copyLink(latestCred.credentialId)}>
                     {copied ? '✓ Copied!' : 'Copy Verification Link'}
                   </button>
-                  <button style={s.btnTeal} onClick={() => {
-                    const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
-                    window.open(url, '_blank');
-                  }}>Add to LinkedIn Profile</button>
-                  <button style={s.btnOut} onClick={() => navigate('/assessment')}>Start New Assessment</button>
+
+                  <button
+                    style={s.btnTeal}
+                    onClick={() => {
+                      const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    Add to LinkedIn Profile
+                  </button>
+
+                  <button style={s.btnOut} onClick={() => navigate('/assessment')}>
+                    Start New Assessment
+                  </button>
                 </div>
               </>
             ) : (
               <div style={s.card}>
                 <div style={s.eyebrow}>Your Certificate</div>
-                <div style={{ fontSize: 13, color: 'rgba(245,243,238,0.4)', textAlign: 'center', padding: '30px 0' }}>Complete your assessment to earn your certificate.</div>
+                <div style={{ fontSize: 13, color: 'rgba(245,243,238,0.4)', textAlign: 'center', padding: '30px 0' }}>
+                  Complete your assessment to earn your certificate.
+                </div>
               </div>
             )}
           </div>
