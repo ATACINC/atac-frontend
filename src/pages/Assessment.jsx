@@ -43,20 +43,49 @@ export default function Assessment() {
   const [loading, setLoading] = useState(false);
 
   const startAssessment = async () => {
-    setLoading(true);
-    try {
-      const res = await API.post('/api/assessment/start', {
-        candidateId: candidate.id, program: 'CRSA', tier: 'standard'
-      });
-      setSessionId(res.data.sessionId);
-      setAssessmentId(res.data.assessmentId);
-      setPhase('assessment');
-      localStorage.setItem('atac_session', res.data.sessionId);
-      localStorage.setItem('atac_assessment', res.data.assessmentId);
-    } catch (err) {
+  setLoading(true);
+
+  try {
+    // 🔒 Step 1: Verify payment first
+    const meRes = await API.get('/api/auth/me');
+    const candidateData = meRes.data.candidate || {};
+
+    if (!candidateData.payment_verified) {
+      alert('You must complete payment before starting the assessment.');
+      navigate('/dashboard');
+      return;
+    }
+
+    // ✅ Step 2: Use REAL tier from DB
+    const tier = candidateData.payment_tier || 'standard';
+
+    const res = await API.post('/api/assessment/start', {
+      candidateId: candidate.id,
+      program: 'CRSA',
+      tier
+    });
+
+    setSessionId(res.data.sessionId);
+    setAssessmentId(res.data.assessmentId);
+    setPhase('assessment');
+
+    localStorage.setItem('atac_session', res.data.sessionId);
+    localStorage.setItem('atac_assessment', res.data.assessmentId);
+
+  } catch (err) {
+    console.error('Start assessment error:', err);
+
+    if (err.response?.status === 402) {
+      alert('Payment required before starting the assessment.');
+      navigate('/dashboard');
+    } else {
       alert('Failed to start assessment. Please try again.');
-    } finally { setLoading(false); }
-  };
+    }
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   const loadQuestion = useCallback(async (qNum) => {
     if (!sessionId) return;
@@ -75,15 +104,25 @@ export default function Assessment() {
   }, [phase, sessionId, currentQ]);
 
   useEffect(() => {
-    if (phase !== 'assessment') return;
-    const interval = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) { clearInterval(interval); submitAssessment(); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [phase]);
+  if (phase !== 'assessment') return;
+
+  let interval = null;
+
+  interval = setInterval(() => {
+    setTimeLeft((t) => {
+      if (t <= 1) {
+        clearInterval(interval);
+        setTimeout(() => submitAssessment(), 0);
+        return 0;
+      }
+      return t - 1;
+    });
+  }, 1000);
+
+  return () => {
+    if (interval) clearInterval(interval);
+  };
+}, [phase]);
 
   const selectOption = async (idx) => {
     setSelected(idx);
