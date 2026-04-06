@@ -57,23 +57,27 @@ export default function Assessment() {
     }
 
     // ✅ Step 2: Use REAL tier from DB
+    const tier = candidateData.payment_tier || 'standard';
+    const candidateId = candidateData.id || candidate.id;
+
     const res = await API.post('/api/assessment/start', {
-  program: 'CRSA',
-  tier
-});
+      candidateId,
+      program: 'CRSA',
+      tier
+    });
 
-if (!res.data || !res.data.sessionId) {
-  throw new Error('Invalid session response');
-}
+    if (!res.data || !res.data.sessionId) {
+      throw new Error('Invalid session response');
+    }
 
-setSessionId(res.data.sessionId);
-setAssessmentId(res.data.assessmentId);
-setPhase('assessment');
+    setSessionId(res.data.sessionId);
+    setAssessmentId(res.data.assessmentId);
+    setPhase('assessment');
 
-localStorage.setItem('atac_session', res.data.sessionId);
-localStorage.setItem('atac_assessment', res.data.assessmentId);
-    console.error('Start assessment error:', err);
-} catch (err) {
+    localStorage.setItem('atac_session', res.data.sessionId);
+    localStorage.setItem('atac_assessment', res.data.assessmentId);
+
+  } catch (err) {
   console.error('Start assessment error:', err);
 
   alert(
