@@ -168,7 +168,25 @@ export default function Dashboard() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
+const downloadCertificate = async (credId) => {
+  try {
+    const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
+    const res = await fetch(
+      `https://atac-backend-production.up.railway.app/api/certificate/${credId}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `ATAC-Certificate-${credId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Certificate download failed. Please try again.');
+  }
+};
   const logout = () => {
     localStorage.clear();
     navigate('/login');
@@ -562,6 +580,7 @@ export default function Dashboard() {
                 </div>
 
                 <div style={{ marginTop: 12 }}>
+<button style={s.btnGold} onClick={() => downloadCertificate(latestCred.credentialId)}>⬇ Download PDF Certificate</button>                  
                   <button style={s.btnGold} onClick={() => copyLink(latestCred.credentialId)}>
                     {copied ? '✓ Copied!' : 'Copy Verification Link'}
                   </button>
