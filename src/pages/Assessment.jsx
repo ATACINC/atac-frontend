@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../api/client';
 
 const s = {
@@ -33,6 +33,8 @@ const LETTERS = ['A', 'B', 'C', 'D'];
 
 export default function Assessment() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const justPaid = new URLSearchParams(location.search).get('payment') === 'success';
   const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const [phase, setPhase] = useState('start');
   const [sessionId, setSessionId] = useState(null);
@@ -149,6 +151,11 @@ export default function Assessment() {
   // ── START SCREEN ────────────────────────────────────────────────────────────
   if (phase === 'start') return (
     <div style={s.page}>
+      {justPaid && (
+  <div style={{ background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.3)', color: '#26B589', padding: '12px 24px', textAlign: 'center', fontSize: 13 }}>
+    ✓ Payment confirmed — your assessment is unlocked. Click Begin Assessment to start.
+  </div>
+)}
       <div style={{ ...s.startCard }}>
         <div style={{ fontSize: 11, color: '#D4A843', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Remote CX Readiness Assessment™</div>
         <div style={s.startTitle}>Certified Remote Service Agent</div>
