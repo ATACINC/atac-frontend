@@ -85,6 +85,7 @@ export default function Dashboard() {
       const dbCandidate = res.data.candidate || {};
       setPaymentVerified(!!dbCandidate.payment_verified);
       setPaymentTier(dbCandidate.payment_tier || '');
+      setCandidateWallet(dbCandidate.wallet_address || '');
     } catch (err) {
       console.error('Payment status check error', err);
     }
