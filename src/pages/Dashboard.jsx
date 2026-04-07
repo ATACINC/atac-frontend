@@ -56,7 +56,11 @@ export default function Dashboard() {
   const [startingAssessment, setStartingAssessment] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState('');
   const [downloading, setDownloading] = useState(false);
-
+  const [walletInput, setWalletInput]   = useState('');
+  const [walletSaving, setWalletSaving] = useState(false);
+  const [walletSaved, setWalletSaved]   = useState(false);
+  const [walletError, setWalletError]   = useState('');
+  const [candidateWallet, setCandidateWallet] = useState(candidate.wallet_address || '');
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('payment') === 'success') {
@@ -166,7 +170,30 @@ export default function Dashboard() {
       setDownloading(false);
     }
   };
-
+const saveWallet = async () => {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(walletInput)) {
+      setWalletError('Invalid address — must start with 0x and be 42 characters');
+      return;
+    }
+    setWalletSaving(true);
+    setWalletError('');
+    try {
+      const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
+      await fetch('https://atac-backend-production.up.railway.app/api/auth/wallet', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ walletAddress: walletInput }),
+      });
+      setCandidateWallet(walletInput);
+      setWalletSaved(true);
+      setWalletInput('');
+      setTimeout(() => setWalletSaved(false), 3000);
+    } catch (err) {
+      setWalletError('Failed to save wallet. Please try again.');
+    } finally {
+      setWalletSaving(false);
+    }
+  };
   const logout = () => {
     localStorage.clear();
     navigate('/login');
@@ -402,9 +429,38 @@ export default function Dashboard() {
                     Add to LinkedIn Profile
                   </button>
                   <button style={s.btnOut} onClick={() => navigate('/assessment')}>
+                    <button style={s.btnOut} onClick={() => navigate('/assessment')}>
                     Start New Assessment
                   </button>
                 </div>
+
+                {/* ── Wallet prompt ── */}
+                {!candidateWallet ? (
+                  <div style={{ marginTop: 12, background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 8, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 11, color: '#D4A843', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Enable Blockchain Verification</div>
+                    <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.5)', marginBottom: 10, lineHeight: 1.5 }}>Add your wallet address to mint your credential as an ERC-721 token on the blockchain.</div>
+                    <input
+                      style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${walletError ? 'rgba(226,75,74,0.5)' : 'rgba(245,243,238,0.1)'}`, borderRadius: 6, padding: '9px 12px', fontSize: 12, color: '#F5F3EE', outline: 'none', boxSizing: 'border-box', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}
+                      placeholder="0x... your EVM wallet address"
+                      value={walletInput}
+                      onChange={e => { setWalletInput(e.target.value); setWalletError(''); }}
+                    />
+                    {walletError && <div style={{ fontSize: 11, color: '#E24B4A', marginBottom: 8 }}>{walletError}</div>}
+                    <button
+                      style={{ ...s.btnGold, marginBottom: 0, opacity: walletSaving ? 0.7 : 1 }}
+                      onClick={saveWallet}
+                      disabled={walletSaving || !walletInput}
+                    >
+                      {walletSaving ? 'Saving...' : 'Save Wallet Address'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ marginTop: 12, background: 'rgba(29,158,117,0.06)', border: '1px solid rgba(29,158,117,0.2)', borderRadius: 8, padding: '12px 16px' }}>
+                    {walletSaved && <div style={{ fontSize: 12, color: '#26B589', marginBottom: 4 }}>✓ Wallet saved — blockchain minting enabled</div>}
+                    <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Blockchain Wallet</div>
+                    <div style={{ fontSize: 11, color: 'rgba(245,243,238,0.6)', wordBreak: 'break-all' }}>{candidateWallet}</div>
+                  </div>
+                )}
               </>
             ) : (
               <div style={s.card}>
