@@ -429,7 +429,7 @@ const saveWallet = async () => {
                   }}>
                     Add to LinkedIn Profile
                   </button>
-                  <button style={s.btnOut} onClick={() => navigate('/assessment')}>
+
                     <button style={s.btnOut} onClick={() => navigate('/assessment')}>
                     Start New Assessment
                   </button>
