@@ -55,20 +55,18 @@ export default function Dashboard() {
   const [paymentTier, setPaymentTier] = useState('');
   const [startingAssessment, setStartingAssessment] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-
     if (params.get('payment') === 'success') {
       setPaymentSuccess(true);
       window.history.replaceState({}, '', '/dashboard');
     }
-
     if (params.get('payment') === 'cancelled') {
       setPaymentCancelled(true);
       window.history.replaceState({}, '', '/dashboard');
     }
-
     if (candidate.id) {
       loadCredentials();
       checkPaymentStatus();
@@ -81,74 +79,10 @@ export default function Dashboard() {
     try {
       const res = await API.get('/api/auth/me');
       const dbCandidate = res.data.candidate || {};
-
       setPaymentVerified(!!dbCandidate.payment_verified);
       setPaymentTier(dbCandidate.payment_tier || '');
     } catch (err) {
       console.error('Payment status check error', err);
-    }
-  };
-
-  const handleCheckout = async (tier) => {
-    try {
-      setCheckoutLoading(tier);
-
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Your session has expired. Please log in again.');
-        navigate('/login');
-        return;
-      }
-
-      const res = await fetch(
-        'https://atac-backend-production.up.railway.app/api/stripe/checkout',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ tier }),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to start checkout');
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      throw new Error('Stripe checkout URL was not returned');
-    } catch (err) {
-      console.error('Checkout error', err);
-      alert(err.message || 'Failed to start checkout');
-    } finally {
-      setCheckoutLoading('');
-    }
-  };
-
-  const startAssessment = async () => {
-    setStartingAssessment(true);
-    try {
-      const tier = paymentTier || localStorage.getItem('atac_payment_tier') || 'standard';
-
-      const res = await API.post('/api/assessment/start', {
-        candidateId: candidate.id,
-        program: 'CRSA',
-        tier
-      });
-
-      localStorage.setItem('atac_session', JSON.stringify(res.data));
-      navigate('/assessment');
-    } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to start assessment';
-      alert(msg);
-      setStartingAssessment(false);
     }
   };
 
@@ -163,30 +97,76 @@ export default function Dashboard() {
     }
   };
 
+  const handleCheckout = async (tier) => {
+    try {
+      setCheckoutLoading(tier);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Your session has expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+      const res = await fetch(
+        'https://atac-backend-production.up.railway.app/api/stripe/checkout',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ tier }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to start checkout');
+      if (data.url) { window.location.href = data.url; return; }
+      throw new Error('Stripe checkout URL was not returned');
+    } catch (err) {
+      alert(err.message || 'Failed to start checkout');
+    } finally {
+      setCheckoutLoading('');
+    }
+  };
+
+  const startAssessment = async () => {
+    setStartingAssessment(true);
+    try {
+      const tier = paymentTier || 'standard';
+      const res = await API.post('/api/assessment/start', { candidateId: candidate.id, program: 'CRSA', tier });
+      localStorage.setItem('atac_session', JSON.stringify(res.data));
+      navigate('/assessment');
+    } catch (err) {
+      alert(err.response?.data?.message || err.response?.data?.error || 'Failed to start assessment');
+      setStartingAssessment(false);
+    }
+  };
+
   const copyLink = (credId) => {
     navigator.clipboard.writeText(`https://atacglobalcx.com/verify/${credId}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-const downloadCertificate = async (credId) => {
-  try {
-    const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
-    const res = await fetch(
-      `https://atac-backend-production.up.railway.app/api/certificate/${credId}`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-    if (!res.ok) throw new Error('Download failed');
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `ATAC-Certificate-${credId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    alert('Certificate download failed. Please try again.');
-  }
-};
+
+  const downloadCertificate = async (credId) => {
+    setDownloading(true);
+    try {
+      const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
+      const res = await fetch(
+        `https://atac-backend-production.up.railway.app/api/certificate/${credId}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error('Download failed');
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `ATAC-Certificate-${credId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Certificate download failed. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const logout = () => {
     localStorage.clear();
     navigate('/login');
@@ -197,125 +177,53 @@ const downloadCertificate = async (credId) => {
 
   return (
     <div style={s.page}>
+
+      {/* ── Header ── */}
       <div style={s.header}>
         <div style={s.brand}>ATAC Global CX</div>
         <div style={{ fontSize: 13 }}>{candidate.name}</div>
-        <button
-          onClick={logout}
-          style={{
-            background: 'none',
-            border: '1px solid rgba(245,243,238,0.2)',
-            color: 'rgba(245,243,238,0.6)',
-            borderRadius: 5,
-            padding: '5px 12px',
-            fontSize: 11,
-            cursor: 'pointer'
-          }}
-        >
+        <button onClick={logout} style={{ background: 'none', border: '1px solid rgba(245,243,238,0.2)', color: 'rgba(245,243,238,0.6)', borderRadius: 5, padding: '5px 12px', fontSize: 11, cursor: 'pointer' }}>
           Sign Out
         </button>
       </div>
 
       <div style={s.body}>
+
+        {/* ── Payment success banner ── */}
         {paymentSuccess && (
-          <div
-            style={{
-              background: 'rgba(29,158,117,0.12)',
-              border: '1px solid rgba(29,158,117,0.35)',
-              borderRadius: 8,
-              padding: '16px 20px',
-              marginBottom: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 16
-            }}
-          >
+          <div style={{ background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.35)', borderRadius: 8, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#26B589', marginBottom: 4 }}>
-                ✓ Payment confirmed — you're ready to begin
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
-                Your assessment session is ready. Click below to start your 20-minute timed assessment.
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#26B589', marginBottom: 4 }}>✓ Payment confirmed — you're ready to begin</div>
+              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>Your assessment session is ready. Click below to start your 20-minute timed assessment.</div>
             </div>
-            <button
-              style={{
-                ...s.btnTeal,
-                width: 'auto',
-                padding: '12px 24px',
-                whiteSpace: 'nowrap',
-                marginBottom: 0,
-                opacity: startingAssessment ? 0.7 : 1,
-                cursor: startingAssessment ? 'not-allowed' : 'pointer'
-              }}
-              onClick={startAssessment}
-              disabled={startingAssessment}
-            >
+            <button style={{ ...s.btnTeal, width: 'auto', padding: '12px 24px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting...' : 'Start Assessment →'}
             </button>
           </div>
         )}
 
+        {/* ── Payment cancelled banner ── */}
         {paymentCancelled && (
-          <div
-            style={{
-              background: 'rgba(216,90,48,0.10)',
-              border: '1px solid rgba(216,90,48,0.30)',
-              borderRadius: 8,
-              padding: '16px 20px',
-              marginBottom: 20
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#D85A30', marginBottom: 4 }}>
-              Payment was cancelled
-            </div>
-            <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
-              No charge was made. You can restart checkout whenever you're ready.
-            </div>
+          <div style={{ background: 'rgba(216,90,48,0.10)', border: '1px solid rgba(216,90,48,0.30)', borderRadius: 8, padding: '16px 20px', marginBottom: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#D85A30', marginBottom: 4 }}>Payment was cancelled</div>
+            <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>No charge was made. You can restart checkout whenever you're ready.</div>
           </div>
         )}
 
+        {/* ── Assessment ready banner (paid but not started) ── */}
         {!paymentSuccess && paymentVerified && !result && credentials.length === 0 && (
-          <div
-            style={{
-              background: 'rgba(55,138,221,0.1)',
-              border: '1px solid rgba(55,138,221,0.3)',
-              borderRadius: 8,
-              padding: '16px 20px',
-              marginBottom: 20,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 16
-            }}
-          >
+          <div style={{ background: 'rgba(55,138,221,0.1)', border: '1px solid rgba(55,138,221,0.3)', borderRadius: 8, padding: '16px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#378ADD', marginBottom: 4 }}>
-                Your assessment is ready
-              </div>
-              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>
-                Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#378ADD', marginBottom: 4 }}>Your assessment is ready</div>
+              <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.6)' }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.</div>
             </div>
-            <button
-              style={{
-                ...s.btnGold,
-                width: 'auto',
-                padding: '12px 24px',
-                whiteSpace: 'nowrap',
-                marginBottom: 0,
-                opacity: startingAssessment ? 0.7 : 1,
-                cursor: startingAssessment ? 'not-allowed' : 'pointer'
-              }}
-              onClick={startAssessment}
-              disabled={startingAssessment}
-            >
+            <button style={{ ...s.btnGold, width: 'auto', padding: '12px 24px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting...' : 'Start Assessment →'}
             </button>
           </div>
         )}
 
+        {/* ── Latest assessment result ── */}
         {result && (
           <div style={{ ...s.card, borderColor: result.passed ? 'rgba(29,158,117,0.3)' : 'rgba(226,75,74,0.3)', marginBottom: 20 }}>
             <div style={s.eyebrow}>Latest Assessment Result</div>
@@ -325,27 +233,17 @@ const downloadCertificate = async (credId) => {
               <div style={s.statBox}><div style={{ ...s.scoreNum, fontSize: 18, paddingTop: 4, color: result.passed ? '#26B589' : '#E24B4A' }}>{result.passed ? 'PASS' : 'FAIL'}</div><div style={s.scoreLbl}>Status</div></div>
               <div style={s.statBox}><div style={s.scoreNum}>28</div><div style={s.scoreLbl}>Pass Mark</div></div>
             </div>
-
             {Object.keys(dims).length > 0 && (
               <>
                 <div style={{ ...s.eyebrow, marginBottom: 10 }}>Performance by Dimension</div>
                 {DIM_LABELS.map((label, i) => {
                   const key = Object.keys(dims)[i];
                   const pct = dims[key] || 0;
-
                   return (
                     <div key={i} style={s.dimRow}>
                       <div style={s.dimName}>{label}</div>
                       <div style={s.dimTrack}>
-                        <div
-                          style={{
-                            height: 5,
-                            width: `${pct}%`,
-                            background: DIM_COLORS[i],
-                            borderRadius: 3,
-                            transition: 'width 0.8s ease'
-                          }}
-                        />
+                        <div style={{ height: 5, width: `${pct}%`, background: DIM_COLORS[i], borderRadius: 3, transition: 'width 0.8s ease' }} />
                       </div>
                       <div style={{ fontSize: 12, color: '#F5F3EE', width: 34, textAlign: 'right' }}>{pct}%</div>
                     </div>
@@ -353,7 +251,6 @@ const downloadCertificate = async (credId) => {
                 })}
               </>
             )}
-
             {result.passed && credentials.length === 0 && (
               <button style={{ ...s.btnGold, marginTop: 16 }} onClick={() => navigate('/simulator')}>
                 Proceed to Call Readiness Simulator™ →
@@ -362,51 +259,35 @@ const downloadCertificate = async (credId) => {
           </div>
         )}
 
+        {/* ── Main grid ── */}
         <div style={s.grid}>
+
+          {/* ── Left: credentials ── */}
           <div>
             <div style={s.card}>
               <div style={s.eyebrow}>My Credentials</div>
-
               {loading ? (
                 <div style={{ color: 'rgba(245,243,238,0.4)', fontSize: 13 }}>Loading...</div>
               ) : credentials.length === 0 ? (
                 <div style={s.noCredCard}>
-                  <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>
-                    No credentials issued yet.
-                  </div>
-
+                  <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>No credentials issued yet.</div>
                   {paymentVerified ? (
-                    <button style={{ ...s.btnGold, width: 'auto', padding: '12px 24px' }} onClick={startAssessment}>
-                      Start Assessment →
-                    </button>
+                    <button style={{ ...s.btnGold, width: 'auto', padding: '12px 24px' }} onClick={startAssessment}>Start Assessment →</button>
                   ) : (
                     <div style={s.payGrid}>
                       <div style={s.payCard}>
                         <div style={s.payTitle}>Standard</div>
-                        <div style={s.payPrice}>$29</div>
-                        <div style={s.payCopy}>
-                          Full assessment access with credential pathway and dashboard unlock.
-                        </div>
-                        <button
-                          style={{ ...s.btnGold, marginBottom: 0 }}
-                          onClick={() => handleCheckout('standard')}
-                          disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
-                        >
+                        <div style={s.payPrice}>$39</div>
+                        <div style={s.payCopy}>Full assessment access with credential pathway and dashboard unlock.</div>
+                        <button style={{ ...s.btnGold, marginBottom: 0 }} onClick={() => handleCheckout('standard')} disabled={!!checkoutLoading}>
                           {checkoutLoading === 'standard' ? 'Redirecting...' : 'Buy Standard'}
                         </button>
                       </div>
-
                       <div style={s.payCard}>
                         <div style={s.payTitle}>Pro</div>
                         <div style={s.payPrice}>$59</div>
-                        <div style={s.payCopy}>
-                          Pro tier assessment access with higher-value paid path and premium positioning.
-                        </div>
-                        <button
-                          style={{ ...s.btnTeal, marginBottom: 0 }}
-                          onClick={() => handleCheckout('pro')}
-                          disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
-                        >
+                        <div style={s.payCopy}>Pro tier with higher-value paid path and premium positioning.</div>
+                        <button style={{ ...s.btnTeal, marginBottom: 0 }} onClick={() => handleCheckout('pro')} disabled={!!checkoutLoading}>
                           {checkoutLoading === 'pro' ? 'Redirecting...' : 'Buy Pro'}
                         </button>
                       </div>
@@ -415,92 +296,41 @@ const downloadCertificate = async (credId) => {
                 </div>
               ) : (
                 credentials.map((cred, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(245,243,238,0.08)',
-                      borderRadius: 7,
-                      padding: '12px 16px',
-                      marginBottom: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 6,
-                        background: 'rgba(29,158,117,0.15)',
-                        border: '1px solid rgba(29,158,117,0.25)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,243,238,0.08)', borderRadius: 7, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 6, background: 'rgba(29,158,117,0.15)', border: '1px solid rgba(29,158,117,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <span style={{ fontSize: 12, color: '#26B589' }}>✓</span>
                     </div>
-
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{cred.program}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.5)', marginTop: 1 }}>
-                        {cred.credentialId} · Issued {new Date(cred.issuedAt).toLocaleDateString()}
-                      </div>
+                      <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.5)', marginTop: 1 }}>{cred.credentialId} · Issued {new Date(cred.issuedAt).toLocaleDateString()}</div>
                     </div>
-
-                    <div
-                      style={{
-                        fontSize: 10,
-                        color: '#26B589',
-                        background: 'rgba(29,158,117,0.1)',
-                        border: '1px solid rgba(29,158,117,0.2)',
-                        borderRadius: 10,
-                        padding: '2px 8px'
-                      }}
-                    >
-                      Valid
-                    </div>
+                    <div style={{ fontSize: 10, color: '#26B589', background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)', borderRadius: 10, padding: '2px 8px' }}>Valid</div>
                   </div>
                 ))
               )}
             </div>
 
+            {/* ── Get started card (no payment yet) ── */}
             {!result && credentials.length === 0 && !paymentVerified && (
               <div style={s.card}>
                 <div style={s.eyebrow}>Get Started</div>
                 <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
                   Choose your assessment tier to unlock the Remote CX Readiness Assessment™ and begin your certification path.
                 </div>
-
                 <div style={s.payGrid}>
                   <div style={s.payCard}>
                     <div style={s.payTitle}>Standard</div>
-                    <div style={s.payPrice}>$29</div>
-                    <div style={s.payCopy}>
-                      Core assessment access for candidates ready to prove their remote CX readiness.
-                    </div>
-                    <button
-                      style={{ ...s.btnGold, marginBottom: 0 }}
-                      onClick={() => handleCheckout('standard')}
-                      disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
-                    >
+                    <div style={s.payPrice}>$39</div>
+                    <div style={s.payCopy}>Core assessment access for candidates ready to prove their remote CX readiness.</div>
+                    <button style={{ ...s.btnGold, marginBottom: 0 }} onClick={() => handleCheckout('standard')} disabled={!!checkoutLoading}>
                       {checkoutLoading === 'standard' ? 'Redirecting...' : 'Buy Standard'}
                     </button>
                   </div>
-
                   <div style={s.payCard}>
                     <div style={s.payTitle}>Pro</div>
                     <div style={s.payPrice}>$59</div>
-                    <div style={s.payCopy}>
-                      Premium candidate path for stronger positioning and higher-value assessment access.
-                    </div>
-                    <button
-                      style={{ ...s.btnTeal, marginBottom: 0 }}
-                      onClick={() => handleCheckout('pro')}
-                      disabled={checkoutLoading === 'standard' || checkoutLoading === 'pro'}
-                    >
+                    <div style={s.payCopy}>Premium candidate path with stronger positioning and higher-value access.</div>
+                    <button style={{ ...s.btnTeal, marginBottom: 0 }} onClick={() => handleCheckout('pro')} disabled={!!checkoutLoading}>
                       {checkoutLoading === 'pro' ? 'Redirecting...' : 'Buy Pro'}
                     </button>
                   </div>
@@ -508,19 +338,19 @@ const downloadCertificate = async (credId) => {
               </div>
             )}
 
+            {/* ── Start assessment card (paid, no result yet) ── */}
             {!result && credentials.length === 0 && paymentVerified && (
               <div style={s.card}>
                 <div style={s.eyebrow}>Get Started</div>
                 <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
                   Your payment is verified. Launch the Remote CX Readiness Assessment™ when you're ready.
                 </div>
-                <button style={s.btnGold} onClick={startAssessment}>
-                  Start Assessment — CRSA
-                </button>
+                <button style={s.btnGold} onClick={startAssessment}>{startingAssessment ? 'Starting...' : 'Start Assessment — CRSA'}</button>
               </div>
             )}
           </div>
 
+          {/* ── Right: certificate panel ── */}
           <div>
             {latestCred ? (
               <>
@@ -533,68 +363,44 @@ const downloadCertificate = async (credId) => {
                     </div>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #D4A843', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>★</div>
                   </div>
-
                   <div style={s.credTitle}>Certificate of Achievement</div>
                   <div style={{ fontSize: 11, color: '#8a7040', textAlign: 'center', marginBottom: 4 }}>Proudly Presented To</div>
                   <div style={s.credName}>{candidate.name}</div>
-                  <div style={s.credDesig}>
-                    {latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}
-                  </div>
-
+                  <div style={s.credDesig}>{latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}</div>
                   <div style={s.metaGrid}>
-                    <div>
-                      <div style={s.metaKey}>Credential ID</div>
-                      <div style={s.metaVal}>{latestCred.credentialId}</div>
-                    </div>
-                    <div>
-                      <div style={s.metaKey}>Issue Date</div>
-                      <div style={s.metaVal}>{new Date(latestCred.issuedAt).toLocaleDateString()}</div>
-                    </div>
-                    <div>
-                      <div style={s.metaKey}>Status</div>
-                      <div style={{ ...s.metaVal, color: '#0F6E56' }}>Valid</div>
-                    </div>
-                    <div>
-                      <div style={s.metaKey}>Expires</div>
-                      <div style={s.metaVal}>{new Date(latestCred.expiresAt).toLocaleDateString()}</div>
-                    </div>
+                    <div><div style={s.metaKey}>Credential ID</div><div style={s.metaVal}>{latestCred.credentialId}</div></div>
+                    <div><div style={s.metaKey}>Issue Date</div><div style={s.metaVal}>{new Date(latestCred.issuedAt).toLocaleDateString()}</div></div>
+                    <div><div style={s.metaKey}>Status</div><div style={{ ...s.metaVal, color: '#0F6E56' }}>Valid</div></div>
+                    <div><div style={s.metaKey}>Expires</div><div style={s.metaVal}>{new Date(latestCred.expiresAt).toLocaleDateString()}</div></div>
                   </div>
-
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #e0d5b0', paddingTop: 10 }}>
-                    <div style={{ fontSize: 9, color: '#8a7040' }}>
-                      Verify at
-                      <br />
-                      <strong style={{ fontSize: 10, color: '#3d2e0a' }}>atacglobalcx.com/verify</strong>
-                    </div>
+                    <div style={{ fontSize: 9, color: '#8a7040' }}>Verify at<br /><strong style={{ fontSize: 10, color: '#3d2e0a' }}>atacglobalcx.com/verify</strong></div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ width: 60, height: 1, background: '#8a7040', marginBottom: 3, marginLeft: 'auto' }} />
                       <div style={{ fontSize: 9, fontWeight: 600, color: '#3d2e0a' }}>Tugreofia Smith</div>
                       <div style={{ fontSize: 8, color: '#8a7040' }}>CEO & Lead Instructor</div>
                     </div>
                   </div>
-
                   <div style={s.chainRow}>
                     <div style={s.chainDot} />
                     ERC-721 Blockchain Credential · Polygon Mainnet
                   </div>
                 </div>
 
+                {/* ── Action buttons ── */}
                 <div style={{ marginTop: 12 }}>
-<button style={s.btnGold} onClick={() => downloadCertificate(latestCred.credentialId)}>⬇ Download PDF Certificate</button>                  
+                  <button style={s.btnGold} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
+                    {downloading ? 'Generating PDF...' : '⬇ Download PDF Certificate'}
+                  </button>
                   <button style={s.btnGold} onClick={() => copyLink(latestCred.credentialId)}>
                     {copied ? '✓ Copied!' : 'Copy Verification Link'}
                   </button>
-
-                  <button
-                    style={s.btnTeal}
-                    onClick={() => {
-                      const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
-                      window.open(url, '_blank');
-                    }}
-                  >
+                  <button style={s.btnTeal} onClick={() => {
+                    const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
+                    window.open(url, '_blank');
+                  }}>
                     Add to LinkedIn Profile
                   </button>
-
                   <button style={s.btnOut} onClick={() => navigate('/assessment')}>
                     Start New Assessment
                   </button>
@@ -609,6 +415,7 @@ const downloadCertificate = async (credId) => {
               </div>
             )}
           </div>
+
         </div>
       </div>
     </div>
