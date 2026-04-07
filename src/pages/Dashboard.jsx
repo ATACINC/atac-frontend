@@ -462,6 +462,7 @@ const saveWallet = async () => {
                     <div style={{ fontSize: 11, color: 'rgba(245,243,238,0.6)', wordBreak: 'break-all' }}>{candidateWallet}</div>
                   </div>
                 )}
+              </div>
               </>
             ) : (
               <div style={s.card}>
