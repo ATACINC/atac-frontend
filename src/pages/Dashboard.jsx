@@ -412,7 +412,7 @@ const saveWallet = async () => {
                   </div>
                   <div style={s.chainRow}>
                     <div style={s.chainDot} />
-                    ERC-721 Blockchain Credential · Polygon Mainnet
+                    Blockchain-Verified Credential · Mainnet
                   </div>
                 </div>
 
@@ -440,7 +440,7 @@ const saveWallet = async () => {
                 {!candidateWallet ? (
                   <div style={{ marginTop: 12, background: 'rgba(212,168,67,0.06)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 8, padding: '14px 16px' }}>
                     <div style={{ fontSize: 11, color: '#D4A843', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>Enable Blockchain Verification</div>
-                    <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.5)', marginBottom: 10, lineHeight: 1.5 }}>Add your wallet address to mint your credential as an ERC-721 token on the blockchain.</div>
+                    <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.5)', marginBottom: 10, lineHeight: 1.5 }}>AAdd your wallet address to receive your blockchain-verified credential directly to your wallet.</div>
                     <input
                       style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${walletError ? 'rgba(226,75,74,0.5)' : 'rgba(245,243,238,0.1)'}`, borderRadius: 6, padding: '9px 12px', fontSize: 12, color: '#F5F3EE', outline: 'none', boxSizing: 'border-box', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}
                       placeholder="0x... your EVM wallet address"
