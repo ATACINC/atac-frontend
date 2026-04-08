@@ -1,3 +1,4 @@
+import LanguageSelector from '../components/LanguageSelector';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';

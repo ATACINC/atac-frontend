@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "ATAC Global CX",
+    "tagline": "Plataforma de Certificación"
+  },
+  "auth": {
+    "signIn": "Iniciar Sesión",
+    "createAccount": "Crear Cuenta",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "fullName": "Nombre Completo",
+    "emailPlaceholder": "jane@email.com",
+    "passwordPlaceholder": "••••••••",
+    "namePlaceholder": "Jane Doe",
+    "signingIn": "Por favor espere...",
+    "creating": "Por favor espere..."
+  },
+  "dashboard": {
+    "myCredentials": "Mis Credenciales",
+    "yourCertificate": "Tu Certificado",
+    "startAssessment": "Iniciar Evaluación — CRSA",
+    "newAssessment": "Iniciar Nueva Evaluación",
+    "copyLink": "Copiar Enlace de Verificación",
+    "copied": "✓ ¡Copiado!",
+    "addLinkedIn": "Agregar a Perfil de LinkedIn",
+    "signOut": "Cerrar Sesión",
+    "noCredentials": "Aún no se han emitido credenciales.",
+    "completeAssessment": "Completa tu evaluación para obtener tu certificado.",
+    "loading": "Cargando...",
+    "valid": "Válido",
+    "issued": "Emitido",
+    "credentialId": "ID de Credencial",
+    "issueDate": "Fecha de Emisión",
+    "status": "Estado",
+    "expires": "Vence"
+  },
+  "assessment": {
+    "title": "Agente de Servicio Remoto Certificado",
+    "eyebrow": "Evaluación de Preparación CX Remota™",
+    "description": "40 preguntas en 5 dominios de CX. Límite de 20 minutos. Obten 70% o más para aprobar y proceder al Simulador de Preparación de Llamadas™.",
+    "questions": "Preguntas",
+    "minutes": "Minutos",
+    "passMark": "Nota de Aprobación",
+    "begin": "Iniciar Evaluación",
+    "starting": "Iniciando...",
+    "submitting": "Calificando tu evaluación...",
+    "submitWait": "Por favor espere. No cierre esta ventana.",
+    "previous": "← Anterior",
+    "next": "Siguiente →",
+    "submit": "Enviar Evaluación",
+    "answered": "respondidas",
+    "of": "de",
+    "pass": "¡Felicitaciones! Aprobaste. Procede al Simulador de Preparación de Llamadas™.",
+    "fail": "La nota de aprobación es 70% (28/40). Revisa los comentarios y vuelve a intentarlo cuando estés listo."
+  },
+  "simulator": {
+    "title": "Simulador de Preparación de Llamadas ATAC™",
+    "live": "Sesión en Vivo",
+    "complete": "Completo",
+    "liveCall": "En Vivo",
+    "briefing": {
+      "begin": "Iniciar Simulación de Llamada",
+      "yourRole": "Tu rol",
+      "objective": "Objetivo"
+    },
+    "sidebar": {
+      "liveScore": "Puntuación en Vivo",
+      "coachingTip": "Consejo de Entrenamiento"
+    },
+    "result": {
+      "title": "Informe Post-Llamada",
+      "passed": "✓ Aprobado",
+      "failed": "✗ No Aprobado",
+      "issueCredential": "✓ Emitir Mi Credencial — CRSA",
+      "issuing": "Emitiendo...",
+      "viewDashboard": "Ver Panel"
+    }
+  },
+  "languages": {
+    "active": "Disponible Ahora",
+    "coming_soon": "Próximamente",
+    "planned": "Planificado",
+    "selector_label": "Idioma",
+    "select_language": "Seleccionar Idioma",
+    "your_language": "Evalúate en tu idioma",
+    "launching_note": "ES · FR disponible Q3 2026"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Algo salió mal. Por favor intente de nuevo.",
+    "verify": "Verificar en",
+    "blockchain": "Credencial Verificada en Blockchain"
+  }
+}

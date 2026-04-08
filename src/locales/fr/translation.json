@@ -1,0 +1,94 @@
+{
+  "app": {
+    "name": "ATAC Global CX",
+    "tagline": "Plateforme de Certification"
+  },
+  "auth": {
+    "signIn": "Se Connecter",
+    "createAccount": "Créer un Compte",
+    "email": "Adresse E-mail",
+    "password": "Mot de Passe",
+    "fullName": "Nom Complet",
+    "emailPlaceholder": "jane@email.com",
+    "passwordPlaceholder": "••••••••",
+    "namePlaceholder": "Jane Dupont",
+    "signingIn": "Veuillez patienter...",
+    "creating": "Veuillez patienter..."
+  },
+  "dashboard": {
+    "myCredentials": "Mes Certifications",
+    "yourCertificate": "Votre Certificat",
+    "startAssessment": "Démarrer l'Évaluation — CRSA",
+    "newAssessment": "Nouvelle Évaluation",
+    "copyLink": "Copier le Lien de Vérification",
+    "copied": "✓ Copié !",
+    "addLinkedIn": "Ajouter au Profil LinkedIn",
+    "signOut": "Se Déconnecter",
+    "noCredentials": "Aucune certification émise pour l'instant.",
+    "completeAssessment": "Complétez votre évaluation pour obtenir votre certificat.",
+    "loading": "Chargement...",
+    "valid": "Valide",
+    "issued": "Émis",
+    "credentialId": "ID de Certification",
+    "issueDate": "Date d'Émission",
+    "status": "Statut",
+    "expires": "Expire"
+  },
+  "assessment": {
+    "title": "Agent de Service à Distance Certifié",
+    "eyebrow": "Évaluation de Préparation CX à Distance™",
+    "description": "40 questions dans 5 domaines CX. Limite de 20 minutes. Obtenez 70% ou plus pour réussir et accéder au Simulateur de Préparation aux Appels™.",
+    "questions": "Questions",
+    "minutes": "Minutes",
+    "passMark": "Note de Passage",
+    "begin": "Commencer l'Évaluation",
+    "starting": "Démarrage...",
+    "submitting": "Notation de votre évaluation...",
+    "submitWait": "Veuillez patienter. Ne fermez pas cette fenêtre.",
+    "previous": "← Précédent",
+    "next": "Suivant →",
+    "submit": "Soumettre l'Évaluation",
+    "answered": "répondues",
+    "of": "sur",
+    "pass": "Félicitations ! Vous avez réussi. Passez au Simulateur de Préparation aux Appels™.",
+    "fail": "La note de passage est 70% (28/40). Revoyez les commentaires et recommencez quand vous êtes prêt."
+  },
+  "simulator": {
+    "title": "Simulateur de Préparation aux Appels ATAC™",
+    "live": "Session en Direct",
+    "complete": "Terminé",
+    "liveCall": "En Direct",
+    "briefing": {
+      "begin": "Démarrer la Simulation d'Appel",
+      "yourRole": "Votre rôle",
+      "objective": "Objectif"
+    },
+    "sidebar": {
+      "liveScore": "Score en Direct",
+      "coachingTip": "Conseil d'Entraînement"
+    },
+    "result": {
+      "title": "Rapport Post-Appel",
+      "passed": "✓ Réussi",
+      "failed": "✗ Non Réussi",
+      "issueCredential": "✓ Émettre Ma Certification — CRSA",
+      "issuing": "Émission en cours...",
+      "viewDashboard": "Voir le Tableau de Bord"
+    }
+  },
+  "languages": {
+    "active": "Disponible Maintenant",
+    "coming_soon": "Bientôt Disponible",
+    "planned": "Prévu",
+    "selector_label": "Langue",
+    "select_language": "Choisir la Langue",
+    "your_language": "Évaluez-vous dans votre langue",
+    "launching_note": "ES · FR disponible T3 2026"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite. Veuillez réessayer.",
+    "verify": "Vérifier sur",
+    "blockchain": "Certification Vérifiée sur Blockchain"
+  }
+}

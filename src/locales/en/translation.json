@@ -79,12 +79,16 @@
   "languages": {
     "active": "Available Now",
     "coming_soon": "Coming Soon",
-    "planned": "Planned"
+    "planned": "Planned",
+    "selector_label": "Language",
+    "select_language": "Select Language",
+    "your_language": "Assess in your language",
+    "launching_note": "ES · FR launching Q3 2026"
   },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong. Please try again.",
     "verify": "Verify at",
-    "blockchain": "ERC-721 Blockchain Credential · Polygon Mainnet"
+    "blockchain": "Blockchain-Verified Credential"
   }
 }
