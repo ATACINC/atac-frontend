@@ -86,9 +86,7 @@ const s = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getToken() {
-  return localStorage.getItem('token') ||
-         localStorage.getItem('authToken') ||
-         localStorage.getItem('jwt') || '';
+  return localStorage.getItem('atac_token') || '';
 }
 
 function fmtDate(iso) {
