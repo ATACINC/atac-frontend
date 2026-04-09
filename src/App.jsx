@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login      from './pages/login';
-import Assessment from './pages/Assessment';
-import Simulator  from './pages/Simulator';
-import Dashboard  from './pages/Dashboard';
-import Payment    from './pages/Payment';
+import Login          from './pages/login';
+import Assessment     from './pages/Assessment';
+import Simulator      from './pages/Simulator';
+import Dashboard  from './pages/CandidateDashboard';
+import Payment        from './pages/Payment';
 import EmployerPortal from './pages/EmployerPortal';
+import CandidateDashboard from './pages/CandidateDashboard';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
