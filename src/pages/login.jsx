@@ -1,141 +1,221 @@
+/**
+ * ATAC Global CX — Login Page
+ * "Vault" design system — luxury dark
+ * File: src/pages/login.jsx
+ */
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import API from '../api/client';
-import LanguageSelector from '../components/LanguageSelector';
 
-const styles = {
-  page:     { minHeight: '100vh', background: '#0D1B2E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans, sans-serif' },
-  card:     { background: '#122238', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 12, padding: '40px 36px', width: '100%', maxWidth: 420, position: 'relative' },
-  langRow:  { position: 'absolute', top: 16, right: 16 },
-  logo:     { fontFamily: 'Georgia, serif', fontSize: 22, color: '#D4A843', letterSpacing: '0.06em', marginBottom: 4 },
-  sub:      { fontSize: 12, color: 'rgba(245,243,238,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 32 },
-  tabs:     { display: 'flex', marginBottom: 28, borderBottom: '1px solid rgba(245,243,238,0.1)' },
-  tab:      (active) => ({ padding: '8px 20px', fontSize: 13, cursor: 'pointer', color: active ? '#D4A843' : 'rgba(245,243,238,0.5)', background: 'none', border: 'none', borderBottom: active ? '2px solid #D4A843' : '2px solid transparent', fontFamily: 'DM Sans, sans-serif' }),
-  label:    { display: 'block', fontSize: 11, color: 'rgba(245,243,238,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 },
-  labelOpt: { display: 'block', fontSize: 11, color: 'rgba(245,243,238,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 },
-  input:    { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(245,243,238,0.1)', borderRadius: 6, padding: '10px 14px', fontSize: 14, color: '#F5F3EE', marginBottom: 16, outline: 'none', boxSizing: 'border-box', fontFamily: 'DM Sans, sans-serif' },
-  inputOpt: { width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(245,243,238,0.08)', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: 'rgba(245,243,238,0.7)', marginBottom: 4, outline: 'none', boxSizing: 'border-box', fontFamily: 'DM Sans, sans-serif' },
-  hint:     { fontSize: 11, color: 'rgba(245,243,238,0.3)', marginBottom: 16, lineHeight: 1.4 },
-  btn:      { width: '100%', background: '#D4A843', color: '#0D1B2E', border: 'none', borderRadius: 6, padding: '13px', fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer', marginTop: 8, fontFamily: 'DM Sans, sans-serif' },
-  error:    { background: 'rgba(226,75,74,0.1)', border: '1px solid rgba(226,75,74,0.3)', borderRadius: 6, padding: '10px 14px', fontSize: 13, color: '#E24B4A', marginBottom: 16 },
-  divider:  { borderTop: '1px solid rgba(245,243,238,0.08)', margin: '20px 0 16px' },
-  hint2:    { fontSize: 11, color: 'rgba(245,243,238,0.25)', marginBottom: 16, letterSpacing: '0.05em', textTransform: 'uppercase' },
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:          '#080B12',
+  bg1:         '#0C1018',
+  bg2:         '#101520',
+  gold:        '#C9A84C',
+  gold2:       '#D4B86A',
+  goldDim:     'rgba(201,168,76,0.10)',
+  goldBorder:  'rgba(201,168,76,0.20)',
+  teal:        '#1A8F69',
+  teal2:       '#22B589',
+  white:       '#EEE9DF',
+  muted:       'rgba(238,233,223,0.45)',
+  faint:       'rgba(238,233,223,0.07)',
+  border:      'rgba(201,168,76,0.15)',
+  border2:     'rgba(238,233,223,0.07)',
+  red:         '#E05C52',
 };
 
-function isValidWallet(addr) {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr);
-}
+const F = {
+  display: "'Cormorant Garamond', 'Times New Roman', serif",
+  body:    "'Syne', 'DM Sans', sans-serif",
+};
 
 export default function Login() {
-  const { t } = useTranslation();
-  const [tab, setTab]       = useState('login');
-  const [form, setForm]     = useState({ name: '', email: '', password: '', walletAddress: '' });
-  const [error, setError]   = useState('');
-  const [walletError, setWalletError] = useState('');
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [focused,  setFocused]  = useState(null);
 
-  const handle = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (e.target.name === 'walletAddress') setWalletError('');
-  };
-
-  const submit = async () => {
+  const handleLogin = async () => {
+    if (!email || !password) { setError('Email and password are required.'); return; }
     setError('');
-    setWalletError('');
-    if (tab === 'register' && form.walletAddress && !isValidWallet(form.walletAddress)) {
-      setWalletError('Invalid wallet address — must start with 0x and be 42 characters');
-      return;
-    }
     setLoading(true);
     try {
-      const endpoint = tab === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const payload  = tab === 'login'
-        ? { email: form.email, password: form.password }
-        : { name: form.name, email: form.email, password: form.password, walletAddress: form.walletAddress || null };
-      const res = await API.post(endpoint, payload);
-      localStorage.setItem('atac_token',        res.data.token);
-      localStorage.setItem('atac_candidate',    JSON.stringify(res.data.candidate));
-      localStorage.setItem('atac_candidate_id', res.data.candidate.id);
-      navigate('/dashboard');
+      const res = await API.post('/api/auth/login', { email: email.trim(), password });
+      const { token, candidate } = res.data;
+      localStorage.setItem('atac_token', token);
+      if (candidate) localStorage.setItem('atac_candidate', JSON.stringify(candidate));
+      const role = candidate?.role || res.data.role || 'candidate';
+      navigate(role === 'employer' ? '/employer' : '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || t('common.error'));
+      setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Syne:wght@400;500;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes vault-up { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes vault-in { from { opacity:0; } to { opacity:1; } }
+        @keyframes drift { 0%,100%{transform:translate(0,0) rotate(0deg);} 33%{transform:translate(20px,-15px) rotate(0.5deg);} 66%{transform:translate(-10px,20px) rotate(-0.5deg);} }
+        .vault-field:focus { border-color: rgba(201,168,76,0.5) !important; background: rgba(201,168,76,0.05) !important; }
+        .vault-btn:hover:not(:disabled) { background: #D4B86A !important; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(201,168,76,0.25); }
+        .vault-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .vault-link:hover { color: #C9A84C !important; }
+      `}</style>
 
-        {/* Language selector — top right of card */}
-        <div style={styles.langRow}>
-          <LanguageSelector />
+      <div style={{ minHeight: '100vh', background: C.bg, fontFamily: F.body, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+
+        {/* ── Background geometry ── */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          {/* Large circle — top right */}
+          <div style={{ position: 'absolute', top: -200, right: -200, width: 700, height: 700, borderRadius: '50%', border: '1px solid rgba(201,168,76,0.06)', animation: 'drift 18s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', top: -120, right: -120, width: 500, height: 500, borderRadius: '50%', border: '1px solid rgba(201,168,76,0.04)' }} />
+          {/* Bottom left accent */}
+          <div style={{ position: 'absolute', bottom: -100, left: -100, width: 400, height: 400, borderRadius: '50%', border: '1px solid rgba(201,168,76,0.05)', animation: 'drift 22s ease-in-out infinite reverse' }} />
+          {/* Diagonal rule */}
+          <div style={{ position: 'absolute', top: 0, left: '25%', width: 1, height: '100%', background: 'linear-gradient(180deg, transparent 0%, rgba(201,168,76,0.08) 30%, rgba(201,168,76,0.08) 70%, transparent 100%)' }} />
+          {/* Noise overlay */}
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E")`, opacity: 0.4 }} />
         </div>
 
-        <div style={styles.logo}>{t('app.name')}</div>
-        <div style={styles.sub}>{t('app.tagline')}</div>
+        {/* ── Left panel — brand statement ── */}
+        <div style={{ width: '45%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '56px 64px', borderRight: `1px solid ${C.border}`, animation: 'vault-in 0.8s ease both' }}>
+          {/* Logo */}
+          <div>
+            <div style={{ fontFamily: F.display, fontSize: 13, fontWeight: 400, color: C.gold, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 6 }}>ATAC Global CX</div>
+            <div style={{ width: 32, height: 1, background: C.gold, opacity: 0.5 }} />
+          </div>
 
-        <div style={styles.tabs}>
-          <button style={styles.tab(tab === 'login')}
-            onClick={() => { setTab('login'); setError(''); }}>
-            {t('auth.signIn')}
-          </button>
-          <button style={styles.tab(tab === 'register')}
-            onClick={() => { setTab('register'); setError(''); }}>
-            {t('auth.createAccount')}
-          </button>
+          {/* Main statement */}
+          <div style={{ animation: 'vault-up 0.9s ease 0.2s both' }}>
+            <div style={{ fontFamily: F.display, fontSize: 52, fontWeight: 300, color: C.white, lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 24 }}>
+              The Standard<br />
+              <span style={{ fontStyle: 'italic', color: C.gold }}>for Remote CX</span><br />
+              Excellence.
+            </div>
+            <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.8, maxWidth: 320, letterSpacing: '0.02em' }}>
+              Blockchain-verified credentials for the world's most trusted remote customer experience professionals.
+            </div>
+          </div>
+
+          {/* Bottom credentials strip */}
+          <div style={{ animation: 'vault-up 0.9s ease 0.4s both' }}>
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${C.gold} 0%, transparent 60%)`, marginBottom: 20, opacity: 0.3 }} />
+            <div style={{ display: 'flex', gap: 32 }}>
+              {[
+                { num: 'ERC-721', lbl: 'Blockchain Standard' },
+                { num: 'ISO', lbl: 'Aligned Framework' },
+                { num: '2026', lbl: 'Cohort Open' },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div style={{ fontFamily: F.display, fontSize: 18, color: C.gold, fontWeight: 400 }}>{item.num}</div>
+                  <div style={{ fontSize: 9, color: C.muted, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 2 }}>{item.lbl}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {error && <div style={styles.error}>{error}</div>}
+        {/* ── Right panel — login form ── */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 64px' }}>
+          <div style={{ width: '100%', maxWidth: 380, animation: 'vault-up 0.9s ease 0.15s both' }}>
 
-        {tab === 'register' && (
-          <>
-            <label style={styles.label} htmlFor="name">{t('auth.fullName')}</label>
-<input style={styles.input} id="name" name="name" autoComplete="name"
-              placeholder={t('auth.namePlaceholder')}
-              value={form.name} onChange={handle} />
-          </>
-        )}
+            {/* Form header */}
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.gold, marginBottom: 12 }}>Candidate Portal</div>
+              <div style={{ fontFamily: F.display, fontSize: 34, fontWeight: 300, color: C.white, lineHeight: 1.2, marginBottom: 8 }}>
+                Sign in to your<br /><span style={{ fontStyle: 'italic' }}>account</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, letterSpacing: '0.02em' }}>Access your credentials and certification status</div>
+            </div>
 
-        <label style={styles.label} htmlFor="email">{t('auth.email')}</label>
-<input style={styles.input} id="email" name="email" type="email" autoComplete="email"
-          placeholder={t('auth.emailPlaceholder')}
-          value={form.email} onChange={handle} />
+            {/* Gold rule */}
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${C.gold} 0%, transparent 100%)`, marginBottom: 36, opacity: 0.4 }} />
 
-        <label style={styles.label} htmlFor="password">{t('auth.password')}</label>
-<input style={styles.input} id="password" name="password" type="password" autoComplete="current-password"
-          placeholder="••••••••"
-          value={form.password} onChange={handle} />
+            {/* Error */}
+            {error && (
+              <div style={{ background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.25)', borderRadius: 3, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: C.red, letterSpacing: '0.02em', animation: 'vault-up 0.3s ease both' }}>
+                {error}
+              </div>
+            )}
 
-        {tab === 'register' && (
-          <>
-            <div style={styles.divider} />
-            <div style={styles.hint2}>Optional — Blockchain Credential</div>
-            <label style={styles.labelOpt}>Wallet Address</label>
-            <input
-              style={{ ...styles.inputOpt, border: walletError ? '1px solid rgba(226,75,74,0.5)' : styles.inputOpt.border }}
-              name="walletAddress"
-              placeholder="0x... (MetaMask or any EVM wallet)"
-              value={form.walletAddress}
-              onChange={handle}
-            />
-            {walletError
-              ? <div style={{ fontSize: 11, color: '#E24B4A', marginBottom: 12 }}>{walletError}</div>
-              : <div style={styles.hint}>Your credential will be minted to this address. You can add this later from your dashboard.</div>
-            }
-          </>
-        )}
+            {/* Fields */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>Email Address</div>
+              <input
+                className="vault-field"
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused(null)}
+                style={{ width: '100%', background: C.faint, border: `1px solid ${focused==='email' ? 'rgba(201,168,76,0.4)' : C.border2}`, borderRadius: 3, padding: '13px 16px', fontFamily: F.body, fontSize: 13, color: C.white, outline: 'none', transition: 'all 0.2s', letterSpacing: '0.02em', boxSizing: 'border-box' }}
+              />
+            </div>
 
-        <button style={styles.btn} onClick={submit} disabled={loading}>
-          {loading
-            ? t('auth.signingIn')
-            : tab === 'login' ? t('auth.signIn') : t('auth.createAccount')
-          }
-        </button>
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>Password</div>
+              <input
+                className="vault-field"
+                type="password"
+                placeholder="••••••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+                style={{ width: '100%', background: C.faint, border: `1px solid ${focused==='password' ? 'rgba(201,168,76,0.4)' : C.border2}`, borderRadius: 3, padding: '13px 16px', fontFamily: F.body, fontSize: 13, color: C.white, outline: 'none', transition: 'all 0.2s', letterSpacing: '0.02em', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              className="vault-btn"
+              onClick={handleLogin}
+              disabled={loading}
+              style={{ width: '100%', background: C.gold, color: C.bg, border: 'none', borderRadius: 3, padding: '14px', fontFamily: F.body, fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', cursor: 'pointer', transition: 'all 0.2s', marginBottom: 20 }}
+            >
+              {loading ? 'Authenticating…' : 'Access Portal'}
+            </button>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, height: 1, background: C.border2 }} />
+              <div style={{ fontSize: 9, color: C.muted, letterSpacing: '0.15em', textTransform: 'uppercase' }}>or</div>
+              <div style={{ flex: 1, height: 1, background: C.border2 }} />
+            </div>
+
+            {/* Register link */}
+            <div style={{ textAlign: 'center', fontSize: 12, color: C.muted }}>
+              New to ATAC Global CX?{' '}
+              <span
+                className="vault-link"
+                onClick={() => navigate('/payment')}
+                style={{ color: C.gold, cursor: 'pointer', transition: 'color 0.2s', letterSpacing: '0.02em' }}
+              >
+                Begin Certification →
+              </span>
+            </div>
+
+            {/* Footer */}
+            <div style={{ marginTop: 48, paddingTop: 20, borderTop: `1px solid ${C.border2}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 9, color: 'rgba(238,233,223,0.25)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Blockchain-Verified</div>
+              <div style={{ fontSize: 9, color: 'rgba(238,233,223,0.25)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>© 2026 ATAC Global CX</div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,111 +1,254 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+/* ATAC Global CX — Vault Design System — Global CSS */
+/* File: src/index.css */
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Syne:wght@400;500;600;700&display=swap');
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* ── Root ── */
+:root {
+  --bg:         #080B12;
+  --bg1:        #0C1018;
+  --bg2:        #101520;
+  --bg3:        #141B26;
+  --gold:       #C9A84C;
+  --gold2:      #D4B86A;
+  --gold-dim:   rgba(201,168,76,0.10);
+  --gold-border:rgba(201,168,76,0.18);
+  --teal:       #1A8F69;
+  --teal2:      #22B589;
+  --white:      #EEE9DF;
+  --muted:      rgba(238,233,223,0.45);
+  --faint:      rgba(238,233,223,0.07);
+  --border:     rgba(201,168,76,0.15);
+  --border2:    rgba(238,233,223,0.07);
+  --red:        #E05C52;
+  --amber:      #D4851A;
+  --font-display: 'Cormorant Garamond', 'Times New Roman', serif;
+  --font-body:    'Syne', 'DM Sans', sans-serif;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* ── Base ── */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  margin: 0;
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* ── Noise texture overlay — applied globally ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.6;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.4); }
+
+/* ── Selection ── */
+::selection {
+  background: rgba(201,168,76,0.2);
+  color: var(--white);
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+/* ── Keyframe animations ── */
+@keyframes vault-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
+@keyframes vault-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes vault-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes vault-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+@keyframes vault-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes drift {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  33%      { transform: translate(20px,-15px) rotate(0.5deg); }
+  66%      { transform: translate(-10px,20px) rotate(-0.5deg); }
+}
+
+/* ── Utility animation classes ── */
+.vault-up-0  { animation: vault-up 0.6s ease both; animation-delay: 0ms; }
+.vault-up-1  { animation: vault-up 0.6s ease both; animation-delay: 60ms; }
+.vault-up-2  { animation: vault-up 0.6s ease both; animation-delay: 120ms; }
+.vault-up-3  { animation: vault-up 0.6s ease both; animation-delay: 180ms; }
+.vault-up-4  { animation: vault-up 0.6s ease both; animation-delay: 240ms; }
+.vault-up-5  { animation: vault-up 0.6s ease both; animation-delay: 300ms; }
+.vault-in    { animation: vault-in 0.6s ease both; }
+
+/* ── Interactive states ── */
+.vault-hover:hover {
+  background: rgba(201,168,76,0.06) !important;
+  color: var(--gold) !important;
+}
+
+.vault-row:hover {
+  background: rgba(238,233,223,0.025) !important;
+}
+
+.vault-btn-gold {
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
   display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.vault-btn-gold:hover:not(:disabled) {
+  background: var(--gold2);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(201,168,76,0.2);
+}
+
+.vault-btn-gold:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.vault-btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.vault-btn-ghost:hover {
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+.vault-input {
+  width: 100%;
+  background: rgba(238,233,223,0.04);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--white);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
+  letter-spacing: 0.02em;
+}
+
+.vault-input:focus {
+  border-color: rgba(201,168,76,0.45);
+  background: rgba(201,168,76,0.04);
+}
+
+.vault-input::placeholder {
+  color: rgba(238,233,223,0.2);
+}
+
+/* ── Gold rule — signature detail ── */
+.vault-rule {
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold) 0%, transparent 100%);
+  border: none;
+  opacity: 0.35;
+}
+
+.vault-rule-full {
+  height: 1px;
+  background: var(--border);
+  border: none;
+}
+
+/* ── Tables ── */
+.vault-table-row {
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.vault-table-row:hover {
+  background: rgba(238,233,223,0.02);
+}
+
+/* ── Sidebar nav ── */
+.vault-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-left: 1px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.vault-nav-item:hover {
+  color: rgba(238,233,223,0.7);
+  background: rgba(238,233,223,0.02);
+}
+
+.vault-nav-item.active {
+  color: var(--gold);
+  border-left-color: var(--gold);
+  background: var(--gold-dim);
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .vault-grid-2 { grid-template-columns: 1fr !important; }
+  .vault-sidebar { display: none !important; }
+  .vault-main { padding: 16px !important; }
 }
