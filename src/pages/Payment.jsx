@@ -92,7 +92,8 @@ export default function Payment() {
   const [error,    setError]    = useState('');
   const [seats,    setSeats]    = useState(10);
 
-  const candidateId = localStorage.getItem('atac_candidate_id');
+  const candidateObj = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
+  const candidateId  = candidateObj.id || localStorage.getItem('atac_candidate_id');
   const token       = localStorage.getItem('atac_token');
 
   const cancelled   = new URLSearchParams(window.location.search).get('cancelled');
