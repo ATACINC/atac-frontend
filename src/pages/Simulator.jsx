@@ -127,7 +127,7 @@ export default function Simulator() {
   const Topbar = ({ statusLabel, statusColor }) => (
     <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 52, objectFit: 'contain' }} />
         <div style={{ width: 1, height: 28, background: BORDER2 }} />
         <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Call Readiness Simulator™</div>
       </div>
