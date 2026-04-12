@@ -259,7 +259,7 @@ export default function Assessment() {
 
         {/* Branding */}
         <div style={{ padding: '20px 18px 14px', borderBottom: `1px solid ${BORDER2}` }}>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.12em' }}>ATAC Global CX</div>
+          <img src="/logo.png" alt="ATAC Global CX" style={{ height: 32, objectFit: 'contain' }} />
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 2 }}>Readiness Assessment</div>
         </div>
 
