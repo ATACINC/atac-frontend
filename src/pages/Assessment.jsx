@@ -168,7 +168,7 @@ export default function Assessment() {
   if (phase === 'locked') return (
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', maxWidth: 420, padding: 40 }} className="vault-up">
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain', marginBottom: 28 }} />
+        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 280, objectFit: 'contain', marginBottom: 28 }} />
         <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, lineHeight: 1.2, marginBottom: 16 }}>Assessment Access Required</div>
         <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 32 }}>
           Complete your purchase to unlock the Remote CX Readiness Assessment and begin your certification journey.
