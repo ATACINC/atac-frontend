@@ -2,87 +2,70 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 
-const NAVY   = '#0D1B2E';
-const NAVY2  = '#122238';
-const GOLD   = '#D4A843';
-const TEAL   = '#1D9E75';
-const TEAL2  = '#26B589';
-const RED    = '#E24B4A';
-const AMBER  = '#EF9F27';
-const WHITE  = '#F5F3EE';
-const MUTED  = 'rgba(245,243,238,0.5)';
-const FAINT  = 'rgba(245,243,238,0.06)';
-const BORDER = 'rgba(212,168,67,0.15)';
-const BORDER2= 'rgba(245,243,238,0.08)';
+/* ── Vault Design Tokens ─────────────────────────────────── */
+const BG    = '#080B12';
+const BG1   = '#0C1018';
+const BG3   = '#141B26';
+const GOLD  = '#C9A84C';
+const TEAL  = '#1A8F69';
+const TEAL2 = '#22A67E';
+const RED   = '#C45C5C';
+const AMBER = '#C48A2A';
+const WHITE = '#EEE9DF';
+const MUTED = 'rgba(238,233,223,0.45)';
+const FAINT = 'rgba(238,233,223,0.04)';
+const BORDER  = 'rgba(201,168,76,0.15)';
+const BORDER2 = 'rgba(238,233,223,0.07)';
 
-const DIM_COLORS = ['#5DCAA5','#378ADD','#D4A843','#D4537E','#7F77DD','#26B589'];
+const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
+const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+
+const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D45C9A','#8A7DD4','#22A67E'];
 const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_work'];
+const DIM_LABELS = ['Prof','Comm','Ops','Tech','H&S','Remote'];
 
-const s = {
-  page:    { minHeight: '100vh', background: '#0a1625', fontFamily: 'DM Sans, sans-serif', color: WHITE },
-  topbar:  { background: NAVY2, borderBottom: `1px solid ${BORDER}`, padding: '11px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  brand:   { fontFamily: 'Georgia, serif', fontSize: 14, color: GOLD, letterSpacing: '0.06em' },
-  brandSub:{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 1 },
-  layout:  { display: 'grid', gridTemplateColumns: '200px 1fr', minHeight: 'calc(100vh - 48px)' },
-  sidebar: { background: NAVY2, borderRight: `1px solid ${BORDER2}`, padding: '16px 0', display: 'flex', flexDirection: 'column' },
-  navItem: (active) => ({ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', fontSize: 12, color: active ? GOLD : MUTED, cursor: 'pointer', borderLeft: `2px solid ${active ? GOLD : 'transparent'}`, background: active ? 'rgba(212,168,67,0.08)' : 'transparent', transition: 'all 0.18s' }),
-  main:    { padding: '20px 24px', background: NAVY },
-  metricRow:    { display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 20 },
-  metricCard:   { background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 8, padding: '12px 14px' },
-  metricNum:    { fontFamily: 'Georgia, serif', fontSize: 22, color: GOLD, lineHeight: 1 },
-  metricLbl:    { fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 },
-  toolbar:      { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' },
-  searchBox:    { display: 'flex', alignItems: 'center', gap: 6, background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 6, padding: '7px 12px', flex: 1, minWidth: 180 },
-  searchInput:  { background: 'none', border: 'none', outline: 'none', fontSize: 12, color: WHITE, fontFamily: 'DM Sans, sans-serif', width: '100%' },
-  filterBtn:    (active) => ({ background: FAINT, border: `1px solid ${active ? GOLD : BORDER2}`, borderRadius: 6, padding: '7px 12px', fontSize: 11, color: active ? GOLD : MUTED, cursor: 'pointer', whiteSpace: 'nowrap' }),
-  exportBtn:    { background: GOLD, color: NAVY, border: 'none', borderRadius: 6, padding: '7px 14px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer' },
-  tableWrap:    { background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 8, overflow: 'hidden' },
-  th:           { padding: '10px 14px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: MUTED, fontWeight: 500, textAlign: 'left', whiteSpace: 'nowrap', background: 'rgba(255,255,255,0.04)' },
-  td:           { padding: '11px 14px', fontSize: 12, color: WHITE, borderBottom: `1px solid rgba(245,243,238,0.04)` },
-  badge: (type) => {
-    const map = { pass: { bg: 'rgba(29,158,117,0.1)', border: 'rgba(29,158,117,0.2)', color: TEAL2 }, fail: { bg: 'rgba(226,75,74,0.1)', border: 'rgba(226,75,74,0.2)', color: RED }, pending: { bg: 'rgba(239,159,39,0.1)', border: 'rgba(239,159,39,0.2)', color: AMBER } };
-    const c = map[type] || map.pending;
-    return { fontSize: 10, padding: '2px 8px', borderRadius: 10, display: 'inline-block', background: c.bg, border: `1px solid ${c.border}`, color: c.color };
-  },
-  verifyBtn:    { background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.25)', borderRadius: 5, padding: '5px 10px', cursor: 'pointer', fontSize: 10, color: TEAL2, display: 'inline-block' },
-  seatsWidget:  { background: 'rgba(29,158,117,0.1)', border: '1px solid rgba(29,158,117,0.2)', borderRadius: 7, padding: '10px 12px', margin: '16px' },
-  inviteModal:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  modalCard:    { background: NAVY2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '28px 28px', width: 400 },
-  input:        { width: '100%', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 6, padding: '9px 12px', fontSize: 13, color: WHITE, fontFamily: 'DM Sans, sans-serif', outline: 'none', marginBottom: 12 },
-  btnGold:      { background: GOLD, color: NAVY, border: 'none', borderRadius: 6, padding: '10px 20px', fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' },
-  btnOut:       { background: 'transparent', color: WHITE, border: `1px solid ${BORDER2}`, borderRadius: 6, padding: '9px 20px', fontSize: 12, cursor: 'pointer', marginLeft: 8 },
+/* ── Keyframe injection ─────────────────────────────────── */
+const injectKF = () => {
+  if (document.getElementById('vault-ep-kf')) return;
+  const s = document.createElement('style');
+  s.id = 'vault-ep-kf';
+  s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Syne:wght@400;500;600&display=swap');
+    @keyframes vault-up { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+    .vault-up { animation: vault-up 0.45s ease both; }
+    .row-hover:hover { background: rgba(201,168,76,0.03) !important; }
+    .nav-item:hover { color: ${WHITE} !important; }
+    .btn-hover:hover { background: rgba(201,168,76,0.12) !important; color: ${GOLD} !important; }
+    ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.15); }
+  `;
+  document.head.appendChild(s);
 };
 
 export default function EmployerPortal() {
   const navigate = useNavigate();
-  const [employerId, setEmployerId]   = useState(null);
-  const [metrics, setMetrics]         = useState(null);
-  const [candidates, setCandidates]   = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [filter, setFilter]           = useState('all');
-  const [search, setSearch]           = useState('');
-  const [activeNav, setActiveNav]     = useState('candidates');
-  const [showInvite, setShowInvite]   = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteMsg, setInviteMsg]     = useState('');
-  const [verifying, setVerifying]     = useState(null);
+  const [employerId, setEmployerId]     = useState(null);
+  const [metrics, setMetrics]           = useState(null);
+  const [candidates, setCandidates]     = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [filter, setFilter]             = useState('all');
+  const [search, setSearch]             = useState('');
+  const [activeNav, setActiveNav]       = useState('candidates');
+  const [showInvite, setShowInvite]     = useState(false);
+  const [inviteEmail, setInviteEmail]   = useState('');
+  const [inviteMsg, setInviteMsg]       = useState('');
+  const [verifying, setVerifying]       = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
+  const [verifyInput, setVerifyInput]   = useState('');
 
-  useEffect(() => {
-    init();
-  }, []);
+  useEffect(() => { injectKF(); init(); }, []);
 
   const init = async () => {
     try {
       const me = await API.get('/api/auth/me');
       const email = me.data.candidate?.email || me.data.email;
-
-      // Look up employer by email
       const empRes = await API.get(`/api/employer/by-email/${encodeURIComponent(email)}`);
       const emp = empRes.data.employer;
       setEmployerId(emp.id);
-
-      // Load metrics + candidates in parallel
       const [mRes, cRes] = await Promise.all([
         API.get(`/api/employer/${emp.id}/metrics`),
         API.get(`/api/employer/${emp.id}/candidates`),
@@ -90,7 +73,6 @@ export default function EmployerPortal() {
       setMetrics(mRes.data);
       setCandidates(cRes.data.candidates || []);
     } catch (err) {
-      // Not an employer — redirect to dashboard
       if (err.response?.status === 404) {
         alert('No employer account found. Contact support to set up your team account.');
         navigate('/dashboard');
@@ -108,27 +90,14 @@ export default function EmployerPortal() {
       if (s) params.set('search', s);
       const res = await API.get(`/api/employer/${employerId}/candidates?${params}`);
       setCandidates(res.data.candidates || []);
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
-  const handleFilter = (f) => {
-    setFilter(f);
-    loadCandidates(f, search);
-  };
-
-  const handleSearch = (val) => {
-    setSearch(val);
-    loadCandidates(filter, val);
-  };
+  const handleFilter = (f) => { setFilter(f); loadCandidates(f, search); };
+  const handleSearch = (val) => { setSearch(val); loadCandidates(filter, val); };
 
   const handleExport = () => {
-    const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
-    window.open(
-      `https://atac-backend-production.up.railway.app/api/employer/${employerId}/export/csv`,
-      '_blank'
-    );
+    window.open(`https://atac-backend-production.up.railway.app/api/employer/${employerId}/export/csv`, '_blank');
   };
 
   const handleInvite = async () => {
@@ -148,11 +117,16 @@ export default function EmployerPortal() {
     try {
       const res = await API.get(`/api/credentials/verify/${credId}`);
       setVerifyResult(res.data);
-    } catch (err) {
+    } catch {
       setVerifyResult({ error: 'Verification failed' });
     } finally {
       setVerifying(null);
     }
+  };
+
+  const handleVerifyManual = async () => {
+    if (!verifyInput.trim()) return;
+    await handleVerify(verifyInput.trim());
   };
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
@@ -163,207 +137,302 @@ export default function EmployerPortal() {
     (c.credentialId || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const seatsUsed  = metrics?.seatsUsed || 0;
+  const seatsPurch = metrics?.seatsPurchased || 10;
+  const seatsPct   = Math.min(100, (seatsUsed / seatsPurch) * 100);
+
+  /* ── Loading ── */
   if (loading) return (
-    <div style={{ ...s.page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: MUTED, fontSize: 14 }}>Loading employer portal...</div>
+    <div style={{ minHeight: '100vh', background: BG, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: VAULT_BODY }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 16, color: GOLD, letterSpacing: '0.15em' }}>ATAC Global CX</div>
+        <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: 6 }}>Loading Portal…</div>
+      </div>
     </div>
   );
 
   return (
-    <div style={s.page}>
+    <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE }}>
 
-      {/* ── Top bar ── */}
-      <div style={s.topbar}>
+      {/* ── Topbar ── */}
+      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <div style={s.brand}>ATAC Global CX</div>
-          <div style={s.brandSub}>Employer & BPO Portal</div>
+          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 15, color: GOLD, letterSpacing: '0.1em' }}>ATAC Global CX</div>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 1 }}>Employer & BPO Portal</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 11, background: 'rgba(212,168,67,0.1)', border: `1px solid ${BORDER}`, borderRadius: 4, padding: '2px 8px', color: GOLD }}>TEAM PLAN</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ fontSize: 10, background: 'rgba(201,168,76,0.08)', border: `1px solid ${BORDER}`, borderRadius: 2, padding: '3px 10px', color: GOLD, letterSpacing: '0.1em' }}>
+            TEAM PLAN
+          </div>
           <div style={{ fontSize: 13, color: WHITE }}>{metrics?.companyName || 'Employer'}</div>
-          <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 5, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}>Sign Out</button>
+          <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '5px 12px', fontSize: 11, cursor: 'pointer', letterSpacing: '0.06em' }}>
+            Sign Out
+          </button>
         </div>
       </div>
 
-      <div style={s.layout}>
+      <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', minHeight: 'calc(100vh - 50px)' }}>
 
         {/* ── Sidebar ── */}
-        <div style={s.sidebar}>
-          <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: MUTED, padding: '0 16px', marginBottom: 6, marginTop: 10 }}>Management</div>
-          {[
-            { id: 'candidates', label: 'Candidates' },
-            { id: 'verify',     label: 'Verify Credential' },
-            { id: 'invite',     label: 'Invite Candidate' },
-          ].map(item => (
-            <div key={item.id} style={s.navItem(activeNav === item.id)} onClick={() => { setActiveNav(item.id); if (item.id === 'invite') setShowInvite(true); }}>
-              {item.label}
-            </div>
-          ))}
+        <div style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column' }}>
 
-          {/* Seats widget */}
-          <div style={{ marginTop: 'auto' }}>
-            <div style={s.seatsWidget}>
-              <div style={{ fontSize: 10, color: TEAL2, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Seats</div>
-              <div>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: WHITE }}>{metrics?.seatsUsed || 0}</span>
-                <span style={{ fontSize: 12, color: MUTED }}> / {metrics?.seatsPurchased || 10}</span>
+          <div style={{ padding: '18px 0 6px' }}>
+            <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', padding: '0 18px', marginBottom: 8 }}>Management</div>
+
+            {[
+              { id: 'candidates', label: 'Candidates' },
+              { id: 'verify',     label: 'Verify Credential' },
+              { id: 'invite',     label: 'Invite Candidate' },
+            ].map(item => {
+              const active = activeNav === item.id;
+              return (
+                <div key={item.id}
+                  className="nav-item"
+                  onClick={() => { setActiveNav(item.id); if (item.id === 'invite') setShowInvite(true); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '9px 18px', fontSize: 12,
+                    color: active ? GOLD : MUTED,
+                    cursor: 'pointer',
+                    borderLeft: `2px solid ${active ? GOLD : 'transparent'}`,
+                    background: active ? 'rgba(201,168,76,0.06)' : 'transparent',
+                    transition: 'all 0.15s',
+                  }}>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: active ? GOLD : 'transparent', border: `1px solid ${active ? GOLD : MUTED}`, flexShrink: 0 }} />
+                  {item.label}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Inline Verify panel if nav = verify */}
+          {activeNav === 'verify' && (
+            <div style={{ margin: '12px 14px', background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '14px' }}>
+              <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>Quick Verify</div>
+              <input
+                type="text"
+                placeholder="ATAC-C-2026-00001"
+                value={verifyInput}
+                onChange={e => setVerifyInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleVerifyManual()}
+                style={{ width: '100%', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '8px 10px', fontSize: 11, color: WHITE, fontFamily: VAULT_BODY, outline: 'none', marginBottom: 8, boxSizing: 'border-box' }}
+              />
+              <button onClick={handleVerifyManual} style={{ width: '100%', background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '8px', fontSize: 10, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                Verify
+              </button>
+            </div>
+          )}
+
+          {/* Seats widget — pinned to bottom */}
+          <div style={{ marginTop: 'auto', padding: '16px 14px' }}>
+            <div style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.18)', borderRadius: 3, padding: '14px' }}>
+              <div style={{ fontSize: 9, color: TEAL2, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 8 }}>Seat Allocation</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
+                <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: WHITE, fontWeight: 300 }}>{seatsUsed}</span>
+                <span style={{ fontSize: 12, color: MUTED }}>/ {seatsPurch}</span>
               </div>
-              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, marginTop: 7 }}>
-                <div style={{ height: 4, width: `${Math.min(100, ((metrics?.seatsUsed || 0) / (metrics?.seatsPurchased || 10)) * 100)}%`, background: TEAL, borderRadius: 2 }} />
+              <div style={{ height: 3, background: BORDER2, borderRadius: 2, marginBottom: 6 }}>
+                <div style={{ height: 3, width: `${seatsPct}%`, background: TEAL, borderRadius: 2, transition: 'width 0.6s' }} />
               </div>
-              <div style={{ fontSize: 10, color: MUTED, marginTop: 5 }}>{metrics?.seatsRemaining || 0} remaining</div>
+              <div style={{ fontSize: 10, color: MUTED }}>{metrics?.seatsRemaining || 0} seats remaining</div>
             </div>
           </div>
         </div>
 
         {/* ── Main content ── */}
-        <div style={s.main}>
+        <div style={{ background: BG, padding: '24px 28px', overflowY: 'auto' }}>
 
           {/* Metrics row */}
-          <div style={s.metricRow}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 24 }} className="vault-up">
             {[
-              { num: metrics?.total    || 0, lbl: 'Total Candidates' },
-              { num: metrics?.passed   || 0, lbl: 'Passed', color: TEAL2 },
-              { num: metrics?.failed   || 0, lbl: 'Failed', color: RED },
-              { num: metrics?.pending  || 0, lbl: 'Pending', color: AMBER },
-              { num: `${metrics?.avgScore || 0}%`, lbl: 'Avg Score' },
+              { num: metrics?.total   || 0, lbl: 'Total Candidates', color: GOLD },
+              { num: metrics?.passed  || 0, lbl: 'Passed',           color: TEAL2 },
+              { num: metrics?.failed  || 0, lbl: 'Failed',           color: RED },
+              { num: metrics?.pending || 0, lbl: 'Pending',          color: AMBER },
+              { num: `${metrics?.avgScore || 0}%`, lbl: 'Avg Score', color: GOLD },
             ].map((m, i) => (
-              <div key={i} style={s.metricCard}>
-                <div style={{ ...s.metricNum, color: m.color || GOLD }}>{m.num}</div>
-                <div style={s.metricLbl}>{m.lbl}</div>
+              <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '14px 16px', animationDelay: `${i * 50}ms` }} className="vault-up">
+                <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: m.color, fontWeight: 300, lineHeight: 1 }}>{m.num}</div>
+                <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 4 }}>{m.lbl}</div>
               </div>
             ))}
           </div>
 
           {/* Verify result banner */}
           {verifyResult && (
-            <div style={{ background: verifyResult.valid ? 'rgba(29,158,117,0.1)' : 'rgba(226,75,74,0.1)', border: `1px solid ${verifyResult.valid ? 'rgba(29,158,117,0.3)' : 'rgba(226,75,74,0.3)'}`, borderRadius: 8, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{
+              background: verifyResult.valid ? 'rgba(26,143,105,0.07)' : 'rgba(196,92,92,0.07)',
+              border: `1px solid ${verifyResult.valid ? 'rgba(26,143,105,0.25)' : 'rgba(196,92,92,0.25)'}`,
+              borderRadius: 3, padding: '12px 18px', marginBottom: 20,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: verifyResult.valid ? TEAL2 : RED, marginBottom: 2 }}>
-                  {verifyResult.valid ? '✓ Credential Verified — Valid' : '✗ Credential Invalid or Not Found'}
+                <div style={{ fontSize: 13, color: verifyResult.valid ? TEAL2 : RED, marginBottom: 3, fontFamily: VAULT_DISPLAY, fontWeight: 500 }}>
+                  {verifyResult.valid ? '✓  Credential Verified — Valid' : '✗  Credential Invalid or Not Found'}
                 </div>
                 {verifyResult.valid && (
                   <div style={{ fontSize: 11, color: MUTED }}>
-                    {verifyResult.candidateName} · {verifyResult.program} · Score: {verifyResult.score}% · Issued: {new Date(verifyResult.issuedAt).toLocaleDateString()} · Expires: {new Date(verifyResult.expiresAt).toLocaleDateString()}
+                    {verifyResult.candidateName} · {verifyResult.program} · Score: {verifyResult.score}%
+                    · Issued: {new Date(verifyResult.issuedAt).toLocaleDateString()}
+                    · Expires: {new Date(verifyResult.expiresAt).toLocaleDateString()}
                   </div>
                 )}
               </div>
-              <button onClick={() => setVerifyResult(null)} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 16 }}>✕</button>
+              <button onClick={() => setVerifyResult(null)} style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18 }}>✕</button>
             </div>
           )}
 
           {/* Page header */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 20, color: WHITE, marginBottom: 3 }}>Candidate Roster</div>
-              <div style={{ fontSize: 12, color: MUTED }}>{filteredCandidates.length} candidates · Ranked by score</div>
+              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 22, color: WHITE, fontWeight: 300 }}>Candidate Roster</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{filteredCandidates.length} candidates · Ranked by score</div>
             </div>
-            <button style={s.exportBtn} onClick={handleExport}>Export CSV</button>
+            <button onClick={handleExport} style={{
+              background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '9px 18px',
+              fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer',
+            }}>
+              Export CSV
+            </button>
           </div>
 
           {/* Toolbar */}
-          <div style={s.toolbar}>
-            <div style={s.searchBox}>
-              <span style={{ color: MUTED, fontSize: 12 }}>🔍</span>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '8px 12px', flex: 1, minWidth: 200 }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <circle cx="5" cy="5" r="3.5" stroke={MUTED} strokeWidth="1.2" />
+                <line x1="7.5" y1="7.5" x2="11" y2="11" stroke={MUTED} strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
               <input
-                style={s.searchInput}
-                placeholder="Search by name, email, or credential ID..."
+                style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: WHITE, fontFamily: VAULT_BODY, width: '100%' }}
+                placeholder="Search by name, email, credential ID…"
                 value={search}
                 onChange={e => handleSearch(e.target.value)}
               />
             </div>
-            {['all','pass','fail','pending'].map(f => (
-              <button key={f} style={s.filterBtn(filter === f)} onClick={() => handleFilter(f)}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
+            {['all','pass','fail','pending'].map(f => {
+              const active = filter === f;
+              return (
+                <button key={f} onClick={() => handleFilter(f)} style={{
+                  background: active ? 'rgba(201,168,76,0.1)' : FAINT,
+                  border: `1px solid ${active ? BORDER : BORDER2}`,
+                  borderRadius: 2, padding: '8px 14px', fontSize: 11,
+                  color: active ? GOLD : MUTED, cursor: 'pointer',
+                  letterSpacing: '0.08em', textTransform: 'capitalize',
+                  transition: 'all 0.15s',
+                }}>
+                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              );
+            })}
           </div>
 
           {/* Table */}
-          <div style={s.tableWrap}>
+          <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>
-                  {['Candidate','Score','Status','Dimensions','Credential','Actions'].map(h => (
-                    <th key={h} style={s.th}>{h}</th>
+                <tr style={{ background: 'rgba(238,233,223,0.03)' }}>
+                  {['Candidate', 'Score', 'Status', 'Dimensions', 'Credential', 'Actions'].map(h => (
+                    <th key={h} style={{ padding: '10px 16px', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.14em', color: MUTED, fontWeight: 500, textAlign: 'left', whiteSpace: 'nowrap' }}>
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredCandidates.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ ...s.td, textAlign: 'center', color: MUTED, padding: '32px' }}>
+                    <td colSpan={6} style={{ padding: '36px', textAlign: 'center', fontSize: 13, color: MUTED }}>
                       No candidates found.
                     </td>
                   </tr>
-                ) : filteredCandidates.map((c, i) => (
-                  <tr key={c.id} style={{ borderBottom: `1px solid rgba(245,243,238,0.04)` }}>
+                ) : filteredCandidates.map((c) => (
+                  <tr key={c.id} className="row-hover" style={{ borderTop: `1px solid ${BORDER2}`, transition: 'background 0.12s' }}>
                     {/* Candidate */}
-                    <td style={s.td}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', background: `rgba(212,168,67,0.15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: GOLD, flexShrink: 0 }}>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(201,168,76,0.12)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: GOLD, flexShrink: 0, fontFamily: VAULT_DISPLAY }}>
                           {c.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 500 }}>{c.name}</div>
+                          <div style={{ fontSize: 13, color: WHITE }}>{c.name}</div>
                           <div style={{ fontSize: 10, color: MUTED }}>{c.email}</div>
                         </div>
                       </div>
                     </td>
                     {/* Score */}
-                    <td style={s.td}>
+                    <td style={{ padding: '12px 16px' }}>
                       {c.score != null ? (
-                        <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 4, fontWeight: 500, background: c.score >= 70 ? 'rgba(29,158,117,0.1)' : c.score >= 50 ? 'rgba(239,159,39,0.1)' : 'rgba(226,75,74,0.1)', color: c.score >= 70 ? TEAL2 : c.score >= 50 ? AMBER : RED }}>
+                        <span style={{
+                          fontFamily: VAULT_DISPLAY, fontSize: 16, fontWeight: 400,
+                          color: c.score >= 70 ? TEAL2 : c.score >= 50 ? AMBER : RED,
+                        }}>
                           {c.score}%
                         </span>
-                      ) : <span style={{ color: MUTED }}>—</span>}
+                      ) : <span style={{ color: MUTED, fontSize: 12 }}>—</span>}
                     </td>
                     {/* Status */}
-                    <td style={s.td}>
-                      <span style={s.badge(c.status)}>
-                        {c.status === 'pass' ? 'Passed' : c.status === 'fail' ? 'Failed' : 'Pending'}
-                      </span>
+                    <td style={{ padding: '12px 16px' }}>
+                      {(() => {
+                        const map = {
+                          pass:    { bg: 'rgba(26,143,105,0.1)',  border: 'rgba(26,143,105,0.25)',  color: TEAL2 },
+                          fail:    { bg: 'rgba(196,92,92,0.1)',   border: 'rgba(196,92,92,0.25)',   color: RED   },
+                          pending: { bg: 'rgba(196,138,42,0.1)',  border: 'rgba(196,138,42,0.25)',  color: AMBER },
+                        };
+                        const st = map[c.status] || map.pending;
+                        return (
+                          <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 1, background: st.bg, border: `1px solid ${st.border}`, color: st.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                            {c.status === 'pass' ? 'Passed' : c.status === 'fail' ? 'Failed' : 'Pending'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     {/* Dimension mini-bars */}
-                    <td style={s.td}>
+                    <td style={{ padding: '12px 16px' }}>
                       {c.dimensions ? (
-                        <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                          {DIM_KEYS.map((key, ki) => (
-                            <div key={key} title={`${key}: ${c.dimensions[key] || 0}%`} style={{ height: 4, width: 14, borderRadius: 1, background: DIM_COLORS[ki], opacity: (c.dimensions[key] || 0) / 100 + 0.2 }} />
-                          ))}
+                        <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end' }}>
+                          {DIM_KEYS.map((key, ki) => {
+                            const pct = c.dimensions[key] || 0;
+                            return (
+                              <div key={key} title={`${DIM_LABELS[ki]}: ${pct}%`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                <div style={{ width: 6, height: Math.max(4, (pct / 100) * 20), background: DIM_COLORS[ki], borderRadius: 1, opacity: 0.7 + (pct / 100) * 0.3 }} />
+                              </div>
+                            );
+                          })}
                         </div>
-                      ) : <span style={{ color: MUTED }}>—</span>}
+                      ) : <span style={{ color: MUTED, fontSize: 12 }}>—</span>}
                     </td>
                     {/* Credential */}
-                    <td style={s.td}>
+                    <td style={{ padding: '12px 16px' }}>
                       {c.credentialId ? (
                         <div>
-                          <div style={{ fontSize: 11, color: WHITE }}>{c.credentialId}</div>
-                          <div style={{ fontSize: 10, color: c.onChain ? TEAL2 : MUTED }}>
-                            {c.onChain ? '● On-chain' : '○ Pending'}
+                          <div style={{ fontSize: 11, color: WHITE, fontFamily: 'monospace' }}>{c.credentialId}</div>
+                          <div style={{ fontSize: 10, marginTop: 2, color: c.onChain ? TEAL2 : MUTED }}>
+                            {c.onChain ? '⬡ On-chain' : '○ Pending'}
                           </div>
                         </div>
-                      ) : <span style={{ color: MUTED }}>Not issued</span>}
+                      ) : <span style={{ fontSize: 11, color: MUTED }}>Not issued</span>}
                     </td>
                     {/* Actions */}
-                    <td style={s.td}>
+                    <td style={{ padding: '12px 16px' }}>
                       <div style={{ display: 'flex', gap: 6 }}>
                         {c.credentialId && (
                           <button
-                            style={s.verifyBtn}
+                            className="btn-hover"
                             onClick={() => handleVerify(c.credentialId)}
                             disabled={verifying === c.credentialId}
-                          >
-                            {verifying === c.credentialId ? '...' : 'Verify'}
+                            style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.22)', borderRadius: 2, padding: '5px 10px', cursor: 'pointer', fontSize: 10, color: TEAL2, transition: 'all 0.15s', letterSpacing: '0.06em' }}>
+                            {verifying === c.credentialId ? '…' : 'Verify'}
                           </button>
                         )}
-                        <button
-                          style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 5, padding: '5px 8px', cursor: 'pointer', fontSize: 10, color: MUTED }}
-                          onClick={() => window.open(`https://atacglobalcx.com/verify/${c.credentialId}`, '_blank')}
-                          disabled={!c.credentialId}
-                        >
-                          View
-                        </button>
+                        {c.credentialId && (
+                          <button
+                            className="btn-hover"
+                            onClick={() => window.open(`https://atacglobalcx.com/verify/${c.credentialId}`, '_blank')}
+                            style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '5px 10px', cursor: 'pointer', fontSize: 10, color: MUTED, transition: 'all 0.15s' }}>
+                            View
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -377,27 +446,31 @@ export default function EmployerPortal() {
 
       {/* ── Invite Modal ── */}
       {showInvite && (
-        <div style={s.inviteModal} onClick={() => setShowInvite(false)}>
-          <div style={s.modalCard} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: WHITE, marginBottom: 6 }}>Invite Candidate</div>
-            <div style={{ fontSize: 12, color: MUTED, marginBottom: 20 }}>Enter the candidate's email address to link them to your account.</div>
+        <div onClick={() => setShowInvite(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: BG3, border: `1px solid ${BORDER}`, borderRadius: 3, padding: '32px', width: 420 }} className="vault-up">
+            <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 22, color: WHITE, fontWeight: 300, marginBottom: 6 }}>Invite Candidate</div>
+            <div style={{ width: 32, height: 1, background: GOLD, opacity: 0.3, marginBottom: 20 }} />
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 20, lineHeight: 1.7 }}>
+              Enter the candidate's email address to link them to your team account.
+            </div>
             <input
-              style={s.input}
               type="email"
               placeholder="candidate@email.com"
               value={inviteEmail}
               onChange={e => setInviteEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleInvite()}
+              style={{ width: '100%', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '11px 14px', fontSize: 13, color: WHITE, fontFamily: VAULT_BODY, outline: 'none', marginBottom: 14, boxSizing: 'border-box' }}
             />
             {inviteMsg && (
-              <div style={{ fontSize: 12, color: inviteMsg.includes('success') || inviteMsg.includes('invited') ? TEAL2 : AMBER, marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: inviteMsg.includes('success') || inviteMsg.includes('invited') ? TEAL2 : AMBER, marginBottom: 14 }}>
                 {inviteMsg}
               </div>
             )}
-            <div>
-              <button style={s.btnGold} onClick={handleInvite} disabled={!inviteEmail}>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleInvite} disabled={!inviteEmail} style={{ background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '11px 22px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.14em', textTransform: 'uppercase', opacity: inviteEmail ? 1 : 0.5 }}>
                 Send Invite
               </button>
-              <button style={s.btnOut} onClick={() => { setShowInvite(false); setInviteMsg(''); }}>
+              <button onClick={() => { setShowInvite(false); setInviteMsg(''); }} style={{ background: 'transparent', color: WHITE, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px 22px', fontSize: 11, cursor: 'pointer' }}>
                 Cancel
               </button>
             </div>

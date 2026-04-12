@@ -1,308 +1,549 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 
-const s = {
-  page: { minHeight: '100vh', background: '#0D1B2E', fontFamily: 'DM Sans, sans-serif', color: '#F5F3EE' },
-  header: { background: '#122238', borderBottom: '1px solid rgba(212,168,67,0.18)', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { fontFamily: 'Georgia, serif', fontSize: 15, color: '#D4A843' },
-  timer: (urgent) => ({ fontFamily: 'Georgia, serif', fontSize: 22, color: urgent ? '#E24B4A' : '#D4A843' }),
-  progress: { height: 3, background: 'rgba(255,255,255,0.08)' },
-  fill: (pct) => ({ height: 3, width: pct + '%', background: '#D4A843', transition: 'width 0.4s ease' }),
-  body: { maxWidth: 680, margin: '0 auto', padding: '40px 24px' },
-  eyebrow: { fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#D4A843', marginBottom: 12 },
-  question: { fontFamily: 'Georgia, serif', fontSize: 22, lineHeight: 1.5, marginBottom: 32, color: '#F5F3EE' },
-  option: (selected) => ({ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 18px', background: selected ? 'rgba(212,168,67,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${selected ? '#D4A843' : 'rgba(245,243,238,0.1)'}`, borderRadius: 8, cursor: 'pointer', marginBottom: 10, fontSize: 14, lineHeight: 1.5, color: '#F5F3EE', transition: 'all 0.18s' }),
-  letter: { width: 24, height: 24, borderRadius: '50%', border: '1px solid rgba(245,243,238,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0, marginTop: 1 },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32 },
-  btnGold: { background: '#D4A843', color: '#0D1B2E', border: 'none', borderRadius: 6, padding: '12px 28px', fontSize: 13, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.05em', textTransform: 'uppercase' },
-  btnOut: { background: 'transparent', color: '#F5F3EE', border: '1px solid rgba(245,243,238,0.2)', borderRadius: 6, padding: '10px 20px', fontSize: 13, cursor: 'pointer' },
-  counter: { fontSize: 12, color: 'rgba(245,243,238,0.5)' },
-  startCard: { maxWidth: 560, margin: '80px auto', background: '#122238', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 12, padding: '40px 36px', textAlign: 'center' },
-  startTitle: { fontFamily: 'Georgia, serif', fontSize: 28, color: '#F5F3EE', marginBottom: 12 },
-  startSub: { fontSize: 14, color: 'rgba(245,243,238,0.55)', lineHeight: 1.7, marginBottom: 28 },
-  statsRow: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 28 },
-  stat: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(245,243,238,0.1)', borderRadius: 8, padding: '14px 10px', textAlign: 'center' },
-  statNum: { fontFamily: 'Georgia, serif', fontSize: 24, color: '#D4A843' },
-  statLbl: { fontSize: 10, color: 'rgba(245,243,238,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 },
+/* ── Vault Design Tokens ─────────────────────────────────── */
+const BG    = '#080B12';
+const BG1   = '#0C1018';
+const BG3   = '#141B26';
+const GOLD  = '#C9A84C';
+const TEAL  = '#1A8F69';
+const WHITE = '#EEE9DF';
+const MUTED = 'rgba(238,233,223,0.45)';
+const FAINT = 'rgba(238,233,223,0.04)';
+const BORDER  = 'rgba(201,168,76,0.15)';
+const BORDER2 = 'rgba(238,233,223,0.07)';
+const RED   = '#C45C5C';
+const AMBER = '#C48A2A';
+
+const DOMAIN_META = {
+  professionalism: { label: 'Professionalism',    color: GOLD,              abbr: 'PROF' },
+  communication:   { label: 'Communication',       color: '#5BA8D4',         abbr: 'COMM' },
+  cx_operations:   { label: 'CX Operations',       color: '#5DCAA5',         abbr: 'OPER' },
+  technology:      { label: 'Technology',          color: '#8A7DD4',         abbr: 'TECH' },
+  health_safety:   { label: 'Health & Safety',     color: '#C45C5C',         abbr: 'H&S'  },
 };
 
-const DIM_COLORS = { professionalism: '#5DCAA5', communication: '#378ADD', cx_operations: '#D4A843', technology: '#D4537E', health_safety: '#7F77DD', remote_work: '#26B589' };
-const DIM_LABELS = { professionalism: 'Professionalism', communication: 'Communication', cx_operations: 'CX Operations', technology: 'Technology', health_safety: 'Health & Safety', remote_work: 'Remote Work Setup' };
-const LETTERS = ['A', 'B', 'C', 'D'];
+const VAULT_FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
+const VAULT_FONT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
+/* ── Keyframe injection ─────────────────────────────────── */
+const injectKeyframes = () => {
+  if (document.getElementById('vault-kf')) return;
+  const style = document.createElement('style');
+  style.id = 'vault-kf';
+  style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Syne:wght@400;500;600;700&display=swap');
+    @keyframes vault-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes vault-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes vault-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    @keyframes progress-fill { from { width: 0; } to { width: var(--target-w); } }
+    @keyframes tick { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+    .vault-up   { animation: vault-up 0.5s ease both; }
+    .vault-in   { animation: vault-in 0.4s ease both; }
+    .opt-hover:hover { border-color: ${BORDER} !important; background: rgba(201,168,76,0.05) !important; cursor: pointer; }
+    .opt-hover:hover .opt-letter { color: ${GOLD} !important; border-color: rgba(201,168,76,0.4) !important; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius:2px; }
+  `;
+  document.head.appendChild(style);
+};
+
+/* ── Timer display ─────────────────────────────────────── */
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+/* ── Main Component ─────────────────────────────────────── */
 export default function Assessment() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const justPaid = new URLSearchParams(location.search).get('payment') === 'success';
-  const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
-  const [phase, setPhase] = useState('start');
-  const [sessionId, setSessionId] = useState(null);
-  const [assessmentId, setAssessmentId] = useState(null);
-  const [currentQ, setCurrentQ] = useState(1);
-  const [question, setQuestion] = useState(null);
-  const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState({});
-  const [timeLeft, setTimeLeft] = useState(1200);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
 
-  const startAssessment = async () => {
-    setLoading(true);
+  // Phase: 'loading' | 'locked' | 'intro' | 'active' | 'submitted' | 'result'
+  const [phase, setPhase]           = useState('loading');
+  const [questions, setQuestions]   = useState([]);
+  const [current, setCurrent]       = useState(0);
+  const [answers, setAnswers]       = useState({});
+  const [flagged, setFlagged]       = useState(new Set());
+  const [timeLeft, setTimeLeft]     = useState(60 * 40); // 40 min
+  const [result, setResult]         = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]           = useState('');
+  const [animKey, setAnimKey]       = useState(0);
+  const timerRef = useRef(null);
+
+  useEffect(() => { injectKeyframes(); checkAccess(); }, []);
+
+  const checkAccess = async () => {
     try {
-      const meRes = await API.get('/api/auth/me');
-      const candidateData = meRes.data.candidate || {};
-
-      if (!candidateData.payment_verified) {
-        alert('You must complete payment before starting the assessment.');
-        navigate('/payment');
-        return;
-      }
-
-      const tier        = candidateData.payment_tier || 'standard';
-      const candidateId = candidateData.id || candidate.id;
-
-      const res = await API.post('/api/assessment/start', {
-        candidateId,
-        program: 'CRSA',
-        tier
-      });
-
-      if (!res.data || !res.data.sessionId) {
-        throw new Error('Invalid session response from server');
-      }
-
-      setSessionId(res.data.sessionId);
-      setAssessmentId(res.data.assessmentId);
-      setPhase('assessment');
-
-      localStorage.setItem('atac_session',    res.data.sessionId);
-      localStorage.setItem('atac_assessment', res.data.assessmentId);
-
-    } catch (err) {
-      console.error('Start assessment error:', err);
-      alert(err?.response?.data?.error || err?.message || 'Failed to start assessment. Please try again.');
-      if (err?.response?.status === 402) navigate('/payment');
-    } finally {
-      setLoading(false);
+      const me = await API.get('/api/auth/me');
+      const cand = me.data.candidate || me.data;
+      if (!cand.hasPaid) { setPhase('locked'); return; }
+      if (cand.assessmentCompleted) { setPhase('result'); fetchResult(); return; }
+      const qRes = await API.get('/api/assessment/questions');
+      setQuestions(qRes.data.questions || []);
+      setPhase('intro');
+    } catch {
+      navigate('/login');
     }
   };
 
-  const loadQuestion = useCallback(async (qNum) => {
-    if (!sessionId) return;
+  const fetchResult = async () => {
     try {
-      const res = await API.get(`/api/assessment/question/${sessionId}/${qNum}`);
-      setQuestion(res.data);
-      setSelected(answered[qNum] ?? null);
-      setTimeLeft(res.data.timeRemaining ?? res.data.secondsLeft ?? timeLeft);
+      const res = await API.get('/api/assessment/result');
+      setResult(res.data);
     } catch (err) {
-      if (err.response?.data?.autoSubmit) submitAssessment();
+      console.error(err);
     }
-  }, [sessionId, answered]);
+  };
 
-  useEffect(() => {
-    if (phase === 'assessment' && sessionId) loadQuestion(currentQ);
-  }, [phase, sessionId, currentQ]);
-
-  useEffect(() => {
-    if (phase !== 'assessment') return;
-    const interval = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) {
-          clearInterval(interval);
-          setTimeout(() => submitAssessment(), 0);
-          return 0;
-        }
+  const startAssessment = () => {
+    setPhase('active');
+    timerRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) { clearInterval(timerRef.current); handleSubmit(); return 0; }
         return t - 1;
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [phase]);
-
-  const selectOption = async (idx) => {
-    setSelected(idx);
-    setAnswered(prev => ({ ...prev, [currentQ]: idx }));
-    try {
-      await API.post('/api/assessment/answer', { sessionId, questionNum: currentQ, selectedOption: idx });
-    } catch (err) { console.error('Answer save error', err); }
   };
 
-  const submitAssessment = async () => {
-    setPhase('submitting');
+  const selectAnswer = (qId, optIdx) => {
+    setAnswers(prev => ({ ...prev, [qId]: optIdx }));
+  };
+
+  const goTo = (idx) => {
+    setCurrent(idx);
+    setAnimKey(k => k + 1);
+  };
+
+  const toggleFlag = (qId) => {
+    setFlagged(prev => {
+      const n = new Set(prev);
+      n.has(qId) ? n.delete(qId) : n.add(qId);
+      return n;
+    });
+  };
+
+  const handleSubmit = useCallback(async () => {
+    if (submitting) return;
+    clearInterval(timerRef.current);
+    setSubmitting(true);
     try {
-      const sid = sessionId || localStorage.getItem('atac_session');
-      const res = await API.post('/api/assessment/submit', { sessionId: sid });
-      // Store result and show results screen — never skip directly to simulator
-      localStorage.setItem('atac_result', JSON.stringify(res.data));
+      const payload = questions.map(q => ({ questionId: q.id, selectedOption: answers[q.id] ?? null }));
+      const res = await API.post('/api/assessment/submit', { answers: payload });
       setResult(res.data);
-      setPhase('results');
+      setPhase('result');
     } catch (err) {
-      alert('Submission error. Please contact support.');
-      setPhase('assessment');
+      setError(err.response?.data?.error || 'Submission failed. Please try again.');
+      setSubmitting(false);
     }
-  };
+  }, [submitting, questions, answers]);
 
-  const mins = Math.floor(timeLeft / 60);
-  const secs = timeLeft % 60;
-  const urgent = timeLeft < 120;
-  const pct = ((currentQ - 1) / 40) * 100;
-  const answeredCount = Object.keys(answered).length;
+  const answered   = Object.keys(answers).length;
+  const progress   = questions.length ? (answered / questions.length) * 100 : 0;
+  const q          = questions[current] || null;
+  const isLowTime  = timeLeft < 300;
+  const domainList = Object.keys(DOMAIN_META);
 
-  // ── START SCREEN ────────────────────────────────────────────────────────────
-  if (phase === 'start') return (
-    <div style={s.page}>
-      {justPaid && (
-  <div style={{ background: 'rgba(29,158,117,0.12)', border: '1px solid rgba(29,158,117,0.3)', color: '#26B589', padding: '12px 24px', textAlign: 'center', fontSize: 13 }}>
-    ✓ Payment confirmed — your assessment is unlocked. Click Begin Assessment to start.
-  </div>
-)}
-      <div style={{ ...s.startCard }}>
-        <div style={{ fontSize: 11, color: '#D4A843', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Remote CX Readiness Assessment™</div>
-        <div style={s.startTitle}>Certified Remote Service Agent</div>
-        <div style={s.startSub}>40 questions across 5 CX domains. 20-minute time limit. Score 70% or higher to pass and proceed to the ATAC Call Readiness Simulator™.</div>
-        <div style={s.statsRow}>
-          <div style={s.stat}><div style={s.statNum}>40</div><div style={s.statLbl}>Questions</div></div>
-          <div style={s.stat}><div style={s.statNum}>20</div><div style={s.statLbl}>Minutes</div></div>
-          <div style={s.stat}><div style={s.statNum}>70%</div><div style={s.statLbl}>Pass Mark</div></div>
-        </div>
-        <button style={s.btnGold} onClick={startAssessment} disabled={loading}>
-          {loading ? 'Starting...' : 'Begin Assessment'}
-        </button>
-      </div>
-    </div>
-  );
+  const domainProgress = domainList.map(d => {
+    const qs = questions.filter(x => x.domain === d);
+    const ans = qs.filter(x => answers[x.id] !== undefined).length;
+    return { key: d, total: qs.length, answered: ans, ...DOMAIN_META[d] };
+  });
 
-  // ── SUBMITTING SCREEN ────────────────────────────────────────────────────────
-  if (phase === 'submitting') return (
-    <div style={{ ...s.page, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  /* ────────────────────────────────────── RENDER PHASES */
+  const base = { minHeight: '100vh', background: BG, fontFamily: VAULT_FONT_BODY, color: WHITE };
+
+  /* LOADING */
+  if (phase === 'loading') return (
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Georgia, serif', fontSize: 24, color: '#D4A843', marginBottom: 12 }}>Scoring your assessment...</div>
-        <div style={{ fontSize: 14, color: 'rgba(245,243,238,0.5)' }}>Please wait. Do not close this window.</div>
+        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>ATAC Global CX</div>
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessment…</div>
       </div>
     </div>
   );
 
-  // ── RESULTS SCREEN ───────────────────────────────────────────────────────────
-  if (phase === 'results' && result) {
-    const passed     = result.passed;
-    const score      = result.score ?? 0;
-    const outOf      = result.outOf ?? 40;
-    const percentage = result.percentage ?? Math.round((score / outOf) * 100);
-    const dimensions = result.dimensions || {};
-    const passColor  = passed ? '#1D9E75' : '#E24B4A';
-    const passColor2 = passed ? '#26B589' : '#E24B4A';
-
-    return (
-      <div style={s.page}>
-        <div style={{ ...s.header }}>
-          <div style={s.brand}>ATAC Global CX — Assessment Results</div>
-          <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.5)' }}>CRSA · {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+  /* LOCKED */
+  if (phase === 'locked') return (
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: 420, padding: 40 }} className="vault-up">
+        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 28 }}>ATAC Global CX</div>
+        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, lineHeight: 1.2, marginBottom: 16 }}>Assessment Access Required</div>
+        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 32 }}>
+          Complete your purchase to unlock the Remote CX Readiness Assessment and begin your certification journey.
         </div>
-        <div style={{ maxWidth: 620, margin: '0 auto', padding: '40px 24px' }}>
+        <button onClick={() => navigate('/')} style={btnGold}>View Pricing</button>
+        <div style={{ marginTop: 12 }}>
+          <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', borderBottom: '1px solid rgba(238,233,223,0.2)', paddingBottom: 1 }}>Return to Dashboard</span>
+        </div>
+      </div>
+    </div>
+  );
 
-          {/* Score circle */}
-          <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <div style={{ width: 110, height: 110, borderRadius: '50%', border: `4px solid ${passColor}`, margin: '0 auto 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ fontFamily: 'Georgia, serif', fontSize: 34, color: passColor2, lineHeight: 1 }}>{percentage}%</div>
-              <div style={{ fontSize: 10, color: 'rgba(245,243,238,0.5)', marginTop: 2 }}>{score}/{outOf}</div>
-            </div>
-            <div style={{ display: 'inline-block', padding: '5px 18px', borderRadius: 20, fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', background: passed ? 'rgba(29,158,117,0.12)' : 'rgba(226,75,74,0.12)', border: `1px solid ${passed ? 'rgba(29,158,117,0.35)' : 'rgba(226,75,74,0.35)'}`, color: passColor2, marginBottom: 10 }}>
-              {passed ? '✓ Assessment Passed' : '✗ Not Passed — Retake Required'}
-            </div>
-            <div style={{ fontSize: 13, color: 'rgba(245,243,238,0.5)', marginTop: 6 }}>
-              {passed
-                ? 'Well done. You qualify to proceed to the ATAC Call Readiness Simulator™.'
-                : `Pass threshold is 70% (28/40). You scored ${score}/40. Purchase a retake to try again.`}
-            </div>
+  /* INTRO */
+  if (phase === 'intro') return (
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ maxWidth: 640, width: '100%' }} className="vault-up">
+
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: 44 }}>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 12, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>Remote CX Readiness</div>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 42, fontWeight: 300, lineHeight: 1.1, marginBottom: 12 }}>
+            Certification Assessment
           </div>
+          <div style={{ width: 40, height: 1, background: GOLD, margin: '0 auto 20px', opacity: 0.4 }} />
+          <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.8, maxWidth: 480, margin: '0 auto' }}>
+            40 professional questions across 5 CX competency domains. Your results determine your blockchain-verified credential.
+          </div>
+        </div>
 
-          {/* Dimension breakdown */}
-          <div style={{ background: '#122238', border: '1px solid rgba(245,243,238,0.09)', borderRadius: 10, padding: '20px 24px', marginBottom: 24 }}>
-            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#D4A843', marginBottom: 16 }}>Performance by Dimension</div>
-            {Object.entries(dimensions).map(([key, val]) => (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.55)', width: 170, flexShrink: 0 }}>{DIM_LABELS[key] || key}</div>
-                <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ height: 5, width: val + '%', background: DIM_COLORS[key] || '#D4A843', borderRadius: 3, transition: 'width 0.6s ease' }}></div>
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 32 }}>
+          {[
+            { val: '40', lbl: 'Questions' },
+            { val: '40', lbl: 'Minutes' },
+            { val: '70%', lbl: 'Pass Threshold' },
+          ].map((s, i) => (
+            <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '18px 0', textAlign: 'center', animationDelay: `${i * 60}ms` }} className="vault-up">
+              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: GOLD, fontWeight: 300 }}>{s.val}</div>
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{s.lbl}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Domain breakdown */}
+        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '20px 24px', marginBottom: 28 }}>
+          <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>Assessment Domains</div>
+          {Object.entries(DOMAIN_META).map(([key, meta], i) => {
+            const qs = questions.filter(x => x.domain === key).length;
+            return (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 4 ? 10 : 0, marginBottom: i < 4 ? 10 : 0, borderBottom: i < 4 ? `1px solid ${BORDER2}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 2, height: 14, background: meta.color, borderRadius: 1, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: WHITE }}>{meta.label}</span>
                 </div>
-                <div style={{ fontSize: 12, color: '#F5F3EE', width: 36, textAlign: 'right' }}>{val}%</div>
+                <span style={{ fontSize: 11, color: MUTED }}>{qs} questions</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Instructions */}
+        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '16px 24px', marginBottom: 32, fontSize: 12, color: MUTED, lineHeight: 1.8 }}>
+          <div style={{ color: WHITE, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>Before You Begin</div>
+          {['The timer starts immediately when you click Begin.', 'You may navigate between questions freely.', 'Flag questions to revisit before final submission.', 'All 40 questions must be answered before submitting.', 'Your credential is issued immediately upon passing.'].map((t, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+              <span style={{ color: GOLD, flexShrink: 0 }}>—</span>
+              <span>{t}</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={startAssessment} style={{ ...btnGold, width: '100%', padding: '16px', fontSize: 13, letterSpacing: '0.18em' }}>
+          BEGIN ASSESSMENT
+        </button>
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <span onClick={() => navigate('/dashboard')} style={{ fontSize: 11, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ACTIVE */
+  if (phase === 'active' && q) return (
+    <div style={{ ...base, display: 'grid', gridTemplateColumns: '240px 1fr', minHeight: '100vh' }}>
+
+      {/* ── Sidebar ── */}
+      <div style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+
+        {/* Branding */}
+        <div style={{ padding: '20px 18px 14px', borderBottom: `1px solid ${BORDER2}` }}>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.12em' }}>ATAC Global CX</div>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 2 }}>Readiness Assessment</div>
+        </div>
+
+        {/* Timer */}
+        <div style={{ padding: '16px 18px', borderBottom: `1px solid ${BORDER2}` }}>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Time Remaining</div>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: isLowTime ? RED : GOLD, fontWeight: 300, animation: isLowTime ? 'tick 1s infinite' : 'none' }}>
+            {formatTime(timeLeft)}
+          </div>
+          {isLowTime && <div style={{ fontSize: 10, color: RED, marginTop: 4, letterSpacing: '0.1em' }}>TIME RUNNING LOW</div>}
+        </div>
+
+        {/* Progress */}
+        <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER2}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Progress</span>
+            <span style={{ fontSize: 10, color: GOLD }}>{answered}/40</span>
+          </div>
+          <div style={{ height: 2, background: BORDER2, borderRadius: 1 }}>
+            <div style={{ height: 2, width: `${progress}%`, background: GOLD, borderRadius: 1, transition: 'width 0.3s ease' }} />
+          </div>
+        </div>
+
+        {/* Domain progress */}
+        <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER2}` }}>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>Domains</div>
+          {domainProgress.map(d => (
+            <div key={d.key} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, color: d.answered === d.total ? d.color : MUTED }}>{d.abbr}</span>
+                <span style={{ fontSize: 10, color: MUTED }}>{d.answered}/{d.total}</span>
+              </div>
+              <div style={{ height: 2, background: BORDER2, borderRadius: 1 }}>
+                <div style={{ height: 2, width: `${d.total ? (d.answered / d.total) * 100 : 0}%`, background: d.color, borderRadius: 1, transition: 'width 0.3s' }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Q Navigator */}
+        <div style={{ padding: '14px 18px', flex: 1 }}>
+          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>Questions</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 4 }}>
+            {questions.map((q2, i) => {
+              const isCurr  = i === current;
+              const isAns   = answers[q2.id] !== undefined;
+              const isFlag  = flagged.has(q2.id);
+              let bg = FAINT, border = BORDER2, color = MUTED;
+              if (isCurr)  { bg = 'rgba(201,168,76,0.15)'; border = BORDER; color = GOLD; }
+              else if (isFlag) { bg = 'rgba(196,92,92,0.1)'; border = 'rgba(196,92,92,0.3)'; color = RED; }
+              else if (isAns) { bg = 'rgba(26,143,105,0.1)'; border = 'rgba(26,143,105,0.3)'; color = TEAL; }
+              return (
+                <div key={q2.id} onClick={() => goTo(i)}
+                  style={{ height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, background: bg, border: `1px solid ${border}`, color, borderRadius: 2, cursor: 'pointer', transition: 'all 0.15s' }}>
+                  {i + 1}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[{ c: TEAL, l: 'Answered' }, { c: GOLD, l: 'Current' }, { c: RED, l: 'Flagged' }].map(leg => (
+              <div key={leg.l} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div style={{ width: 6, height: 6, borderRadius: 1, background: leg.c }} />
+                <span style={{ fontSize: 9, color: MUTED }}>{leg.l}</span>
               </div>
             ))}
           </div>
+        </div>
 
-          {/* Score summary stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 28 }}>
-            <div style={s.stat}><div style={s.statNum}>{score}</div><div style={s.statLbl}>Correct</div></div>
-            <div style={s.stat}><div style={s.statNum}>{percentage}%</div><div style={s.statLbl}>Score</div></div>
-            <div style={s.stat}><div style={{ ...s.statNum, fontSize: 18, color: passColor2, paddingTop: 4 }}>{passed ? 'PASS' : 'FAIL'}</div><div style={s.statLbl}>Result</div></div>
+        {/* Submit */}
+        <div style={{ padding: '14px 18px', borderTop: `1px solid ${BORDER2}` }}>
+          <div style={{ fontSize: 10, color: MUTED, marginBottom: 8 }}>{40 - answered} unanswered</div>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{ width: '100%', ...btnGold, fontSize: 11, padding: '10px 0', opacity: submitting ? 0.6 : 1 }}>
+            {submitting ? 'SUBMITTING…' : 'SUBMIT ASSESSMENT'}
+          </button>
+          {error && <div style={{ fontSize: 10, color: RED, marginTop: 8 }}>{error}</div>}
+        </div>
+      </div>
+
+      {/* ── Question Area ── */}
+      <div style={{ background: BG, display: 'flex', flexDirection: 'column', padding: '32px 40px', overflowY: 'auto' }}>
+
+        {/* Question header */}
+        <div key={animKey} className="vault-in" style={{ flex: 1 }}>
+
+          {/* Domain + Q number */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 2, height: 16, background: DOMAIN_META[q.domain]?.color || GOLD, borderRadius: 1 }} />
+              <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                {DOMAIN_META[q.domain]?.label || q.domain}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={() => toggleFlag(q.id)}
+                style={{ background: flagged.has(q.id) ? 'rgba(196,92,92,0.1)' : FAINT, border: `1px solid ${flagged.has(q.id) ? 'rgba(196,92,92,0.35)' : BORDER2}`, color: flagged.has(q.id) ? RED : MUTED, fontSize: 10, padding: '5px 10px', borderRadius: 2, cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                {flagged.has(q.id) ? '⚑ Flagged' : '⚐ Flag'}
+              </button>
+              <span style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, color: MUTED, fontWeight: 300 }}>
+                <span style={{ color: GOLD }}>{current + 1}</span> / 40
+              </span>
+            </div>
           </div>
 
-          {/* CTA */}
-          <div style={{ textAlign: 'center' }}>
-            {passed ? (
-              <div>
-                <div style={{ fontSize: 13, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>
-                  Next step: Complete the ATAC Call Readiness Simulator™ to earn your CRSA credential.
+          {/* Question text */}
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 24, fontWeight: 400, lineHeight: 1.5, color: WHITE, marginBottom: 36, maxWidth: 680 }}>
+            {q.text}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: BORDER2, marginBottom: 28 }} />
+
+          {/* Options */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {q.options.map((opt, i) => {
+              const selected = answers[q.id] === i;
+              const letters  = ['A', 'B', 'C', 'D'];
+              return (
+                <div key={i}
+                  className="opt-hover"
+                  onClick={() => selectAnswer(q.id, i)}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 14,
+                    background: selected ? 'rgba(201,168,76,0.08)' : FAINT,
+                    border: `1px solid ${selected ? BORDER : BORDER2}`,
+                    borderRadius: 3, padding: '16px 18px',
+                    cursor: 'pointer', transition: 'all 0.18s',
+                  }}>
+                  <div className="opt-letter" style={{
+                    width: 26, height: 26, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: VAULT_FONT_DISPLAY, fontSize: 14, fontWeight: 500,
+                    border: `1px solid ${selected ? GOLD : BORDER2}`,
+                    color: selected ? GOLD : MUTED,
+                    borderRadius: 2, transition: 'all 0.18s',
+                  }}>
+                    {letters[i]}
+                  </div>
+                  <div style={{ fontSize: 14, color: selected ? WHITE : 'rgba(238,233,223,0.8)', lineHeight: 1.6, paddingTop: 2 }}>
+                    {opt}
+                  </div>
+                  {selected && (
+                    <div style={{ marginLeft: 'auto', flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ color: BG, fontSize: 10, fontWeight: 700 }}>✓</span>
+                    </div>
+                  )}
                 </div>
-                <button style={s.btnGold} onClick={() => navigate('/simulator')}>
-                  Continue to Simulator →
+              );
+            })}
+          </div>
+
+          {/* Nav buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 36, paddingTop: 24, borderTop: `1px solid ${BORDER2}` }}>
+            <button
+              onClick={() => goTo(Math.max(0, current - 1))}
+              disabled={current === 0}
+              style={{ ...btnOutline, opacity: current === 0 ? 0.3 : 1 }}>
+              ← Previous
+            </button>
+            <div style={{ fontSize: 11, color: MUTED, alignSelf: 'center' }}>
+              {answered} of 40 answered
+            </div>
+            {current < 39
+              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next →</button>
+              : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
+                  {submitting ? 'Submitting…' : 'Submit Assessment'}
                 </button>
-              </div>
-            ) : (
-              <div>
-                <div style={{ fontSize: 13, color: 'rgba(245,243,238,0.5)', marginBottom: 16 }}>
-                  Review your weak dimensions above before retaking. Each retake requires a new payment.
-                </div>
-                <button style={s.btnGold} onClick={() => navigate('/payment')}>
-                  Purchase Retake
-                </button>
-                <button style={{ ...s.btnOut, marginLeft: 10 }} onClick={() => navigate('/dashboard')}>
-                  View Dashboard
-                </button>
-              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* SUBMITTED (transitional) */
+  if (phase === 'submitted' || submitting) return (
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', marginBottom: 8 }}>Processing Results</div>
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', animation: 'vault-pulse 1.5s infinite' }}>Evaluating your responses…</div>
+      </div>
+    </div>
+  );
+
+  /* RESULT */
+  if (phase === 'result' && result) {
+    const passed  = result.passed;
+    const score   = result.score || result.percentageScore || 0;
+    const cred    = result.credentialId;
+    const dims    = result.domainScores || result.dimensions || {};
+    return (
+      <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: '100vh' }}>
+        <div style={{ maxWidth: 680, width: '100%' }} className="vault-up">
+
+          {/* Result header */}
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 12, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>
+              Assessment Complete
+            </div>
+            <div style={{
+              width: 100, height: 100, borderRadius: '50%', margin: '0 auto 24px',
+              border: `2px solid ${passed ? TEAL : RED}`,
+              background: passed ? 'rgba(26,143,105,0.08)' : 'rgba(196,92,92,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: VAULT_FONT_DISPLAY, fontSize: 36, color: passed ? TEAL : RED,
+            }}>
+              {passed ? '✓' : '×'}
+            </div>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 48, fontWeight: 300, color: passed ? TEAL : RED, lineHeight: 1 }}>
+              {Math.round(score)}%
+            </div>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, fontWeight: 300, color: WHITE, marginTop: 8 }}>
+              {passed ? 'Assessment Passed' : 'Assessment Not Passed'}
+            </div>
+            <div style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
+              Pass threshold: 70% · {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
+            </div>
+          </div>
+
+          {/* Domain breakdown */}
+          {Object.keys(dims).length > 0 && (
+            <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Domain Breakdown</div>
+              {Object.entries(dims).map(([domain, sc], i) => {
+                const meta  = DOMAIN_META[domain] || { label: domain, color: GOLD };
+                const pct   = typeof sc === 'number' ? Math.round(sc) : Math.round((sc.score / sc.total) * 100);
+                const pass  = pct >= 70;
+                return (
+                  <div key={domain} style={{ marginBottom: i < Object.keys(dims).length - 1 ? 14 : 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: WHITE }}>{meta.label}</span>
+                      <span style={{ fontSize: 12, color: pass ? meta.color : RED, fontFamily: VAULT_FONT_DISPLAY }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 3, background: BORDER2, borderRadius: 2 }}>
+                      <div style={{ height: 3, width: `${pct}%`, background: pass ? meta.color : RED, borderRadius: 2, transition: 'width 1s ease' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Credential info */}
+          {passed && cred && (
+            <div style={{ background: 'rgba(26,143,105,0.06)', border: `1px solid rgba(26,143,105,0.2)`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 10, color: TEAL, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Blockchain Credential Issued</div>
+              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 16, color: WHITE }}>{cred}</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Minted on the blockchain · Verifiable by any employer worldwide</div>
+            </div>
+          )}
+
+          {/* CTAs */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button onClick={() => navigate('/dashboard')} style={{ ...btnGold, flex: 1, padding: '14px', letterSpacing: '0.12em', textAlign: 'center' }}>
+              View Dashboard
+            </button>
+            {passed && (
+              <button onClick={() => window.open('/api/certificate/download', '_blank')} style={{ ...btnOutline, flex: 1, padding: '14px', textAlign: 'center' }}>
+                Download Certificate
+              </button>
             )}
           </div>
-
         </div>
       </div>
     );
   }
 
-  // ── ASSESSMENT SCREEN ────────────────────────────────────────────────────────
-  return (
-    <div style={s.page}>
-      <div style={s.header}>
-        <div style={s.brand}>ATAC Global CX — Assessment</div>
-        <div style={{ fontSize: 12, color: 'rgba(245,243,238,0.5)' }}>{answeredCount}/40 answered</div>
-        <div style={s.timer(urgent)}>{mins}:{String(secs).padStart(2, '0')}</div>
-      </div>
-      <div style={s.progress}><div style={s.fill(pct)}></div></div>
-      <div style={s.body}>
-        {question ? (
-          <>
-            <div style={s.eyebrow}>Question {currentQ} of 40 · {question.domain?.replace('_', ' ').toUpperCase()}</div>
-            <div style={s.question}>{question.text}</div>
-            <div>
-              {question.options?.map((opt, i) => (
-                <div key={i} style={s.option(selected === i)} onClick={() => selectOption(i)}>
-                  <div style={s.letter}>{LETTERS[i]}</div>
-                  <span>{opt}</span>
-                </div>
-              ))}
-            </div>
-            <div style={s.nav}>
-              <button style={s.btnOut} onClick={() => setCurrentQ(q => Math.max(1, q - 1))} disabled={currentQ === 1}>← Previous</button>
-              <div style={s.counter}>{answeredCount} of 40 answered</div>
-              {currentQ < 40
-                ? <button style={s.btnGold} onClick={() => setCurrentQ(q => q + 1)}>Next →</button>
-                : <button style={s.btnGold} onClick={submitAssessment}>Submit Assessment</button>
-              }
-            </div>
-          </>
-        ) : (
-          <div style={{ textAlign: 'center', color: 'rgba(245,243,238,0.5)', paddingTop: 60 }}>Loading question...</div>
-        )}
-      </div>
-    </div>
-  );
+  return null;
 }
+
+/* ── Shared button styles ── */
+const btnGold = {
+  background: GOLD, color: BG, border: 'none', borderRadius: 2,
+  padding: '11px 24px', fontSize: 11, fontWeight: 600,
+  letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
+  fontFamily: "'Syne', sans-serif",
+};
+const btnOutline = {
+  background: 'transparent', color: WHITE,
+  border: `1px solid ${BORDER2}`, borderRadius: 2,
+  padding: '10px 24px', fontSize: 11, cursor: 'pointer',
+  letterSpacing: '0.1em', textTransform: 'uppercase',
+  fontFamily: "'Syne', sans-serif",
+};
