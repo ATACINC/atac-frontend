@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AdminDashboard from './pages/AdminDashboard';
 import Login      from './pages/login';
 import Assessment from './pages/Assessment';
 import Simulator  from './pages/Simulator';
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/simulator"  element={<PrivateRoute><Simulator /></PrivateRoute>} />
         <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/employer" element={<PrivateRoute><EmployerPortal /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
         <Route path="/"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
