@@ -157,7 +157,7 @@ export default function AdminDashboard() {
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <div>
-            <img src="/logo.png" alt="ATAC Global CX" style={{ height: 32, objectFit: 'contain' }} />
+            <img src="/logo.png" alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain' }} />
             <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 1 }}>Command Centre</div>
           </div>
           <div style={{ width: 1, height: 28, background: BORDER2 }} />
