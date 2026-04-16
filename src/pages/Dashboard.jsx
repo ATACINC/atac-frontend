@@ -23,7 +23,7 @@ const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D4537E','#8A7DD4','#22A67E'];
 const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Health & Safety','Remote Work'];
-const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_work'];
+const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_setup'];
 
 /* ── Keyframe injection ─────────────────────────────────── */
 const injectKF = () => {
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [credentials,       setCredentials]       = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [copied,            setCopied]            = useState(false);
+  const [linkedInCopied,    setLinkedInCopied]    = useState(false);
   const [paymentSuccess,    setPaymentSuccess]    = useState(false);
   const [paymentCancelled,  setPaymentCancelled]  = useState(false);
   const [paymentVerified,   setPaymentVerified]   = useState(false);
@@ -124,28 +125,31 @@ export default function Dashboard() {
   };
 
   const copyLink = (credId) => {
-    navigator.clipboard.writeText(`https://atacglobalcx.com/verify/${credId}`);
+    navigator.clipboard.writeText(`https://app.atacglobalcx.com/verify/${credId}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadCertificate = async (credId) => {
+  const downloadCertificate = (credId) => {
+    const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
+    if (!token) return;
+    const win = window.open('', '_blank');
     setDownloading(true);
-    try {
-      const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
-      const res   = await fetch(`https://atac-backend-production.up.railway.app/api/certificate/${credId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+    fetch(`https://atac-backend-production.up.railway.app/api/credentials/${credId}/certificate/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error('Failed'); return r.text(); })
+      .then(html => {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        setDownloading(false);
+      })
+      .catch(() => {
+        win.close();
+        alert('Certificate download failed. Please try again.');
+        setDownloading(false);
       });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      a.download = `ATAC-Certificate-${credId}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch { alert('Certificate download failed. Please try again.'); }
-    finally { setDownloading(false); }
   };
 
   const saveWallet = async () => {
@@ -168,6 +172,31 @@ export default function Dashboard() {
       setTimeout(() => setWalletSaved(false), 3000);
     } catch { setWalletError('Failed to save wallet. Please try again.'); }
     finally { setWalletSaving(false); }
+  };
+
+  /* ── LinkedIn caption builder — uses real credential data ── */
+  const buildLinkedInCaption = (cred) => {
+    const credId = cred?.credentialId || '';
+    const program = cred?.program || 'CRSA';
+    const programLabel =
+      program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' :
+      program === 'CCSA' ? 'Certified Customer Service Agent (CCSA)' :
+      program === 'CCCA' ? 'Certified Contact Center Agent (CCCA)' :
+      program === 'CRSS' ? 'Certified Remote Service Supervisor (CRSS)' :
+      program === 'CCSS' ? 'Certified Customer Service Supervisor (CCSS)' :
+      program === 'CCSM' ? 'Certified Customer Service Manager (CCSM)' :
+      program;
+    return `Proud to have earned my ${programLabel} from @ATACGlobalCX — blockchain-verified, globally recognized.\n\nVerify my credential: app.atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
+  };
+
+  const copyLinkedInCaption = (cred) => {
+    const caption = buildLinkedInCaption(cred);
+    navigator.clipboard?.writeText(caption).then(() => {
+      setLinkedInCopied(true);
+      setTimeout(() => setLinkedInCopied(false), 3000);
+    }).catch(() => {
+      alert('Could not copy — please select the caption text and copy manually.');
+    });
   };
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
@@ -363,7 +392,41 @@ export default function Dashboard() {
                 ))
               )}
             </div>
-
+{/* ISORA Community CTA — visible only after credential issued */}
+            {hasCred && (
+              <div className="vault-up" style={{
+                background: 'linear-gradient(135deg, rgba(26,143,105,0.08), rgba(201,168,76,0.05))',
+                border: '1px solid rgba(26,143,105,0.25)',
+                borderRadius: 3, padding: '20px 24px', marginBottom: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20,
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '.2em', textTransform: 'uppercase', color: TEAL2, marginBottom: 8 }}>
+                    ISORA Community
+                  </div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 20, fontWeight: 300, color: WHITE, marginBottom: 6, lineHeight: 1.2 }}>
+                    You're invited to join the network.
+                  </div>
+                  <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
+                    Connect with certified CX professionals globally. Access job leads, peer support, and resources inside ISORA — the community built for remote CX excellence.
+                  </div>
+                </div>
+                
+                  <a href="https://isora.clientclub.net"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    background: TEAL, color: WHITE, textDecoration: 'none',
+                    padding: '11px 22px', borderRadius: 2, whiteSpace: 'nowrap',
+                    fontFamily: VAULT_BODY, fontSize: 10, fontWeight: 600,
+                    letterSpacing: '.18em', textTransform: 'uppercase', flexShrink: 0,
+                  }}
+                >
+                  Join ISORA
+                </a>
+              </div>
+            )}
             {/* Get started / pricing (no payment) */}
             {!result && credentials.length === 0 && !paymentVerified && (
               <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 24px', marginBottom: 16 }}>
@@ -466,11 +529,89 @@ export default function Dashboard() {
                   {copied ? '✓ Copied!' : 'Copy Verification Link'}
                 </button>
                 <button className="btn-gold-h" style={btnTeal} onClick={() => {
-                  const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
+                  const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=https://app.atacglobalcx.com/verify/${latestCred.credentialId}&certId=${latestCred.credentialId}`;
                   window.open(url, '_blank');
                 }}>
                   Add to LinkedIn Profile
                 </button>
+
+                {/* ── LINKEDIN SHARE CARD ───────────────────────── */}
+                <div style={{ background: BG1, border: '1px solid rgba(10,102,194,0.3)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+
+                  {/* Header */}
+                  <div style={{ background: 'rgba(10,102,194,0.12)', borderBottom: '1px solid rgba(10,102,194,0.2)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="#0A66C2">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5B9BD5' }}>Share on LinkedIn</div>
+                  </div>
+
+                  <div style={{ padding: '12px 14px' }}>
+
+                    {/* Steps */}
+                    {[
+                      { n: '01', t: 'Download your certificate', d: 'Click "Download PDF Certificate" above to save your file.' },
+                      { n: '02', t: 'Go to LinkedIn → Create a Post', d: 'Click "Start a post", then upload your certificate as the image.' },
+                      { n: '03', t: 'Copy the caption below', d: 'Click Copy, then paste it into your LinkedIn post.' },
+                      { n: '04', t: 'Post it', d: 'Hit Post — your blockchain-verified credential is now live for employers.' },
+                    ].map((step, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 4px', marginBottom: 2 }}>
+                        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 13, fontWeight: 300, color: 'rgba(10,102,194,0.7)', flexShrink: 0, lineHeight: 1, paddingTop: 2, minWidth: 18 }}>{step.n}</div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: WHITE, marginBottom: 1 }}>{step.t}</div>
+                          <div style={{ fontSize: 10, color: MUTED, lineHeight: 1.5 }}>{step.d}</div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Caption box */}
+                    <div style={{ marginTop: 12, background: 'rgba(0,0,0,0.2)', border: `1px solid ${BORDER2}`, borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', borderBottom: `1px solid ${BORDER2}` }}>
+                        <div style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Your Caption</div>
+                        <button
+                          onClick={() => copyLinkedInCaption(latestCred)}
+                          style={{
+                            background: linkedInCopied ? 'rgba(26,143,105,0.15)' : 'rgba(201,168,76,0.10)',
+                            border: `1px solid ${linkedInCopied ? 'rgba(26,143,105,0.4)' : BORDER}`,
+                            borderRadius: 2, padding: '3px 9px',
+                            fontSize: 9, color: linkedInCopied ? TEAL2 : GOLD,
+                            cursor: 'pointer', fontFamily: VAULT_BODY,
+                            letterSpacing: '0.1em', textTransform: 'uppercase',
+                            transition: 'all 0.2s', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {linkedInCopied ? '✓ Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <div style={{ padding: '10px', fontSize: 10, color: MUTED, lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: VAULT_BODY }}>
+                        {buildLinkedInCaption(latestCred)}
+                      </div>
+                    </div>
+
+                    {/* Open LinkedIn button */}
+                    <button
+                      onClick={() => window.open('https://www.linkedin.com/feed/', '_blank')}
+                      style={{
+                        width: '100%', marginTop: 10,
+                        background: '#0A66C2', color: '#fff',
+                        border: 'none', borderRadius: 2,
+                        padding: '10px', fontFamily: VAULT_BODY,
+                        fontSize: 10, fontWeight: 600,
+                        letterSpacing: '0.14em', textTransform: 'uppercase',
+                        cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', gap: 7,
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff">
+                        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                      </svg>
+                      Open LinkedIn → Create Post
+                    </button>
+
+                  </div>
+                </div>
+                {/* ── END LINKEDIN SHARE CARD ───────────────────── */}
+
                 <button className="btn-out-h" style={btnOut} onClick={() => navigate('/assessment')}>
                   Start New Assessment
                 </button>
@@ -514,3 +655,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
