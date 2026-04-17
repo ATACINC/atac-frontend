@@ -22,6 +22,7 @@ const DOMAIN_META = {
   cx_operations:   { label: 'CX Operations',       color: '#5DCAA5',         abbr: 'OPER' },
   technology:      { label: 'Technology',          color: '#8A7DD4',         abbr: 'TECH' },
   health_safety:   { label: 'Health & Safety',     color: '#C45C5C',         abbr: 'H&S'  },
+  remote_setup:    { label: 'Remote Work Setup',    color: '#22A67E',         abbr: 'RWS'  },
 };
 
 const VAULT_FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
@@ -63,7 +64,7 @@ export default function Assessment() {
   const [phase, setPhase]           = useState('loading');
   const [questions, setQuestions]   = useState([]);
   const [current, setCurrent]       = useState(0);
-  const [answers, setAnswers]       = useState({});
+  const [answers, setAnswers]     = useState(() => { try { return JSON.parse(localStorage.getItem('atac_answers') || '{}'); } catch { return {}; } });
   const [flagged, setFlagged]       = useState(new Set());
   const [timeLeft, setTimeLeft]     = useState(60 * 40); // 40 min
   const [result, setResult]         = useState(null);
@@ -78,7 +79,7 @@ export default function Assessment() {
     try {
       const me = await API.get('/api/auth/me');
       const cand = me.data.candidate || me.data;
-      if (!cand.hasPaid) { setPhase('locked'); return; }
+      if (!cand.payment_verified) { setPhase('locked'); return; }
       if (cand.assessmentCompleted) { setPhase('result'); fetchResult(); return; }
       const qRes = await API.get('/api/assessment/questions');
       setQuestions(qRes.data.questions || []);
@@ -108,8 +109,8 @@ export default function Assessment() {
   };
 
   const selectAnswer = (qId, optIdx) => {
-    setAnswers(prev => ({ ...prev, [qId]: optIdx }));
-  };
+  setAnswers(prev => { const u = { ...prev, [qId]: optIdx }; localStorage.setItem('atac_answers', JSON.stringify(u)); return u; });
+};
 
   const goTo = (idx) => {
     setCurrent(idx);
@@ -130,8 +131,9 @@ export default function Assessment() {
     setSubmitting(true);
     try {
       const payload = questions.map(q => ({ questionId: q.id, selectedOption: answers[q.id] ?? null }));
-      const res = await API.post('/api/assessment/submit', { answers: payload });
+      const res = await API.post('/api/assessment/submit-direct', { answers: payload });
       setResult(res.data);
+      localStorage.removeItem('atac_answers');
       setPhase('result');
     } catch (err) {
       setError(err.response?.data?.error || 'Submission failed. Please try again.');
@@ -401,7 +403,7 @@ export default function Assessment() {
                   }}>
                     {letters[i]}
                   </div>
-                  <div style={{ fontSize: 14, color: selected ? WHITE : 'rgba(238,233,223,0.8)', lineHeight: 1.6, paddingTop: 2 }}>
+                  <div style={{ fontSize: 17, color: selected ? WHITE : 'rgba(238,233,223,0.8)', lineHeight: 1.6, paddingTop: 2 }}>
                     {opt}
                   </div>
                   {selected && (
@@ -450,9 +452,9 @@ export default function Assessment() {
   /* RESULT */
   if (phase === 'result' && result) {
     const passed  = result.passed;
-    const score   = result.score || result.percentageScore || 0;
+    const score   = result.percentage || result.score || result.percentageScore || 0;
     const cred    = result.credentialId;
-    const dims    = result.domainScores || result.dimensions || {};
+    const dims    = result.dimScores || result.domainScores || result.dimensions || {};
     return (
       <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: '100vh' }}>
         <div style={{ maxWidth: 680, width: '100%' }} className="vault-up">
@@ -488,7 +490,7 @@ export default function Assessment() {
               <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Domain Breakdown</div>
               {Object.entries(dims).map(([domain, sc], i) => {
                 const meta  = DOMAIN_META[domain] || { label: domain, color: GOLD };
-                const pct   = typeof sc === 'number' ? Math.round(sc) : Math.round((sc.score / sc.total) * 100);
+                const pct   = typeof sc === 'number' ? Math.round(sc) : Math.round(sc.pct || (sc.correct / sc.total) * 100 || 0);
                 const pass  = pct >= 70;
                 return (
                   <div key={domain} style={{ marginBottom: i < Object.keys(dims).length - 1 ? 14 : 0 }}>

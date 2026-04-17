@@ -65,8 +65,7 @@ export default function Dashboard() {
   const [walletSaved,       setWalletSaved]       = useState(false);
   const [walletError,       setWalletError]       = useState('');
   const [candidateWallet,   setCandidateWallet]   = useState(candidate.wallet_address || '');
-  const [certHtml,    setCertHtml]    = useState('');
-  const [certLoading, setCertLoading] = useState(false);
+
   useEffect(() => {
     injectKF();
     const params = new URLSearchParams(window.location.search);
@@ -89,22 +88,7 @@ export default function Dashboard() {
   const loadCredentials = async () => {
     try {
       const res = await API.get(`/api/credentials/candidate/${candidate.id}`);
-      const creds = res.data.credentials || [];
-      setCredentials(creds);
-      // Fetch cert HTML once we know the credential ID
-      if (creds.length > 0) {
-        const credId = creds[0].credentialId;
-        const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
-        if (token) {
-          setCertLoading(true);
-          fetch(`https://atac-backend-production.up.railway.app/api/credentials/${credId}/certificate`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-            .then(r => r.text())
-            .then(html => { setCertHtml(html); setCertLoading(false); })
-            .catch(() => setCertLoading(false));
-        }
-      }
+      setCredentials(res.data.credentials || []);
     } catch (err) { console.error('Load credentials error', err); }
     finally { setLoading(false); }
   };
@@ -357,7 +341,7 @@ export default function Dashboard() {
         )}
 
         {/* ── Main grid ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
 
           {/* ── LEFT: credentials / get started ── */}
           <div>
@@ -489,30 +473,54 @@ export default function Dashboard() {
 
                 {/* Certificate card — parchment style on dark */}
                 <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 12 }}>Your Certificate</div>
-<div style={{ background: '#0D1219', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 3, padding: '22px', marginBottom: 14, textAlign: 'center' }}>
-  <div style={{ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, marginBottom: 16 }}>ATAC Global CX · Verified Credential</div>
-  <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 28, color: WHITE, marginBottom: 4 }}>{candidate.name}</div>
-  <div style={{ fontSize: 12, color: TEAL2, fontWeight: 600, marginBottom: 20 }}>
-    {latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}
-  </div>
-  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-    {[
-      { k: 'Credential ID', v: latestCred.credentialId },
-      { k: 'Issue Date',    v: new Date(latestCred.issuedAt).toLocaleDateString() },
-      { k: 'Status',        v: 'Valid', vc: TEAL2 },
-      { k: 'Expires',       v: new Date(latestCred.expiresAt).toLocaleDateString() },
-    ].map((m, i) => (
-      <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px' }}>
-        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: MUTED, marginBottom: 3 }}>{m.k}</div>
-        <div style={{ fontSize: 11, color: m.vc || WHITE, fontWeight: 600 }}>{m.v}</div>
-      </div>
-    ))}
-  </div>
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-    <div style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL2 }} />
-    <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.1em' }}>Blockchain-Verified · ERC-721 · Mainnet</span>
-  </div>
-</div>
+                <div style={{ background: '#F5F0E4', border: '1px solid #D4C89A', borderRadius: 3, padding: '22px', color: '#1a1208', marginBottom: 14 }}>
+
+                  {/* Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e0d5b0', paddingBottom: 12, marginBottom: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#8a7040', marginBottom: 3 }}>ATAC Global CX · Verified Credentials</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: '#3d2e0a' }}>Certificate of Achievement</div>
+                    </div>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#C9A84C' }}>★</div>
+                  </div>
+
+                  <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7040', textAlign: 'center', marginBottom: 4 }}>Certificate of Achievement</div>
+                  <div style={{ fontSize: 10, color: '#8a7040', textAlign: 'center', marginBottom: 4 }}>Proudly Presented To</div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 22, color: '#1a1208', textAlign: 'center', marginBottom: 4 }}>{candidate.name}</div>
+                  <div style={{ fontSize: 12, color: '#0F6E56', textAlign: 'center', fontWeight: 600, marginBottom: 16 }}>
+                    {latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}
+                  </div>
+
+                  {/* Meta grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, borderTop: '1px solid #e0d5b0', paddingTop: 14, marginBottom: 14 }}>
+                    {[
+                      { k: 'Credential ID', v: latestCred.credentialId },
+                      { k: 'Issue Date',    v: new Date(latestCred.issuedAt).toLocaleDateString() },
+                      { k: 'Status',        v: 'Valid', vc: '#0F6E56' },
+                      { k: 'Expires',       v: new Date(latestCred.expiresAt).toLocaleDateString() },
+                    ].map((m, i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8a7040' }}>{m.k}</div>
+                        <div style={{ fontSize: 11, color: m.vc || '#1a1208', fontWeight: 600, marginTop: 2 }}>{m.v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Footer */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #e0d5b0', paddingTop: 10 }}>
+                    <div style={{ fontSize: 9, color: '#8a7040' }}>Verify at<br /><strong style={{ fontSize: 10, color: '#3d2e0a' }}>atacglobalcx.com/verify</strong></div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ width: 60, height: 1, background: '#8a7040', marginBottom: 3, marginLeft: 'auto' }} />
+                      <div style={{ fontSize: 9, fontWeight: 600, color: '#3d2e0a' }}>Tugreofia Smith</div>
+                      <div style={{ fontSize: 8, color: '#8a7040' }}>CEO & Lead Instructor</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, borderTop: '1px solid #e0d5b0', paddingTop: 8, marginTop: 8 }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#0F6E56', flexShrink: 0 }} />
+                    <span style={{ fontSize: 9, color: '#8a7040' }}>Blockchain-Verified Credential · Mainnet</span>
+                  </div>
+                </div>
+
                 {/* Action buttons */}
                 <button className="btn-gold-h" style={btnGold} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
                   {downloading ? 'Generating PDF…' : '↓ Download PDF Certificate'}
@@ -643,44 +651,31 @@ export default function Dashboard() {
           </div>
 
         </div>
-        {/* ── Full-width certificate preview ── */}
-{/* ── Full-width certificate preview ── */}
-{latestCred && (
-  <div className="vault-up" style={{ marginTop: 20 }}>
-    <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 12 }}>Certificate Preview</div>
-    <div style={{ width: '100%', borderRadius: 3, overflow: 'hidden', border: '1px solid rgba(201,168,76,0.2)' }}>
-      <iframe
-        src={`https://atac-backend-production.up.railway.app/api/credentials/${latestCred.credentialId}/certificate`}
-        style={{ width: '100%', height: 900, border: 'none', display: 'block' }}
-        title="Certificate Preview"
-      />
-    </div>
-  </div>
-)}
-      <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: GOLD, margin: '12px 0' }}>★</div>
-      <div style={{ fontSize: 12, color: MUTED, maxWidth: 600, textAlign: 'center', lineHeight: 1.8, fontStyle: 'italic' }}>
-        In recognition of demonstrated excellence in remote customer experience operations, professional conduct, and commitment to the highest standards of the global CX industry.
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 640, marginTop: 16 }}>
-        {[
-          { k: 'Credential ID', v: latestCred.credentialId },
-          { k: 'Issue Date',    v: new Date(latestCred.issuedAt).toLocaleDateString() },
-          { k: 'Status',        v: 'Valid', vc: TEAL2 },
-          { k: 'Expires',       v: new Date(latestCred.expiresAt).toLocaleDateString() },
-        ].map((m, i) => (
-          <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 3, padding: '10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: GOLD, marginBottom: 4 }}>{m.k}</div>
-            <div style={{ fontSize: 11, color: m.vc || WHITE, fontWeight: 600 }}>{m.v}</div>
+        {/* Full-width certificate preview */}
+        {latestCred && (
+          <div className="vault-up" style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 12 }}>Certificate Preview</div>
+            <div style={{ background: '#04040A', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 3, padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' }}>ATAC Global CX · Verified Credential · ERC-721 · Blockchain Mainnet</div>
+              <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 42, color: WHITE, marginTop: 8 }}>{candidate.name}</div>
+              <div style={{ fontSize: 13, color: TEAL2, fontWeight: 600, letterSpacing: '0.08em' }}>{latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}</div>
+              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: GOLD, margin: '12px 0' }}>★</div>
+              <div style={{ fontSize: 12, color: MUTED, maxWidth: 600, textAlign: 'center', lineHeight: 1.8, fontStyle: 'italic' }}>In recognition of demonstrated excellence in remote customer experience operations, professional conduct, and commitment to the highest standards of the global CX industry.</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 640, marginTop: 16 }}>
+                {[{ k: 'Credential ID', v: latestCred.credentialId },{ k: 'Issue Date', v: new Date(latestCred.issuedAt).toLocaleDateString() },{ k: 'Status', v: 'Valid', vc: TEAL2 },{ k: 'Expires', v: new Date(latestCred.expiresAt).toLocaleDateString() }].map((m, i) => (
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 3, padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: GOLD, marginBottom: 4 }}>{m.k}</div>
+                    <div style={{ fontSize: 11, color: m.vc || WHITE, fontWeight: 600 }}>{m.v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL2 }} />
+                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified · ERC-721 · Mainnet</span>
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL2 }} />
-        <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified · ERC-721 · Mainnet</span>
-      </div>
-    </div>
-  </div>
-)}
+        )}
       </div>
     </div>
   );
