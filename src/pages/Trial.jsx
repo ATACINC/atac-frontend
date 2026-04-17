@@ -49,6 +49,7 @@ export default function Trial() {
   const [result,     setResult]     = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loading,    setLoading]    = useState(false);
+  const [sessionKey, setSessionKey] = useState('');
 
   useEffect(() => { injectKF(); }, []);
 
@@ -58,6 +59,7 @@ export default function Trial() {
       const res  = await fetch(`${API_BASE}/api/trial/questions`);
       const data = await res.json();
       setQuestions(data.questions || []);
+      setSessionKey(data.sessionKey || '');
       setPhase('questions');
       setCurrent(0);
       setAnswers({});
@@ -94,7 +96,7 @@ export default function Trial() {
       const res  = await fetch(`${API_BASE}/api/trial/submit`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ answers: payload }),
+        body:    JSON.stringify({ answers: payload, sessionKey }),
       });
       const data = await res.json();
       setResult(data);
