@@ -240,6 +240,7 @@ export default function Dashboard() {
               {paymentTier}
             </div>
           )}
+          <LanguageSelector />
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '5px 12px', fontSize: 11, cursor: 'pointer' }}>
             Sign Out
           </button>
