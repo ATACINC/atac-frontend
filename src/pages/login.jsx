@@ -20,6 +20,8 @@ export default function Login() {
   const [regEmail,    setRegEmail]    = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirm,  setRegConfirm]  = useState('');
+  const [termsAccepted,   setTermsAccepted]   = useState(false);
+  const [termsAcceptedAt, setTermsAcceptedAt] = useState(null);
   const [error,       setError]       = useState('');
   const [loading,     setLoading]     = useState(false);
   const [focused,     setFocused]     = useState(null);
@@ -123,10 +125,16 @@ export default function Login() {
     if (!name || !regEmail || !regPassword) { setError('All fields are required.'); return; }
     if (regPassword !== regConfirm) { setError('Passwords do not match.'); return; }
     if (regPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!termsAccepted) { setError('You must accept the Terms of Certification to continue.'); return; }
     setError(''); setLoading(true);
     try {
-      const res = await API.post('/api/auth/register', { name, email: regEmail.trim(), password: regPassword });
-      const { token, candidate } = res.data;
+const res = await API.post('/api/auth/register', {
+        name,
+        email: regEmail.trim(),
+        password: regPassword,
+        termsAccepted: true,
+        termsAcceptedAt: termsAcceptedAt || new Date().toISOString(),
+      });      const { token, candidate } = res.data;
       localStorage.setItem('atac_token', token);
       if (candidate) localStorage.setItem('atac_candidate', JSON.stringify(candidate));
       navigate('/payment');
@@ -314,10 +322,13 @@ export default function Login() {
                       style={inputStyle('pw')} />
                   </div>
 
-                  <button className="atac-btn" disabled={loading} onClick={handleLogin} style={{ width:'100%', background:GOLD, color:BLACK, border:'none', borderRadius:8, padding:'14px', fontFamily:FG, fontSize:11, fontWeight:600, letterSpacing:'.22em', textTransform:'uppercase', cursor:'pointer', transition:'all .2s', marginBottom:20 }}>
-                    {loading ? 'Authenticating…' : 'Access Portal'}
+                  <button
+                    className="atac-btn"
+                    disabled={loading}
+                    onClick={handleLogin}
+                    style={{ width:'100%', background:GOLD, color:BLACK, border:'none', borderRadius:8, padding:'14px', fontFamily:FG, fontSize:11, fontWeight:600, letterSpacing:'.22em', textTransform:'uppercase', cursor:'pointer', transition:'all .2s', marginTop:6, marginBottom:18 }}>
+                    {loading ? 'Signing in…' : 'Sign In'}
                   </button>
-
                   <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:18 }}>
                     <div style={{ flex:1, height:1, background:'rgba(201,168,76,0.12)' }} />
                     <span style={{ fontSize:9.5, color:TEXT3, letterSpacing:'.16em', textTransform:'uppercase' }}>or</span>
@@ -362,7 +373,62 @@ export default function Login() {
                     </div>
                   ))}
 
-                  <button className="atac-btn" disabled={loading} onClick={handleRegister} style={{ width:'100%', background:GOLD, color:BLACK, border:'none', borderRadius:8, padding:'14px', fontFamily:FG, fontSize:11, fontWeight:600, letterSpacing:'.22em', textTransform:'uppercase', cursor:'pointer', transition:'all .2s', marginTop:6, marginBottom:18 }}>
+                  {/* ── Terms of Certification — required for legal audit trail ─ */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    marginTop: 8,
+                    marginBottom: 18,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setTermsAccepted(checked);
+                        setTermsAcceptedAt(checked ? new Date().toISOString() : null);
+                      }}
+                      style={{
+                        marginTop: 3,
+                        width: 14,
+                        height: 14,
+                        accentColor: GOLD,
+                        cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: 11, lineHeight: 1.55, color: TEXT2 }}>
+                      I certify that I am the individual named above. I will personally
+                      complete all assessments. I understand that credential fraud voids
+                      my certification permanently and results in public revocation on
+                      the blockchain.
+                    </span>
+                  </label>
+                  <button
+                    className="atac-btn"
+                    disabled={loading || !termsAccepted}
+                    onClick={handleRegister}
+                    style={{
+                      width: '100%',
+                      background: GOLD,
+                      color: BLACK,
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '14px',
+                      fontFamily: FG,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '.22em',
+                      textTransform: 'uppercase',
+                      cursor: (loading || !termsAccepted) ? 'not-allowed' : 'pointer',
+                      opacity: (loading || !termsAccepted) ? 0.4 : 1,
+                      transition: 'all .2s',
+                      marginTop: 0,
+                      marginBottom: 18,
+                    }}>
                     {loading ? 'Creating Account…' : 'Apply for Access'}
                   </button>
 
