@@ -1,16 +1,30 @@
 // frontend/src/pages/VerifyLanding.jsx
-// Employer verification portal landing page
+// Employer verification portal landing page — Vault Design System v2
 // Route: /verify (app.atacglobalcx.com/verify)
-// Flow: Employer pastes credential ID + enters email -> lead captured -> redirects to /verify/:credentialId
+// v2 changes: typography scaled up across the board for readability
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 
-// Credential ID format: ATAC-C-YYYY-NNNNN (e.g., ATAC-C-2026-00002)
 const CREDENTIAL_ID_REGEX = /^ATAC-C-\d{4}-\d{5}$/i;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* ── Vault Design Tokens ─────────────────────────────────── */
+const BG      = '#080B12';
+const BG1     = '#0C1018';
+const BG2     = '#101520';
+const GOLD    = '#C9A84C';
+const TEAL    = '#1A8F69';
+const WHITE   = '#EEE9DF';
+const MUTED   = 'rgba(238,233,223,0.60)';
+const BORDER  = 'rgba(201,168,76,0.15)';
+const BORDER2 = 'rgba(238,233,223,0.07)';
+const RED     = '#E05C52';
+
+const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
+const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 export default function VerifyLanding() {
   const navigate = useNavigate();
@@ -25,238 +39,535 @@ export default function VerifyLanding() {
     const cleanId = credentialId.trim().toUpperCase();
     if (!cleanId) e.credentialId = 'Credential ID required';
     else if (!CREDENTIAL_ID_REGEX.test(cleanId)) {
-      e.credentialId = 'Format: ATAC-C-YYYY-NNNNN (e.g., ATAC-C-2026-00002)';
+      e.credentialId = 'Format: ATAC-C-YYYY-NNNNN';
     }
     if (!email.trim()) e.email = 'Email required';
-    else if (!EMAIL_REGEX.test(email.trim())) e.email = 'Enter a valid email';
-    return e;
+    else if (!EMAIL_REGEX.test(email.trim())) e.email = 'Valid email required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();
-    const v = validate();
-    if (Object.keys(v).length > 0) {
-      setErrors(v);
-      return;
-    }
-    setErrors({});
-    setLoading(true);
+    if (!validate()) return;
 
+    setLoading(true);
     const cleanId = credentialId.trim().toUpperCase();
 
     try {
-      // Lead capture - fire and forget, don't block verification on this
-      fetch(`${API_BASE}/api/employer-leads`, {
+      await fetch(`${API_BASE}/api/employer/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          credentialId: cleanId,
-          email: email.trim().toLowerCase(),
+          credential_id: cleanId,
+          email: email.trim(),
           company: company.trim() || null,
-          source: 'verify_landing',
-          userAgent: navigator.userAgent,
         }),
-      }).catch(() => {}); // silent fail - don't block employer
-
-      // Redirect to the existing verification result page
-      navigate(`/verify/${cleanId}`);
+      });
     } catch (err) {
-      console.error('Verify submit error:', err);
-      // Still navigate - the verify page will show the real result
-      navigate(`/verify/${cleanId}`);
-    } finally {
-      setLoading(false);
+      console.warn('Lead capture failed:', err);
     }
+
+    navigate(`/verify/${cleanId}`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <a href="https://atacglobalcx.com" className="flex items-center gap-2">
-            <span className="font-bold text-xl tracking-tight text-slate-900">ATAC</span>
-            <span className="text-sm text-slate-500 font-medium">Global CX</span>
+    <div style={{
+      minHeight: '100vh',
+      background: BG,
+      color: WHITE,
+      fontFamily: VAULT_BODY,
+      position: 'relative',
+    }}>
+
+      {/* ═══ HEADER BAND ═══ */}
+      <header style={{
+        borderBottom: `1px solid ${BORDER2}`,
+        background: `linear-gradient(180deg, ${BG1} 0%, ${BG} 100%)`,
+        position: 'relative',
+        zIndex: 2,
+      }}>
+        <div style={{
+          maxWidth: '1180px',
+          margin: '0 auto',
+          padding: '24px 32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <a href="https://atacglobalcx.com" style={{
+            textDecoration: 'none',
+            color: WHITE,
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '12px',
+          }}>
+            <span style={{
+              fontFamily: VAULT_DISPLAY,
+              fontSize: '26px',
+              fontWeight: 500,
+              letterSpacing: '0.02em',
+              fontStyle: 'italic',
+            }}>
+              ATAC
+            </span>
+            <span style={{
+              fontFamily: VAULT_BODY,
+              fontSize: '11px',
+              letterSpacing: '0.25em',
+              textTransform: 'uppercase',
+              color: MUTED,
+            }}>
+              Global CX
+            </span>
           </a>
-          <a
-            href="https://atacglobalcx.com/for-enterprise"
-            className="text-sm font-medium text-slate-700 hover:text-slate-900"
+          <a href="https://atacglobalcx.com/employers"
+             style={{
+               fontFamily: VAULT_BODY,
+               fontSize: '11px',
+               letterSpacing: '0.22em',
+               textTransform: 'uppercase',
+               color: MUTED,
+               textDecoration: 'none',
+               transition: 'color 0.2s',
+             }}
+             onMouseOver={(e) => e.target.style.color = GOLD}
+             onMouseOut={(e) => e.target.style.color = MUTED}
           >
-            For Enterprise &rarr;
+            For Enterprise →
           </a>
         </div>
       </header>
 
-      {/* Hero + Form */}
-      <main className="max-w-3xl mx-auto px-6 py-16">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold mb-6 border border-emerald-200">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            BLOCKCHAIN-VERIFIED CREDENTIALS
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4">
-            Verify an ATAC Global CX Credential
-          </h1>
-          <p className="text-lg text-slate-600 max-w-xl mx-auto">
-            Paste a credential ID to confirm authenticity, score, and validity. Verification is
-            instant and cryptographically proven on the blockchain.
-          </p>
+      {/* ═══ MAIN HERO ═══ */}
+      <main style={{
+        maxWidth: '720px',
+        margin: '0 auto',
+        padding: '80px 32px 60px',
+        position: 'relative',
+        zIndex: 2,
+      }}>
+
+        {/* Eyebrow */}
+        <div className="vault-up-0" style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginBottom: '32px',
+        }}>
+          <span style={{
+            width: '28px',
+            height: '1px',
+            background: GOLD,
+            opacity: 0.5,
+          }} />
+          <span style={{
+            fontSize: '12px',
+            letterSpacing: '0.32em',
+            textTransform: 'uppercase',
+            color: GOLD,
+            fontWeight: 500,
+          }}>
+            Blockchain-Verified Credentials
+          </span>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8"
-        >
-          {/* Credential ID */}
-          <div className="mb-5">
-            <label htmlFor="credentialId" className="block text-sm font-semibold text-slate-900 mb-2">
+        {/* Headline */}
+        <h1 className="vault-up-1" style={{
+          fontFamily: VAULT_DISPLAY,
+          fontSize: 'clamp(44px, 6.5vw, 64px)',
+          lineHeight: 1.05,
+          fontWeight: 400,
+          letterSpacing: '-0.01em',
+          marginBottom: '24px',
+          color: WHITE,
+        }}>
+          Verify an{' '}
+          <span style={{ fontStyle: 'italic', color: GOLD }}>
+            ATAC Global CX
+          </span>{' '}
+          credential.
+        </h1>
+
+        {/* Deck */}
+        <p className="vault-up-2" style={{
+          fontFamily: VAULT_BODY,
+          fontSize: '18px',
+          lineHeight: 1.6,
+          color: MUTED,
+          maxWidth: '580px',
+          marginBottom: '48px',
+          fontWeight: 400,
+        }}>
+          Every credential is minted on the blockchain and cryptographically sealed.
+          Paste the credential ID below to confirm authenticity, score, and validity
+          in seconds.
+        </p>
+
+        {/* Gold rule */}
+        <hr className="vault-up-3 vault-rule" style={{ marginBottom: '40px' }} />
+
+        {/* ═══ VERIFICATION FORM ═══ */}
+        <form onSubmit={handleSubmit} className="vault-up-3" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '28px',
+        }}>
+
+          {/* Credential ID field */}
+          <div>
+            <label htmlFor="credentialId" style={labelStyle}>
               Credential ID
             </label>
             <input
               id="credentialId"
               type="text"
+              className="vault-input"
+              placeholder="ATAC-C-2026-00001"
               value={credentialId}
               onChange={(e) => setCredentialId(e.target.value)}
-              placeholder="ATAC-C-2026-00002"
-              className={`w-full px-4 py-3 rounded-lg border font-mono text-base tracking-wider uppercase
-                ${errors.credentialId ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white'}
-                focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900`}
+              style={{
+                fontFamily: 'SF Mono, Consolas, monospace',
+                fontSize: '16px',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                padding: '16px 18px',
+                borderColor: errors.credentialId ? RED : undefined,
+              }}
               autoComplete="off"
-              spellCheck="false"
-              disabled={loading}
+              autoCapitalize="characters"
             />
             {errors.credentialId && (
-              <p className="text-sm text-red-600 mt-1.5">{errors.credentialId}</p>
+              <p style={errorStyle}>{errors.credentialId}</p>
             )}
           </div>
 
-          {/* Email */}
-          <div className="mb-5">
-            <label htmlFor="email" className="block text-sm font-semibold text-slate-900 mb-2">
-              Your Work Email
+          {/* Email field */}
+          <div>
+            <label htmlFor="email" style={labelStyle}>
+              Work Email
             </label>
             <input
               id="email"
               type="email"
+              className="vault-input"
+              placeholder="you@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              className={`w-full px-4 py-3 rounded-lg border text-base
-                ${errors.email ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white'}
-                focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900`}
+              style={{
+                fontSize: '15px',
+                padding: '16px 18px',
+                borderColor: errors.email ? RED : undefined,
+              }}
               autoComplete="email"
-              disabled={loading}
             />
-            {errors.email && <p className="text-sm text-red-600 mt-1.5">{errors.email}</p>}
-            <p className="text-xs text-slate-500 mt-1.5">
-              We&rsquo;ll send you the verification record for your files.
+            <p style={helperStyle}>
+              We'll send the verification record to your inbox.
             </p>
+            {errors.email && <p style={errorStyle}>{errors.email}</p>}
           </div>
 
-          {/* Company (optional) */}
-          <div className="mb-6">
-            <label htmlFor="company" className="block text-sm font-semibold text-slate-900 mb-2">
-              Company <span className="text-slate-400 font-normal">(optional)</span>
+          {/* Company field */}
+          <div>
+            <label htmlFor="company" style={labelStyle}>
+              Company <span style={{ color: MUTED, fontSize: '10px', marginLeft: '6px', letterSpacing: '0.18em' }}>— Optional</span>
             </label>
             <input
               id="company"
               type="text"
+              className="vault-input"
+              placeholder="Acme BPO Services"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              placeholder="Acme BPO Services"
-              className="w-full px-4 py-3 rounded-lg border border-slate-300 bg-white text-base
-                focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-900"
+              style={{
+                fontSize: '15px',
+                padding: '16px 18px',
+              }}
               autoComplete="organization"
-              disabled={loading}
             />
           </div>
 
+          {/* Submit CTA */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400
-              text-white font-semibold py-3.5 rounded-lg transition-colors
-              flex items-center justify-center gap-2"
+            className="vault-btn-gold"
+            style={{
+              padding: '18px 32px',
+              fontSize: '12px',
+              letterSpacing: '0.22em',
+              marginTop: '16px',
+              width: '100%',
+            }}
           >
             {loading ? (
-              <>
-                <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
-                  <path fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
-                </svg>
-                Verifying&hellip;
-              </>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{
+                  width: '14px',
+                  height: '14px',
+                  border: `2px solid ${BG}`,
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'vault-spin 0.8s linear infinite',
+                }} />
+                Verifying
+              </span>
             ) : (
-              <>
-                Verify Credential
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </>
+              <>Verify Credential →</>
             )}
           </button>
 
-          <p className="text-xs text-slate-500 text-center mt-4">
-            Free verification &middot; No account required &middot; Results in under 10 seconds
-          </p>
+          {/* Trust footer row */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '28px',
+            marginTop: '12px',
+            flexWrap: 'wrap',
+          }}>
+            <TrustBadge label="Free verification" />
+            <DotDivider />
+            <TrustBadge label="No account required" />
+            <DotDivider />
+            <TrustBadge label="Under 10 seconds" />
+          </div>
         </form>
 
-        {/* How it works */}
-        <div className="mt-12 grid md:grid-cols-3 gap-6">
-          {[
-            {
-              step: '1',
-              title: 'Paste credential ID',
-              body: 'Find it on the candidate\u2019s certificate or LinkedIn profile.',
-            },
-            {
-              step: '2',
-              title: 'Blockchain check',
-              body: 'We verify the credential against the on-chain record in real time.',
-            },
-            {
-              step: '3',
-              title: 'Instant result',
-              body: 'See holder name, score breakdown, validity dates, and download proof.',
-            },
-          ].map((item) => (
-            <div key={item.step} className="text-center">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 text-white font-bold text-sm mb-3">
-                {item.step}
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-1.5">{item.title}</h3>
-              <p className="text-sm text-slate-600">{item.body}</p>
-            </div>
-          ))}
-        </div>
+        {/* ═══ HOW IT WORKS ═══ */}
+        <section className="vault-up-4" style={{ marginTop: '112px' }}>
+          <hr className="vault-rule-full" style={{ marginBottom: '36px' }} />
 
-        {/* Enterprise CTA */}
-        <div className="mt-12 bg-slate-900 rounded-2xl p-8 md:p-10 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-            Hiring at scale?
-          </h2>
-          <p className="text-slate-300 mb-6 max-w-md mx-auto">
-            Get API access, bulk verification, and a custom employer dashboard for your hiring team.
+          <div style={{
+            fontSize: '12px',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            color: GOLD,
+            fontWeight: 500,
+            marginBottom: '40px',
+          }}>
+            How It Works
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '40px',
+          }}>
+            <Step
+              num="01"
+              title="Paste credential ID"
+              body="Find it on the candidate's certificate PDF or LinkedIn profile."
+            />
+            <Step
+              num="02"
+              title="On-chain lookup"
+              body="We verify against the public blockchain record in real time."
+            />
+            <Step
+              num="03"
+              title="Instant result"
+              body="Score breakdown, validity dates, and downloadable proof."
+            />
+          </div>
+        </section>
+
+        {/* ═══ ENTERPRISE CTA ═══ */}
+        <section className="vault-up-5" style={{
+          marginTop: '112px',
+          padding: '48px',
+          background: `linear-gradient(135deg, ${BG1} 0%, ${BG2} 100%)`,
+          border: `1px solid ${BORDER}`,
+          borderRadius: '4px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          {/* Gold corner accent */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '100px',
+            height: '1px',
+            background: `linear-gradient(90deg, transparent, ${GOLD})`,
+            opacity: 0.6,
+          }} />
+
+          <div style={{
+            fontSize: '12px',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            color: GOLD,
+            fontWeight: 500,
+            marginBottom: '20px',
+          }}>
+            For Hiring Teams
+          </div>
+          <h3 style={{
+            fontFamily: VAULT_DISPLAY,
+            fontSize: '34px',
+            lineHeight: 1.15,
+            fontWeight: 400,
+            marginBottom: '16px',
+            color: WHITE,
+          }}>
+            Hiring <span style={{ fontStyle: 'italic', color: GOLD }}>at scale?</span>
+          </h3>
+          <p style={{
+            fontSize: '16px',
+            lineHeight: 1.6,
+            color: MUTED,
+            marginBottom: '28px',
+            maxWidth: '520px',
+          }}>
+            API access, bulk verification, and a branded employer dashboard
+            for your recruiting team.
           </p>
           <a
-            href="mailto:enterprise@atacglobalcx.com?subject=Enterprise%20Verification%20API%20Inquiry"
-            className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-semibold px-6 py-3 rounded-lg transition-colors"
+            href="mailto:sales@atacglobalcx.com?subject=Enterprise Verification Access"
+            className="vault-btn-ghost"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '14px 26px',
+              fontSize: '12px',
+              letterSpacing: '0.18em',
+              textDecoration: 'none',
+            }}
           >
-            Talk to sales
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M5 12h14M13 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            Talk to Sales →
           </a>
-        </div>
+        </section>
       </main>
 
-      <footer className="border-t border-slate-200 mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-6 text-center text-sm text-slate-500">
-          &copy; {new Date().getFullYear()} ATAC Anagenesis Inc. &middot; ATAC Global CX &trade;
+      {/* ═══ FOOTER ═══ */}
+      <footer style={{
+        maxWidth: '1180px',
+        margin: '0 auto',
+        padding: '48px 32px 56px',
+        borderTop: `1px solid ${BORDER2}`,
+        marginTop: '96px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        fontSize: '12px',
+        color: MUTED,
+        letterSpacing: '0.06em',
+      }}>
+        <div>
+          © 2026 ATAC Anagenesis Inc. · ATAC Global CX™
+        </div>
+        <div style={{ display: 'flex', gap: '28px' }}>
+          <a href="https://atacglobalcx.com/privacy" style={footerLinkStyle}>Privacy</a>
+          <a href="https://atacglobalcx.com/terms" style={footerLinkStyle}>Terms</a>
+          <a href="https://atacglobalcx.com/contact" style={footerLinkStyle}>Contact</a>
         </div>
       </footer>
     </div>
   );
 }
+
+/* ── Sub-components ──────────────────────────────────────── */
+
+function Step({ num, title, body }) {
+  return (
+    <div>
+      <div style={{
+        fontFamily: VAULT_DISPLAY,
+        fontSize: '32px',
+        fontStyle: 'italic',
+        color: GOLD,
+        fontWeight: 400,
+        marginBottom: '12px',
+        letterSpacing: '0.02em',
+      }}>
+        {num}
+      </div>
+      <h4 style={{
+        fontFamily: VAULT_BODY,
+        fontSize: '15px',
+        fontWeight: 600,
+        color: WHITE,
+        letterSpacing: '0.02em',
+        marginBottom: '10px',
+      }}>
+        {title}
+      </h4>
+      <p style={{
+        fontSize: '14px',
+        lineHeight: 1.6,
+        color: MUTED,
+      }}>
+        {body}
+      </p>
+    </div>
+  );
+}
+
+function TrustBadge({ label }) {
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '9px',
+      fontSize: '13px',
+      color: MUTED,
+      letterSpacing: '0.04em',
+    }}>
+      <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
+        <path d="M1 5L4 8L9 2" stroke={TEAL} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      {label}
+    </div>
+  );
+}
+
+function DotDivider() {
+  return (
+    <span style={{
+      width: '3px',
+      height: '3px',
+      borderRadius: '50%',
+      background: BORDER2,
+    }} />
+  );
+}
+
+/* ── Shared style objects ────────────────────────────────── */
+
+const labelStyle = {
+  display: 'block',
+  fontFamily: VAULT_BODY,
+  fontSize: '11px',
+  fontWeight: 500,
+  letterSpacing: '0.22em',
+  textTransform: 'uppercase',
+  color: MUTED,
+  marginBottom: '12px',
+};
+
+const helperStyle = {
+  marginTop: '10px',
+  fontSize: '13px',
+  color: MUTED,
+  letterSpacing: '0.02em',
+  fontStyle: 'italic',
+};
+
+const errorStyle = {
+  marginTop: '10px',
+  fontSize: '13px',
+  color: RED,
+  letterSpacing: '0.04em',
+};
+
+const footerLinkStyle = {
+  color: MUTED,
+  textDecoration: 'none',
+  letterSpacing: '0.08em',
+  fontSize: '12px',
+  transition: 'color 0.2s',
+};
