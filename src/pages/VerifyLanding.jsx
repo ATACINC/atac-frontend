@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logoUrl from '../assets/agcx-logo.png';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 
@@ -96,31 +97,38 @@ export default function VerifyLanding() {
           justifyContent: 'space-between',
         }}>
           <a href="https://atacglobalcx.com" style={{
-            textDecoration: 'none',
-            color: WHITE,
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: '12px',
-          }}>
-            <span style={{
-              fontFamily: VAULT_DISPLAY,
-              fontSize: '26px',
-              fontWeight: 500,
-              letterSpacing: '0.02em',
-              fontStyle: 'italic',
-            }}>
-              ATAC
-            </span>
-            <span style={{
-              fontFamily: VAULT_BODY,
-              fontSize: '11px',
-              letterSpacing: '0.25em',
-              textTransform: 'uppercase',
-              color: MUTED,
-            }}>
-              Global CX
-            </span>
-          </a>
+  textDecoration: 'none',
+  color: WHITE,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '14px',
+}}>
+  <div style={{
+    background: WHITE,
+    borderRadius: '6px',
+    padding: '6px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    boxShadow: `0 0 0 1px ${BORDER}`,
+  }}>
+    <img
+      src={logoUrl}
+      alt="ATAC Global CX"
+      style={{ height: '32px', width: 'auto', display: 'block' }}
+    />
+  </div>
+  <span style={{
+    fontFamily: VAULT_BODY,
+    fontSize: '10px',
+    letterSpacing: '0.28em',
+    textTransform: 'uppercase',
+    color: MUTED,
+  }}>
+    Certification
+    <br />
+    Authority
+  </span>
+</a>
           <a href="https://atacglobalcx.com/employers"
              style={{
                fontFamily: VAULT_BODY,
