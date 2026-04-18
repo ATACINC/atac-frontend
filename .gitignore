@@ -25,3 +25,10 @@ dist-ssr
 
 .vercel
 .env*.local
+
+# Backup and one-off debug files — never commit
+*.backup-*
+fix-*.js
+test-*.pdf
+test-*.js
+asset-test.*
