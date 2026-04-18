@@ -7,6 +7,8 @@ import Dashboard  from './pages/Dashboard';
 import Payment    from './pages/Payment';
 import EmployerPortal from './pages/EmployerPortal';
 import Trial from './pages/Trial';
+import Verify from './pages/Verify';
+import VerifyLanding from './pages/VerifyLanding';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
@@ -26,6 +28,8 @@ export default function App() {
         <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
         <Route path="/"           element={<Navigate to="/dashboard" replace />} />
         <Route path="/try" element={<Trial />} />
+        <Route path="/verify" element={<VerifyLanding />} />
+        <Route path="/verify/:credentialId" element={<Verify />} />
       </Routes>
     </BrowserRouter>
   );
