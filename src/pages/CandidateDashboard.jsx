@@ -36,6 +36,7 @@ export default function CandidateDashboard() {
   const [loading,setLoading]=useState(true);
   const [downloading,setDownloading]=useState(false);
   const [toast,setToast]=useState({show:false,msg:'',err:false});
+  const [linkedInCopied,setLinkedInCopied]=useState(false);
 
   const showToast = useCallback((msg,err=false)=>{
     setToast({show:true,msg,err});
@@ -88,6 +89,36 @@ export default function CandidateDashboard() {
     showToast('Verification URL copied');
   };
 
+  // Build dynamic LinkedIn caption using candidate's real credential data
+  const buildLinkedInCaption = () => {
+    const credId   = cred?.credential_id || 'ATAC-C-2026-00001';
+    const program  = cred?.program || 'CRSA';
+    const fullName = candidate?.name || 'Candidate';
+    const programLabel = program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)'
+      : program === 'CCSA' ? 'Certified Customer Service Agent (CCSA)'
+      : program === 'CCCA' ? 'Certified Contact Center Agent (CCCA)'
+      : program === 'CRSS' ? 'Certified Remote Service Supervisor (CRSS)'
+      : program === 'CCSS' ? 'Certified Customer Service Supervisor (CCSS)'
+      : program === 'CCSM' ? 'Certified Customer Service Manager (CCSM)'
+      : program;
+    return `Proud to have earned my ${programLabel} from @ATACGlobalCX — blockchain-verified, globally recognized.\n\nVerify my credential: atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
+  };
+
+  const copyLinkedInCaption = () => {
+    const caption = buildLinkedInCaption();
+    navigator.clipboard?.writeText(caption).then(() => {
+      setLinkedInCopied(true);
+      showToast('Caption copied — paste it into your LinkedIn post');
+      setTimeout(() => setLinkedInCopied(false), 3000);
+    }).catch(() => {
+      showToast('Could not copy — please select and copy manually', true);
+    });
+  };
+
+  const openLinkedInPost = () => {
+    window.open('https://www.linkedin.com/feed/', '_blank');
+  };
+
   const dimScores=assessment?.dim_scores||{};
   const txShort=cred?.tx_hash?`${cred.tx_hash.slice(0,6)}…${cred.tx_hash.slice(-4)}`:'Pending';
   const candidateName=candidate?.name||'Candidate';
@@ -107,6 +138,7 @@ export default function CandidateDashboard() {
       .vbtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,168,76,.2)}
       .vgh:hover{border-color:rgba(201,168,76,.3)!important;color:#C9A84C!important}
       .vstep:hover{background:rgba(201,168,76,.04)!important}
+      .li-step:hover{background:rgba(201,168,76,0.03)!important}
     `}</style>
     <div style={{minHeight:'100vh',background:C.bg,fontFamily:F.body,color:C.white}}>
 
@@ -304,13 +336,90 @@ export default function CandidateDashboard() {
             </button>
           ))}
 
-          <div style={{marginTop:8}}>
+          <div style={{marginTop:8,marginBottom:20}}>
             <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.16em',textTransform:'uppercase',color:C.muted,marginBottom:8}}>Verification URL</div>
             <div style={{display:'flex',gap:6}}>
               <input readOnly value={`atacglobalcx.com/verify/${cred?.credential_id||''}`} style={{flex:1,background:C.faint,border:`1px solid ${C.border2}`,borderRadius:3,padding:'8px 12px',fontSize:10,color:C.muted,fontFamily:F.body,outline:'none'}}/>
               <button onClick={copyUrl} style={{background:C.goldDim,border:`1px solid ${C.border}`,borderRadius:3,padding:'8px 12px',fontSize:10,color:C.gold,cursor:'pointer',fontFamily:F.body,whiteSpace:'nowrap',letterSpacing:'0.08em'}}>Copy</button>
             </div>
           </div>
+
+          {/* ── LINKEDIN SHARE CARD ─────────────────────────── */}
+          {cred&&<div style={{background:C.bg1,border:`1px solid rgba(10,102,194,0.3)`,borderRadius:4,overflow:'hidden',marginBottom:8}}>
+
+            {/* Header */}
+            <div style={{background:'rgba(10,102,194,0.12)',borderBottom:`1px solid rgba(10,102,194,0.2)`,padding:'12px 16px',display:'flex',alignItems:'center',gap:10}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="#0A66C2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.18em',textTransform:'uppercase',color:'#5B9BD5'}}>Share on LinkedIn</div>
+            </div>
+
+            <div style={{padding:'14px 16px'}}>
+
+              {/* Steps */}
+              {[
+                {n:'01', t:'Download your certificate', d:'Click "Download Certificate" above to save your PDF.'},
+                {n:'02', t:'Go to LinkedIn → Create a Post', d:'Click the "Start a post" box on your LinkedIn feed, then upload your certificate image.'},
+                {n:'03', t:'Copy the caption below', d:'Click the copy button, then paste the caption into your post.'},
+                {n:'04', t:'Post it', d:'Hit Post — your blockchain-verified credential is now visible to employers worldwide.'},
+              ].map((step,i)=>(
+                <div key={i} className="li-step" style={{display:'flex',gap:12,padding:'8px 6px',borderRadius:3,marginBottom:4,transition:'background 0.15s'}}>
+                  <div style={{fontFamily:F.display,fontSize:14,fontWeight:300,color:'rgba(10,102,194,0.7)',flexShrink:0,lineHeight:1,paddingTop:2,minWidth:20}}>{step.n}</div>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:600,color:C.white,marginBottom:2}}>{step.t}</div>
+                    <div style={{fontSize:10,color:C.muted,lineHeight:1.5}}>{step.d}</div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Caption box */}
+              <div style={{marginTop:14,background:'rgba(0,0,0,0.25)',border:`1px solid ${C.border2}`,borderRadius:3,overflow:'hidden'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 12px',borderBottom:`1px solid ${C.border2}`}}>
+                  <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.16em',textTransform:'uppercase',color:C.gold}}>Your Caption</div>
+                  <button
+                    onClick={copyLinkedInCaption}
+                    style={{
+                      background: linkedInCopied ? 'rgba(26,143,105,0.15)' : C.goldDim,
+                      border: `1px solid ${linkedInCopied ? 'rgba(26,143,105,0.4)' : C.border}`,
+                      borderRadius:3,padding:'4px 10px',
+                      fontSize:9,color: linkedInCopied ? C.teal2 : C.gold,
+                      cursor:'pointer',fontFamily:F.body,
+                      letterSpacing:'0.12em',textTransform:'uppercase',
+                      transition:'all 0.2s',whiteSpace:'nowrap',
+                    }}
+                  >
+                    {linkedInCopied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+                <div style={{padding:'12px',fontSize:11,color:C.muted,lineHeight:1.75,fontFamily:F.body,whiteSpace:'pre-wrap',wordBreak:'break-word'}}>
+                  {buildLinkedInCaption()}
+                </div>
+              </div>
+
+              {/* Open LinkedIn button */}
+              <button
+                onClick={openLinkedInPost}
+                style={{
+                  width:'100%',marginTop:12,
+                  background:'#0A66C2',color:'#fff',
+                  border:'none',borderRadius:3,
+                  padding:'11px',fontFamily:F.body,
+                  fontSize:10,fontWeight:600,
+                  letterSpacing:'0.16em',textTransform:'uppercase',
+                  cursor:'pointer',display:'flex',
+                  alignItems:'center',justifyContent:'center',gap:8,
+                  transition:'opacity 0.2s',
+                }}
+                onMouseOver={e=>e.currentTarget.style.opacity='0.85'}
+                onMouseOut={e=>e.currentTarget.style.opacity='1'}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                Open LinkedIn → Create Post
+              </button>
+
+            </div>
+          </div>}
+          {/* ── END LINKEDIN SHARE CARD ─────────────────────── */}
+
         </div>
       </div>
     </div>
