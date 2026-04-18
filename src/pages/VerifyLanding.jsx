@@ -56,18 +56,25 @@ export default function VerifyLanding() {
     const cleanId = credentialId.trim().toUpperCase();
 
     try {
-      await fetch(`${API_BASE}/api/employer/leads`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          credential_id: cleanId,
-          email: email.trim(),
-          company: company.trim() || null,
-        }),
-      });
-    } catch (err) {
-      console.warn('Lead capture failed:', err);
-    }
+  const response = await fetch(`${API_BASE}/api/employer-leads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      credentialId: cleanId,
+      email: email.trim(),
+      company: company.trim() || null,
+          source: 'verify_landing',
+          userAgent: navigator.userAgent,
+      source: 'verify_landing',
+      userAgent: navigator.userAgent,
+    }),
+  });
+  if (!response.ok) {
+    console.warn('Lead capture returned:', response.status);
+  }
+} catch (err) {
+  console.warn('Lead capture failed:', err);
+}
 
     navigate(`/verify/${cleanId}`);
   };
