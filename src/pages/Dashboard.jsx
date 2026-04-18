@@ -96,7 +96,7 @@ export default function Dashboard() {
   const handleCheckout = async (tier) => {
     try {
       setCheckoutLoading(tier);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
       if (!token) { alert('Your session has expired. Please log in again.'); navigate('/login'); return; }
       const res  = await fetch('https://atac-backend-production.up.railway.app/api/stripe/checkout', {
         method: 'POST',
