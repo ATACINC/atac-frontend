@@ -340,7 +340,7 @@ export default function Payment() {
       {/* -- Cancelled banner -- */}
       {cancelled && !needsVerification && (
         <div style={{ background: 'rgba(196,138,42,0.08)', border: `1px solid rgba(196,138,42,0.25)`, borderRadius: 3, padding: '12px 24px', margin: '0 auto 24px', maxWidth: 600, textAlign: 'center', fontSize: 13, color: AMBER }}>
-          Payment cancelled \u2014 no charge was made. Choose a tier below to continue.
+          Payment cancelled {'\u2014'} no charge was made. Choose a tier below to continue.
         </div>
       )}
 
@@ -475,7 +475,7 @@ export default function Payment() {
                   cursor: 'pointer',
                   padding: 0,
                 }}>
-                \u2190 Back to plans
+                {'\u2190'} Back to plans
               </button>
             </div>
 
@@ -537,7 +537,7 @@ export default function Payment() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
                   {tier.features.map((f, fi) => (
                     <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.5 }}>
-                      <span style={{ color: tier.color, flexShrink: 0, marginTop: 1 }}>\u25C6</span>
+                      <span style={{ color: tier.color, flexShrink: 0, marginTop: 1 }}>{'\u25C6'}</span>
                       {f}
                     </li>
                   ))}
@@ -566,7 +566,7 @@ export default function Payment() {
 
       {/* -- Trust line -- */}
       <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(238,233,223,0.25)', paddingBottom: 48, letterSpacing: '0.06em' }}>
-        \uD83D\uDD12 Secured by Stripe &nbsp;\u00B7&nbsp; Blockchain-verified credential &nbsp;\u00B7&nbsp; No subscription
+        {'\uD83D\uDD12'} Secured by Stripe &nbsp;{'\u00B7'}&nbsp; Blockchain-verified credential &nbsp;{'\u00B7'}&nbsp; No subscription
       </div>
 
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
