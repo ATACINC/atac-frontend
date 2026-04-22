@@ -29,7 +29,7 @@ const TIERS = [
     color: TEAL2,
     features: [
       '40-question knowledge assessment',
-      'ATAC Call Readiness Simulator\u2122 (1 session)',
+      'ATAC Call Readiness Simulator™ (1 session)',
       'ERC-721 blockchain credential on pass',
       'PDF score report',
       'LinkedIn shareable badge',
@@ -45,7 +45,7 @@ const TIERS = [
     badge: 'Most Popular',
     features: [
       '40-question knowledge assessment',
-      'ATAC Call Readiness Simulator\u2122 (1 session)',
+      'ATAC Call Readiness Simulator™ (1 session)',
       'ERC-721 blockchain credential on pass',
       'PDF score report',
       'LinkedIn shareable badge',
@@ -69,7 +69,7 @@ const TIERS = [
       'ATS webhook integration',
       'Minimum 10 seats',
     ],
-    cta: '$49/seat \u2014 Min 10 seats',
+    cta: '$49/seat — Min 10 seats',
   },
 ];
 
@@ -303,7 +303,7 @@ export default function Payment() {
       }
 
       setResendCooldown(60);
-      setResendStatus('New code sent \u2014 check your inbox.');
+      setResendStatus('New code sent — check your inbox.');
       setVerifyError('');
     } catch (err) {
       setResendStatus('Network error. Please try again.');
@@ -333,14 +333,14 @@ export default function Payment() {
         <div style={{ fontSize: 14, color: MUTED, maxWidth: 520, margin: '0 auto', lineHeight: 1.8 }}>
           {needsVerification
             ? 'Enter the 6-digit code we just sent to your inbox to continue to secure payment.'
-            : 'Complete your 40-question assessment and ATAC Call Readiness Simulator\u2122 session. Pass and earn a blockchain-verified credential.'}
+            : 'Complete your 40-question assessment and ATAC Call Readiness Simulator™ session. Pass and earn a blockchain-verified credential.'}
         </div>
       </div>
 
       {/* -- Cancelled banner -- */}
       {cancelled && !needsVerification && (
         <div style={{ background: 'rgba(196,138,42,0.08)', border: `1px solid rgba(196,138,42,0.25)`, borderRadius: 3, padding: '12px 24px', margin: '0 auto 24px', maxWidth: 600, textAlign: 'center', fontSize: 13, color: AMBER }}>
-          Payment cancelled {'\u2014'} no charge was made. Choose a tier below to continue.
+          Payment cancelled — no charge was made. Choose a tier below to continue.
         </div>
       )}
 
@@ -428,7 +428,7 @@ export default function Payment() {
                 transition: 'all 0.2s',
                 marginBottom: 20,
               }}>
-              {verifying ? 'Verifying\u2026' : 'Verify & Continue to Payment'}
+              {verifying ? 'Verifying…' : 'Verify & Continue to Payment'}
             </button>
 
             {/* Resend */}
@@ -452,7 +452,7 @@ export default function Payment() {
                   textDecoration: resendCooldown > 0 ? 'none' : 'underline',
                   textUnderlineOffset: 3,
                 }}>
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Didn\u2019t get it? Resend code'}
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Didn’t get it? Resend code'}
               </button>
             </div>
 
@@ -475,7 +475,7 @@ export default function Payment() {
                   cursor: 'pointer',
                   padding: 0,
                 }}>
-                {'\u2190'} Back to plans
+                ← Back to plans
               </button>
             </div>
 
@@ -537,7 +537,7 @@ export default function Payment() {
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
                   {tier.features.map((f, fi) => (
                     <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.5 }}>
-                      <span style={{ color: tier.color, flexShrink: 0, marginTop: 1 }}>{'\u25C6'}</span>
+                      <span style={{ color: tier.color, flexShrink: 0, marginTop: 1 }}>◆</span>
                       {f}
                     </li>
                   ))}
@@ -556,7 +556,7 @@ export default function Payment() {
                     opacity: loading && loading !== tier.id ? 0.4 : 1,
                     transition: 'all 0.2s',
                   }}>
-                  {loading === tier.id ? 'Redirecting to Stripe\u2026' : tier.cta}
+                  {loading === tier.id ? 'Redirecting to Stripe…' : tier.cta}
                 </button>
               </div>
             );
@@ -566,7 +566,7 @@ export default function Payment() {
 
       {/* -- Trust line -- */}
       <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(238,233,223,0.25)', paddingBottom: 48, letterSpacing: '0.06em' }}>
-        {'\uD83D\uDD12'} Secured by Stripe &nbsp;{'\u00B7'}&nbsp; Blockchain-verified credential &nbsp;{'\u00B7'}&nbsp; No subscription
+        {'\uD83D\uDD12'} Secured by Stripe &nbsp;·&nbsp; Blockchain-verified credential &nbsp;·&nbsp; No subscription
       </div>
 
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
@@ -575,3 +575,5 @@ export default function Payment() {
     </div>
   );
 }
+
+

@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const API_BASE    = 'https://atac-backend-production.up.railway.app';
-const POLYGONSCAN = 'https://polygonscan.com/tx/';
+const BLOCKCHAIN_EXPLORER = 'https://polygonscan.com/tx/';
 
 const C = {
   bg:'#080B12',bg1:'#0C1018',bg2:'#101520',bg3:'#141B26',
@@ -328,7 +328,7 @@ export default function CandidateDashboard() {
           {[
             {label:downloading?'Generating…':'Download Certificate',action:downloadCertificate,bg:C.gold,color:C.bg,disabled:downloading},
             {label:'Add to LinkedIn',action:addToLinkedIn,bg:'#0A66C2',color:'#fff'},
-            {label:'View on Blockchain',action:()=>cred?.tx_hash?window.open(POLYGONSCAN+cred.tx_hash,'_blank'):showToast('TX hash pending.',true),bg:C.teal,color:'#fff'},
+            {label:'View on Blockchain',action:()=>cred?.tx_hash?window.open(BLOCKCHAIN_EXPLORER+cred.tx_hash,'_blank'):showToast('TX hash pending.',true),bg:C.teal,color:'#fff'},
             {label:'Copy Shareable Link',action:copyUrl,bg:'transparent',color:C.white,border:`1px solid ${C.border2}`},
           ].map((btn,i)=>(
             <button key={i} className={i===3?'vgh':'vbtn'} onClick={btn.action} disabled={btn.disabled} style={{background:btn.bg,color:btn.color,border:btn.border||'none',width:'100%',borderRadius:3,padding:'12px',fontFamily:F.body,fontSize:10,fontWeight:600,letterSpacing:'0.18em',textTransform:'uppercase',cursor:btn.disabled?'not-allowed':'pointer',marginBottom:8,transition:'all 0.2s',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
@@ -428,3 +428,5 @@ export default function CandidateDashboard() {
     </div>
   </>);
 }
+
+

@@ -90,14 +90,14 @@ export default function ConsentModal({
     <div style={styles.backdrop}>
       <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="consent-heading">
 
-        {/* ═══ HEADER ═══ */}
+        {/* ═══ HEADER ═══ */}
         <div style={styles.header}>
           <div style={styles.eyebrow}>ATAC GLOBAL CX · LEGAL CONSENT</div>
           <h2 id="consent-heading" style={styles.heading}>{heading}</h2>
           <p style={styles.subheading}>{subheading}</p>
         </div>
 
-        {/* ═══ DOCUMENTS LIST ═══ */}
+        {/* ═══ DOCUMENTS LIST ═══ */}
         <div style={styles.documentsWrap}>
           {documents.map(doc => {
             const isChecked = !!checked[doc.key];
@@ -175,12 +175,12 @@ export default function ConsentModal({
           })}
         </div>
 
-        {/* ═══ ERROR ═══ */}
+        {/* ═══ ERROR ═══ */}
         {error && (
           <div style={styles.errorBox}>{error}</div>
         )}
 
-        {/* ═══ FOOTER ═══ */}
+        {/* ═══ FOOTER ═══ */}
         <div style={styles.footer}>
           <div style={styles.footerNote}>
             A record of your acceptance (including timestamp and IP address) is stored for compliance and dispute resolution.
@@ -217,7 +217,7 @@ export default function ConsentModal({
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
 const styles = {
   backdrop: {
     position: 'fixed', inset: 0, zIndex: 10000,
@@ -317,3 +317,5 @@ const styles = {
     transition: 'opacity 150ms',
   },
 };
+
+

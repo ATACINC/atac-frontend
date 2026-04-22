@@ -252,7 +252,7 @@ export default function Trial() {
             {/* Navigation */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 32, paddingTop: 24, borderTop: `1px solid ${BORDER2}` }}>
               <button onClick={goPrev} disabled={current === 0} style={{ background: 'transparent', color: MUTED, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px 20px', fontSize: 11, cursor: current === 0 ? 'not-allowed' : 'pointer', opacity: current === 0 ? 0.3 : 1, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: VAULT_BODY }}>
-                ← Prev
+                â† Prev
               </button>
 
               {current < 4 ? (
@@ -368,3 +368,5 @@ export default function Trial() {
 }
 
 const AMBER = '#C48A2A';
+
+

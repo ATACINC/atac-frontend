@@ -88,7 +88,7 @@ export default function VerifyLanding() {
       position: 'relative',
     }}>
 
-      {/* ═══ HEADER BAND ═══ */}
+      {/* ═══ HEADER BAND ═══ */}
       <header style={{
         borderBottom: `1px solid ${BORDER2}`,
         background: `linear-gradient(180deg, ${BG1} 0%, ${BG} 100%)`,
@@ -154,7 +154,7 @@ export default function VerifyLanding() {
         </div>
       </header>
 
-      {/* ═══ MAIN HERO ═══ */}
+      {/* ═══ MAIN HERO ═══ */}
       <main style={{
         maxWidth: '720px',
         margin: '0 auto',
@@ -222,7 +222,7 @@ export default function VerifyLanding() {
         {/* Gold rule */}
         <hr className="vault-up-3 vault-rule" style={{ marginBottom: '40px' }} />
 
-        {/* ═══ VERIFICATION FORM ═══ */}
+        {/* ═══ VERIFICATION FORM ═══ */}
         <form onSubmit={handleSubmit} className="vault-up-3" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -349,7 +349,7 @@ export default function VerifyLanding() {
           </div>
         </form>
 
-        {/* ═══ HOW IT WORKS ═══ */}
+        {/* ═══ HOW IT WORKS ═══ */}
         <section className="vault-up-4" style={{ marginTop: '112px' }}>
           <hr className="vault-rule-full" style={{ marginBottom: '36px' }} />
 
@@ -387,7 +387,7 @@ export default function VerifyLanding() {
           </div>
         </section>
 
-        {/* ═══ ENTERPRISE CTA ═══ */}
+        {/* ═══ ENTERPRISE CTA ═══ */}
         <section className="vault-up-5" style={{
           marginTop: '112px',
           padding: '48px',
@@ -456,7 +456,7 @@ export default function VerifyLanding() {
         </section>
       </main>
 
-      {/* ═══ FOOTER ═══ */}
+      {/* ═══ FOOTER ═══ */}
       <footer style={{
         maxWidth: '1180px',
         margin: '0 auto',
@@ -586,3 +586,4 @@ const footerLinkStyle = {
   fontSize: '12px',
   transition: 'color 0.2s',
 };
+

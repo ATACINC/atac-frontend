@@ -20,7 +20,7 @@ const DOCUMENT_SUMMARIES = {
   tos: 'Governs your overall use of the ATAC Global CX platform. Covers account responsibility, acceptable use, intellectual property, limitation of liability, and dispute resolution via binding arbitration in Toronto with class action waiver.',
   privacy: 'Explains how we collect, use, and share your personal information across Canada (PIPEDA), the EU/UK (GDPR), and California (CCPA). Names our subprocessors (Stripe, Postmark, Alchemy, etc.) and outlines your rights including access, correction, and deletion requests.',
   refund: 'Our refund rules. Full refund within 48 hours if the assessment has not been started; non-refundable once started. Subscriptions cancellable anytime with access through billing period end.',
-  blockchain: 'Critical disclosure about your credential record. On passing, a minimum record (credential ID, program, score band, wallet identifier) is written permanently to the Polygon blockchain and cannot be deleted. Your name and email are NOT written on-chain.',
+  blockchain: 'Critical disclosure about your credential record. On passing, a minimum record (credential ID, program, score band, wallet identifier) is written permanently to the public blockchain and cannot be deleted. Your name and email are NOT written on-chain.',
   candidate_agreement: 'The specific promises you make when taking an assessment: identity integrity, no cheating, no sharing of questions, and agreement that ATAC may revoke credentials for violations.',
   msa: 'Master Services Agreement for employers and BPOs purchasing team seats. Covers seat usage, data processing roles, hiring disclaimers, service levels, and dispute resolution with a mediation-first step.',
   dpa: 'Data Processing Addendum naming you (the employer) as Controller of candidate data and ATAC as Processor, with standard contractual clauses for EU/UK/California data.',
@@ -156,3 +156,5 @@ export function useConsent({ required }) {
 
   return { ensure, modal, error };
 }
+
+

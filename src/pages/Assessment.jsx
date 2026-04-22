@@ -2,12 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 
-/* ── Vault Design Tokens ─────────────────────────────────── */
+/* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
 const BG1   = '#0C1018';
 const BG3   = '#141B26';
 const GOLD  = '#C9A84C';
 const TEAL  = '#1A8F69';
+const TEAL2 = '#22A67E';
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.45)';
 const FAINT = 'rgba(238,233,223,0.04)';
@@ -28,7 +29,25 @@ const DOMAIN_META = {
 const VAULT_FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_FONT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
-/* ── Keyframe injection ─────────────────────────────────── */
+/* Stage labels for the processing screen */
+const STAGE_LABELS = {
+  starting:            'Initializing credential',
+  uploading_metadata:  'Uploading credential metadata',
+  minting_blockchain:  'Minting on the blockchain',
+  finalizing:          'Finalizing your credential',
+  done:                'Credential issued',
+  error:               'Something went wrong',
+};
+
+const STAGE_ORDER = [
+  'starting',
+  'uploading_metadata',
+  'minting_blockchain',
+  'finalizing',
+  'done'
+];
+
+/* ── Keyframe injection ──────────────────────────────────────────── */
 const injectKeyframes = () => {
   if (document.getElementById('vault-kf')) return;
   const style = document.createElement('style');
@@ -40,40 +59,67 @@ const injectKeyframes = () => {
     @keyframes vault-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
     @keyframes progress-fill { from { width: 0; } to { width: var(--target-w); } }
     @keyframes tick { 0%,100% { transform:scale(1); } 50% { transform:scale(1.08); } }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
     .vault-up   { animation: vault-up 0.5s ease both; }
     .vault-in   { animation: vault-in 0.4s ease both; }
     .opt-hover:hover { border-color: ${BORDER} !important; background: rgba(201,168,76,0.05) !important; cursor: pointer; }
     .opt-hover:hover .opt-letter { color: ${GOLD} !important; border-color: rgba(201,168,76,0.4) !important; }
+    .stage-shimmer {
+      background: linear-gradient(90deg, rgba(201,168,76,0.06) 0%, rgba(201,168,76,0.2) 50%, rgba(201,168,76,0.06) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 2s ease-in-out infinite;
+    }
     ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius:2px; }
   `;
   document.head.appendChild(style);
 };
 
-/* ── Timer display ─────────────────────────────────────── */
+/* ── Timer display ───────────────────────────────────────────────── */
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
-/* ── Main Component ─────────────────────────────────────── */
+/* ── Main Component ──────────────────────────────────────────────── */
 export default function Assessment() {
   const navigate = useNavigate();
 
-  // Phase: 'loading' | 'locked' | 'intro' | 'active' | 'submitted' | 'result'
+  // Phase: 'loading' | 'locked' | 'intro' | 'active' | 'processing' | 'result'
   const [phase, setPhase]           = useState('loading');
   const [questions, setQuestions]   = useState([]);
   const [current, setCurrent]       = useState(0);
-  const [answers, setAnswers]     = useState(() => { try { return JSON.parse(localStorage.getItem('atac_answers') || '{}'); } catch { return {}; } });
+  const [answers, setAnswers]       = useState(() => {
+    try { return JSON.parse(localStorage.getItem('atac_answers') || '{}'); }
+    catch { return {}; }
+  });
   const [flagged, setFlagged]       = useState(new Set());
   const [timeLeft, setTimeLeft]     = useState(60 * 40); // 40 min
   const [result, setResult]         = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState('');
   const [animKey, setAnimKey]       = useState(0);
-  const timerRef = useRef(null);
+
+  // Processing-phase state (for async credential minting)
+  const [processingStatus, setProcessingStatus] = useState(null); // pending | processing | issued | failed
+  const [processingStage,  setProcessingStage]  = useState(null);
+  const [processingStartedAt, setProcessingStartedAt] = useState(null);
+
+  const timerRef   = useRef(null);
+  const pollRef    = useRef(null);
 
   useEffect(() => { injectKeyframes(); checkAccess(); }, []);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
 
   const checkAccess = async () => {
     try {
@@ -109,8 +155,12 @@ export default function Assessment() {
   };
 
   const selectAnswer = (qId, optIdx) => {
-  setAnswers(prev => { const u = { ...prev, [qId]: optIdx }; localStorage.setItem('atac_answers', JSON.stringify(u)); return u; });
-};
+    setAnswers(prev => {
+      const u = { ...prev, [qId]: optIdx };
+      localStorage.setItem('atac_answers', JSON.stringify(u));
+      return u;
+    });
+  };
 
   const goTo = (idx) => {
     setCurrent(idx);
@@ -120,26 +170,106 @@ export default function Assessment() {
   const toggleFlag = (qId) => {
     setFlagged(prev => {
       const n = new Set(prev);
-      n.has(qId) ? n.delete(qId) : n.add(qId);
+      if (n.has(qId)) n.delete(qId); else n.add(qId);
       return n;
     });
   };
+
+  // ═════════════════════════════════════════════════════════════════
+  // Submission flow — async pattern
+  //
+  // 1. POST /submit-direct — responds immediately with score + pass/fail
+  // 2. If user passed AND credentialStatus === 'pending', go to
+  //    'processing' phase and begin polling /credential-status
+  // 3. When polling returns status === 'issued', merge credential
+  //    into result and show final 'result' phase
+  // 4. If failed status or timeout, still show result but note
+  //    credential is "being issued — check email in a few minutes"
+  // ═════════════════════════════════════════════════════════════════
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     clearInterval(timerRef.current);
     setSubmitting(true);
+    setError('');
     try {
-      const payload = questions.map(q => ({ questionId: q.id, selectedOption: answers[q.id] ?? null }));
+      const payload = questions.map(q => ({
+        questionId: q.id,
+        selectedOption: answers[q.id] ?? null
+      }));
       const res = await API.post('/api/assessment/submit-direct', { answers: payload });
       setResult(res.data);
       localStorage.removeItem('atac_answers');
-      setPhase('result');
+
+      // If credential is still pending, go to processing phase and poll
+      if (res.data.passed && res.data.credentialStatus === 'pending') {
+        setProcessingStatus('pending');
+        setProcessingStage('starting');
+        setProcessingStartedAt(Date.now());
+        setPhase('processing');
+        startPolling(res.data.assessmentId);
+      } else {
+        // Either they didn't pass, or credential came back instantly
+        setPhase('result');
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Submission failed. Please try again.');
       setSubmitting(false);
     }
   }, [submitting, questions, answers]);
+
+  const startPolling = (assessmentId) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    let pollCount = 0;
+    const maxPolls = 180; // 180 polls × 3s = 9 min max
+
+    const poll = async () => {
+      pollCount++;
+      try {
+        const res = await API.get(`/api/assessment/credential-status/${assessmentId}`);
+        const data = res.data;
+
+        setProcessingStatus(data.status);
+        setProcessingStage(data.stage);
+
+        if (data.status === 'issued' && data.credential) {
+          // Merge credential into result
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setResult(prev => ({
+            ...prev,
+            credentialId: data.credential.credentialId,
+            txHash:       data.credential.txHash,
+            tokenId:      data.credential.tokenId,
+            ipfsUri:      data.credential.ipfsUri,
+          }));
+          setPhase('result');
+        } else if (data.status === 'failed') {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          // Show result but with a "we'll email you" note
+          setPhase('result');
+        } else if (pollCount >= maxPolls) {
+          // Give up polling — show result with note
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setPhase('result');
+        }
+      } catch (err) {
+        console.error('Poll error:', err);
+        if (pollCount >= maxPolls) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setPhase('result');
+        }
+      }
+    };
+
+    // First poll after 1 second, then every 3 seconds
+    setTimeout(poll, 1000);
+    pollRef.current = setInterval(poll, 3000);
+  };
 
   const answered   = Object.keys(answers).length;
   const progress   = questions.length ? (answered / questions.length) * 100 : 0;
@@ -153,7 +283,7 @@ export default function Assessment() {
     return { key: d, total: qs.length, answered: ans, ...DOMAIN_META[d] };
   });
 
-  /* ────────────────────────────────────── RENDER PHASES */
+  /* ─────────────────────────────────────── RENDER PHASES ────── */
   const base = { minHeight: '100vh', background: BG, fontFamily: VAULT_FONT_BODY, color: WHITE };
 
   /* LOADING */
@@ -183,70 +313,76 @@ export default function Assessment() {
     </div>
   );
 
-  /* INTRO */
+  /* INTRO — bigger, clearer typography for CX demographic */
   if (phase === 'intro') return (
-    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ maxWidth: 640, width: '100%' }} className="vault-up">
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div style={{ maxWidth: 720, width: '100%' }} className="vault-up">
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 44 }}>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 12, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>Remote CX Readiness</div>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 42, fontWeight: 300, lineHeight: 1.1, marginBottom: 12 }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 14, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 20 }}>Remote CX Readiness</div>
+          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 52, fontWeight: 300, lineHeight: 1.1, marginBottom: 16 }}>
             Certification Assessment
           </div>
-          <div style={{ width: 40, height: 1, background: GOLD, margin: '0 auto 20px', opacity: 0.4 }} />
-          <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.8, maxWidth: 480, margin: '0 auto' }}>
+          <div style={{ width: 48, height: 1, background: GOLD, margin: '0 auto 24px', opacity: 0.4 }} />
+          <div style={{ fontSize: 16, color: 'rgba(238,233,223,0.7)', lineHeight: 1.8, maxWidth: 540, margin: '0 auto' }}>
             40 professional questions across 5 CX competency domains. Your results determine your blockchain-verified credential.
           </div>
         </div>
 
-        {/* Stats row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 32 }}>
+        {/* Stats row - larger, more prominent */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 36 }}>
           {[
             { val: '40', lbl: 'Questions' },
             { val: '40', lbl: 'Minutes' },
             { val: '70%', lbl: 'Pass Threshold' },
           ].map((s, i) => (
-            <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '18px 0', textAlign: 'center', animationDelay: `${i * 60}ms` }} className="vault-up">
-              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: GOLD, fontWeight: 300 }}>{s.val}</div>
-              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: 4 }}>{s.lbl}</div>
+            <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 0', textAlign: 'center', animationDelay: `${i * 60}ms` }} className="vault-up">
+              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 40, color: GOLD, fontWeight: 300 }}>{s.val}</div>
+              <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 6 }}>{s.lbl}</div>
             </div>
           ))}
         </div>
 
-        {/* Domain breakdown */}
-        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '20px 24px', marginBottom: 28 }}>
-          <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>Assessment Domains</div>
+        {/* Domain breakdown — larger text */}
+        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 28px', marginBottom: 32 }}>
+          <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>Assessment Domains</div>
           {Object.entries(DOMAIN_META).map(([key, meta], i) => {
             const qs = questions.filter(x => x.domain === key).length;
             return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 4 ? 10 : 0, marginBottom: i < 4 ? 10 : 0, borderBottom: i < 4 ? `1px solid ${BORDER2}` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 2, height: 14, background: meta.color, borderRadius: 1, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: WHITE }}>{meta.label}</span>
+              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 4 ? 12 : 0, marginBottom: i < 4 ? 12 : 0, borderBottom: i < 4 ? `1px solid ${BORDER2}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 2, height: 18, background: meta.color, borderRadius: 1, flexShrink: 0 }} />
+                  <span style={{ fontSize: 15, color: WHITE }}>{meta.label}</span>
                 </div>
-                <span style={{ fontSize: 11, color: MUTED }}>{qs} questions</span>
+                <span style={{ fontSize: 13, color: MUTED }}>{qs} questions</span>
               </div>
             );
           })}
         </div>
 
-        {/* Instructions */}
-        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '16px 24px', marginBottom: 32, fontSize: 12, color: MUTED, lineHeight: 1.8 }}>
-          <div style={{ color: WHITE, fontSize: 11, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>Before You Begin</div>
-          {['The timer starts immediately when you click Begin.', 'You may navigate between questions freely.', 'Flag questions to revisit before final submission.', 'All 40 questions must be answered before submitting.', 'Your credential is issued immediately upon passing.'].map((t, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-              <span style={{ color: GOLD, flexShrink: 0 }}>—</span>
+        {/* Instructions — larger, more scannable */}
+        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 28px', marginBottom: 40 }}>
+          <div style={{ color: WHITE, fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Before You Begin</div>
+          {[
+            'The timer starts immediately when you click Begin.',
+            'You may navigate between questions freely.',
+            'Flag questions to revisit before final submission.',
+            'All 40 questions must be answered before submitting.',
+            'Your credential is issued immediately upon passing.'
+          ].map((t, i) => (
+            <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 14, color: 'rgba(238,233,223,0.75)', lineHeight: 1.7 }}>
+              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>—</span>
               <span>{t}</span>
             </div>
           ))}
         </div>
 
-        <button onClick={startAssessment} style={{ ...btnGold, width: '100%', padding: '16px', fontSize: 13, letterSpacing: '0.18em' }}>
+        <button onClick={startAssessment} style={{ ...btnGold, width: '100%', padding: '18px', fontSize: 14, letterSpacing: '0.2em' }}>
           BEGIN ASSESSMENT
         </button>
-        <div style={{ textAlign: 'center', marginTop: 12 }}>
-          <span onClick={() => navigate('/dashboard')} style={{ fontSize: 11, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
         </div>
       </div>
     </div>
@@ -347,7 +483,6 @@ export default function Assessment() {
       {/* ── Question Area ── */}
       <div style={{ background: BG, display: 'flex', flexDirection: 'column', padding: '32px 40px', overflowY: 'auto' }}>
 
-        {/* Question header */}
         <div key={animKey} className="vault-in" style={{ flex: 1 }}>
 
           {/* Domain + Q number */}
@@ -375,7 +510,6 @@ export default function Assessment() {
             {q.text}
           </div>
 
-          {/* Divider */}
           <div style={{ height: 1, background: BORDER2, marginBottom: 28 }} />
 
           {/* Options */}
@@ -439,15 +573,129 @@ export default function Assessment() {
     </div>
   );
 
-  /* SUBMITTED (transitional) */
-  if (phase === 'submitted' || submitting) return (
-    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', marginBottom: 8 }}>Processing Results</div>
-        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', animation: 'vault-pulse 1.5s infinite' }}>Evaluating your responses…</div>
+  /* PROCESSING — new async credential flow */
+  if (phase === 'processing') {
+    const elapsed = processingStartedAt ? Math.floor((Date.now() - processingStartedAt) / 1000) : 0;
+    const showLongWait = elapsed > 60; // after 1 minute, show "take your time" message
+    const currentStageIndex = STAGE_ORDER.indexOf(processingStage || 'starting');
+
+    return (
+      <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <div style={{ maxWidth: 560, width: '100%' }} className="vault-up">
+
+          {/* Score confirmation */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 14, color: TEAL2, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
+              Assessment Passed
+            </div>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 56, fontWeight: 300, color: WHITE, lineHeight: 1, marginBottom: 6 }}>
+              {result?.percentage}%
+            </div>
+            <div style={{ fontSize: 13, color: MUTED, letterSpacing: '0.1em' }}>
+              {result?.score} of 40 correct · Pass threshold 70%
+            </div>
+          </div>
+
+          {/* Main card */}
+          <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '32px 28px', marginBottom: 24 }}>
+            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 24, fontWeight: 300, color: WHITE, marginBottom: 10, lineHeight: 1.3 }}>
+              Minting your blockchain credential
+            </div>
+            <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.7, marginBottom: 28 }}>
+              Your credential is being permanently recorded on the blockchain. This normally takes less than a minute.
+            </div>
+
+            {/* Progress stages */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {STAGE_ORDER.map((stageName, i) => {
+                const isDone    = i < currentStageIndex || processingStatus === 'issued';
+                const isCurrent = i === currentStageIndex && processingStatus !== 'issued';
+                const label = STAGE_LABELS[stageName];
+
+                let dotBg, dotBorder, textColor;
+                if (isDone) {
+                  dotBg = TEAL2;
+                  dotBorder = TEAL2;
+                  textColor = 'rgba(238,233,223,0.85)';
+                } else if (isCurrent) {
+                  dotBg = 'transparent';
+                  dotBorder = GOLD;
+                  textColor = WHITE;
+                } else {
+                  dotBg = 'transparent';
+                  dotBorder = BORDER2;
+                  textColor = MUTED;
+                }
+
+                return (
+                  <div key={stageName} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%',
+                      background: dotBg,
+                      border: `2px solid ${dotBorder}`,
+                      flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                    }}>
+                      {isDone && <span style={{ color: BG, fontSize: 8, fontWeight: 700 }}>✓</span>}
+                      {isCurrent && (
+                        <div style={{
+                          width: 6, height: 6, borderRadius: '50%',
+                          background: GOLD,
+                          animation: 'vault-pulse 1.5s infinite',
+                        }} />
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, color: textColor, transition: 'color 0.3s' }}>
+                        {label}
+                      </div>
+                      {isCurrent && (
+                        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                          In progress…
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Elapsed timer */}
+          <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, letterSpacing: '0.1em', marginBottom: 16 }}>
+            Elapsed: {formatTime(elapsed)}
+          </div>
+
+          {/* Long wait reassurance */}
+          {showLongWait && (
+            <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 20px', fontSize: 13, color: MUTED, lineHeight: 1.7, textAlign: 'center' }}>
+              <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Taking Longer Than Usual
+              </div>
+              The blockchain is experiencing high traffic. You can safely close this page — we'll email your credential as soon as it's ready.
+            </div>
+          )}
+
+          {/* Failed state */}
+          {processingStatus === 'failed' && (
+            <div style={{ background: 'rgba(196,92,92,0.07)', border: `1px solid rgba(196,92,92,0.25)`, borderRadius: 3, padding: '16px 20px', fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.7 }}>
+              <div style={{ color: RED, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
+                Credential Processing Delayed
+              </div>
+              There was an issue issuing your credential automatically. Our team has been notified and will issue it manually within 24 hours. You'll receive an email confirmation.
+              <div style={{ marginTop: 12 }}>
+                <button onClick={() => setPhase('result')} style={btnOutline}>
+                  Continue to Dashboard
+                </button>
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   /* RESULT */
   if (phase === 'result' && result) {
@@ -455,6 +703,8 @@ export default function Assessment() {
     const score   = result.percentage || result.score || result.percentageScore || 0;
     const cred    = result.credentialId;
     const dims    = result.dimScores || result.domainScores || result.dimensions || {};
+    const credentialDelayed = passed && !cred; // passed but no credential yet
+
     return (
       <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: '100vh' }}>
         <div style={{ maxWidth: 680, width: '100%' }} className="vault-up">
@@ -507,7 +757,7 @@ export default function Assessment() {
             </div>
           )}
 
-          {/* Credential info */}
+          {/* Credential info — issued */}
           {passed && cred && (
             <div style={{ background: 'rgba(26,143,105,0.06)', border: `1px solid rgba(26,143,105,0.2)`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
               <div style={{ fontSize: 10, color: TEAL, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Blockchain Credential Issued</div>
@@ -516,12 +766,22 @@ export default function Assessment() {
             </div>
           )}
 
+          {/* Credential info — delayed */}
+          {credentialDelayed && (
+            <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Credential Being Issued</div>
+              <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.6 }}>
+                Your blockchain credential is still being minted. We'll send an email with your credential ID and verification link within a few minutes.
+              </div>
+            </div>
+          )}
+
           {/* CTAs */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={() => navigate('/dashboard')} style={{ ...btnGold, flex: 1, padding: '14px', letterSpacing: '0.12em', textAlign: 'center' }}>
               View Dashboard
             </button>
-            {passed && (
+            {passed && cred && (
               <button onClick={() => window.open('/api/certificate/download', '_blank')} style={{ ...btnOutline, flex: 1, padding: '14px', textAlign: 'center' }}>
                 Download Certificate
               </button>

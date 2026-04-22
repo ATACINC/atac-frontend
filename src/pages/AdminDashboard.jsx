@@ -191,7 +191,7 @@ export default function AdminDashboard() {
       {/* ── Page content ── */}
       <div style={{ padding: '28px 28px', maxWidth: 1400, margin: '0 auto' }}>
 
-        {/* ════ OVERVIEW ════ */}
+        {/* ════ OVERVIEW ════ */}
         {activeNav === 'overview' && (
           <div className="vault-up">
             <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, fontWeight: 300, marginBottom: 6 }}>Platform Overview</div>
@@ -277,7 +277,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ════ CANDIDATES ════ */}
+        {/* ════ CANDIDATES ════ */}
         {activeNav === 'candidates' && (
           <div className="vault-up">
             <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, fontWeight: 300, marginBottom: 4 }}>All Candidates</div>
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ════ CREDENTIALS ════ */}
+        {/* ════ CREDENTIALS ════ */}
         {activeNav === 'credentials' && (
           <div className="vault-up">
             <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, fontWeight: 300, marginBottom: 4 }}>Issued Credentials</div>
@@ -385,7 +385,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ════ EMPLOYERS ════ */}
+        {/* ════ EMPLOYERS ════ */}
         {activeNav === 'employers' && (
           <div className="vault-up">
             <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, fontWeight: 300, marginBottom: 4 }}>BPO / Employer Accounts</div>
@@ -446,3 +446,4 @@ const btnGold = {
   letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
   fontFamily: "'Syne', sans-serif",
 };
+
