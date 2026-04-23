@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import { useAssessmentIntegrity } from '../hooks/useAssessmentIntegrity';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
@@ -112,6 +113,14 @@ export default function Assessment() {
   const pollRef    = useRef(null);
 
   useEffect(() => { injectKeyframes(); checkAccess(); }, []);
+
+  // Integrity tracking: logs blur/focus/visibility events to backend
+  // Active during all post-loading phases. Events during 'active' phase
+  // are queued locally until assessmentId exists (after /submit-direct).
+  useAssessmentIntegrity({
+    assessmentId: result?.assessmentId || null,
+    active: phase === 'active' || phase === 'processing',
+  });
 
   // Clean up polling on unmount
   useEffect(() => {
