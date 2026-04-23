@@ -1,5 +1,5 @@
 // frontend/src/pages/VerifyLanding.jsx
-// Employer verification portal landing page Ã¢â‚¬â€ Vault Design System v2
+// Employer verification portal landing page — Vault Design System v2
 // Route: /verify (app.atacglobalcx.com/verify)
 // v2 changes: typography scaled up across the board for readability
 
@@ -13,7 +13,7 @@ const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY || '29525f8e-3e9c
 const CREDENTIAL_ID_REGEX = /^ATAC-C-\d{4}-\d{5}$/i;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Vault Design Tokens Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── Vault Design Tokens ─────────────────────────────────── */
 const BG      = '#080B12';
 const BG1     = '#0C1018';
 const BG2     = '#101520';
@@ -162,7 +162,7 @@ export default function VerifyLanding() {
       position: 'relative',
     }}>
 
-      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â HEADER BAND Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+      {/* ═══ HEADER BAND ═══ */}
       <header style={{
         borderBottom: `1px solid ${BORDER2}`,
         background: `linear-gradient(180deg, ${BG1} 0%, ${BG} 100%)`,
@@ -223,12 +223,12 @@ export default function VerifyLanding() {
              onMouseOver={(e) => e.target.style.color = GOLD}
              onMouseOut={(e) => e.target.style.color = MUTED}
           >
-            For Enterprise Ã¢â€ â€™
+            For Enterprise →
           </a>
         </div>
       </header>
 
-      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â MAIN HERO Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+      {/* ═══ MAIN HERO ═══ */}
       <main style={{
         maxWidth: '720px',
         margin: '0 auto',
@@ -296,7 +296,7 @@ export default function VerifyLanding() {
         {/* Gold rule */}
         <hr className="vault-up-3 vault-rule" style={{ marginBottom: '40px' }} />
 
-        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â VERIFICATION FORM Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+        {/* ═══ VERIFICATION FORM ═══ */}
         <form onSubmit={handleSubmit} className="vault-up-3" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -359,7 +359,7 @@ export default function VerifyLanding() {
           {/* Company field */}
           <div>
             <label htmlFor="company" style={labelStyle}>
-              Company <span style={{ color: MUTED, fontSize: '10px', marginLeft: '6px', letterSpacing: '0.18em' }}>Ã¢â‚¬â€ Optional</span>
+              Company <span style={{ color: MUTED, fontSize: '10px', marginLeft: '6px', letterSpacing: '0.18em' }}>— Optional</span>
             </label>
             <input
               id="company"
@@ -399,7 +399,7 @@ export default function VerifyLanding() {
               }}
             />
             {!captchaReady && (
-              <p style={{ ...helperStyle, textAlign: 'center' }}>Loading verificationÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</p>
+              <p style={{ ...helperStyle, textAlign: 'center' }}>Loading verification…</p>
             )}
             {errors.captcha && <p style={errorStyle}>{errors.captcha}</p>}
           </div>
@@ -432,7 +432,7 @@ export default function VerifyLanding() {
                 Verifying
               </span>
             ) : (
-              <>Verify Credential Ã¢â€ â€™</>
+              <>Verify Credential →</>
             )}
           </button>
 
@@ -453,7 +453,7 @@ export default function VerifyLanding() {
           </div>
         </form>
 
-        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â HOW IT WORKS Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+        {/* ═══ HOW IT WORKS ═══ */}
         <section className="vault-up-4" style={{ marginTop: '112px' }}>
           <hr className="vault-rule-full" style={{ marginBottom: '36px' }} />
 
@@ -491,7 +491,7 @@ export default function VerifyLanding() {
           </div>
         </section>
 
-        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â ENTERPRISE CTA Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+        {/* ═══ ENTERPRISE CTA ═══ */}
         <section className="vault-up-5" style={{
           marginTop: '112px',
           padding: '48px',
@@ -555,12 +555,12 @@ export default function VerifyLanding() {
               textDecoration: 'none',
             }}
           >
-            Talk to Sales Ã¢â€ â€™
+            Talk to Sales →
           </a>
         </section>
       </main>
 
-      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â FOOTER Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
+      {/* ═══ FOOTER ═══ */}
       <footer style={{
         maxWidth: '1180px',
         margin: '0 auto',
@@ -577,7 +577,7 @@ export default function VerifyLanding() {
         letterSpacing: '0.06em',
       }}>
         <div>
-          Ã‚Â© 2026 ATAC Anagenesis Inc. Ã‚Â· ATAC Global CXÃ¢â€žÂ¢
+          © 2026 ATAC Anagenesis Inc. · ATAC Global CX™
         </div>
         <div style={{ display: 'flex', gap: '28px' }}>
           <a href="https://atacglobalcx.com/privacy" style={footerLinkStyle}>Privacy</a>
@@ -589,7 +589,7 @@ export default function VerifyLanding() {
   );
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Sub-components Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── Sub-components ──────────────────────────────────────── */
 
 function Step({ num, title, body }) {
   return (
@@ -655,7 +655,7 @@ function DotDivider() {
   );
 }
 
-/* Ã¢â€â‚¬Ã¢â€â‚¬ Shared style objects Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+/* ── Shared style objects ────────────────────────────────── */
 
 const labelStyle = {
   display: 'block',
