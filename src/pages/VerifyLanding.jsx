@@ -1,18 +1,19 @@
 // frontend/src/pages/VerifyLanding.jsx
-// Employer verification portal landing page — Vault Design System v2
+// Employer verification portal landing page Ã¢â‚¬â€ Vault Design System v2
 // Route: /verify (app.atacglobalcx.com/verify)
 // v2 changes: typography scaled up across the board for readability
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import logoUrl from '../assets/agcx-logo.png';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
+const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY || '29525f8e-3e9c-41be-a0a0-a50abd621964';
 
 const CREDENTIAL_ID_REGEX = /^ATAC-C-\d{4}-\d{5}$/i;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* ── Vault Design Tokens ─────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Vault Design Tokens Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 const BG      = '#080B12';
 const BG1     = '#0C1018';
 const BG2     = '#101520';
@@ -34,6 +35,66 @@ export default function VerifyLanding() {
   const [company, setCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaReady, setCaptchaReady] = useState(false);
+  const captchaRef = useRef(null);
+  const captchaWidgetId = useRef(null);
+
+  // Load hCaptcha script on mount
+  useEffect(() => {
+    // If hCaptcha is already loaded, just render the widget
+    if (window.hcaptcha) {
+      renderCaptcha();
+      return;
+    }
+    // Otherwise load the script
+    const scriptId = 'hcaptcha-api-script';
+    if (document.getElementById(scriptId)) {
+      // Script tag exists but hcaptcha not ready yet, wait for it
+      const interval = setInterval(() => {
+        if (window.hcaptcha) {
+          clearInterval(interval);
+          renderCaptcha();
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => renderCaptcha();
+    document.head.appendChild(script);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const renderCaptcha = () => {
+    if (!window.hcaptcha || !captchaRef.current) return;
+    if (captchaWidgetId.current !== null) return; // already rendered
+    try {
+      captchaWidgetId.current = window.hcaptcha.render(captchaRef.current, {
+        sitekey: HCAPTCHA_SITEKEY,
+        theme: 'dark',
+        callback: (token) => {
+          setCaptchaToken(token);
+          setErrors(prev => ({ ...prev, captcha: null }));
+        },
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      });
+      setCaptchaReady(true);
+    } catch (err) {
+      console.error('[hCaptcha] render error:', err);
+    }
+  };
+
+  const resetCaptcha = () => {
+    setCaptchaToken('');
+    if (window.hcaptcha && captchaWidgetId.current !== null) {
+      try { window.hcaptcha.reset(captchaWidgetId.current); } catch (e) {}
+    }
+  };
 
   const validate = () => {
     const e = {};
@@ -52,31 +113,44 @@ export default function VerifyLanding() {
     ev.preventDefault();
     if (!validate()) return;
 
+    // Require captcha solved before submission
+    if (!captchaToken) {
+      setErrors(prev => ({ ...prev, captcha: 'Please complete the captcha to continue.' }));
+      return;
+    }
+
     setLoading(true);
     const cleanId = credentialId.trim().toUpperCase();
 
     try {
-  const response = await fetch(`${API_BASE}/api/employer-leads`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      credentialId: cleanId,
-      email: email.trim(),
-      company: company.trim() || null,
+      const response = await fetch(`${API_BASE}/api/employer-leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          credentialId: cleanId,
+          email: email.trim(),
+          company: company.trim() || null,
           source: 'verify_landing',
           userAgent: navigator.userAgent,
-      source: 'verify_landing',
-      userAgent: navigator.userAgent,
-    }),
-  });
-  if (!response.ok) {
-    console.warn('Lead capture returned:', response.status);
-  }
-} catch (err) {
-  console.warn('Lead capture failed:', err);
-}
+          website: '',
+          hcaptchaToken: captchaToken,
+        }),
+      });
+      if (!response.ok) {
+        if (response.status === 400) {
+          resetCaptcha();
+          setErrors(prev => ({ ...prev, captcha: 'Verification failed. Please try the captcha again.' }));
+          setLoading(false);
+          return;
+        }
+        console.warn('Lead capture returned:', response.status);
+      }
+    } catch (err) {
+      console.warn('Lead capture failed:', err);
+    }
 
-    navigate(`/verify/${cleanId}`);
+    navigate('/verify/' + cleanId);
+
   };
 
   return (
@@ -88,7 +162,7 @@ export default function VerifyLanding() {
       position: 'relative',
     }}>
 
-      {/* ═══ HEADER BAND ═══ */}
+      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â HEADER BAND Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
       <header style={{
         borderBottom: `1px solid ${BORDER2}`,
         background: `linear-gradient(180deg, ${BG1} 0%, ${BG} 100%)`,
@@ -149,12 +223,12 @@ export default function VerifyLanding() {
              onMouseOver={(e) => e.target.style.color = GOLD}
              onMouseOut={(e) => e.target.style.color = MUTED}
           >
-            For Enterprise →
+            For Enterprise Ã¢â€ â€™
           </a>
         </div>
       </header>
 
-      {/* ═══ MAIN HERO ═══ */}
+      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â MAIN HERO Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
       <main style={{
         maxWidth: '720px',
         margin: '0 auto',
@@ -222,7 +296,7 @@ export default function VerifyLanding() {
         {/* Gold rule */}
         <hr className="vault-up-3 vault-rule" style={{ marginBottom: '40px' }} />
 
-        {/* ═══ VERIFICATION FORM ═══ */}
+        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â VERIFICATION FORM Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
         <form onSubmit={handleSubmit} className="vault-up-3" style={{
           display: 'flex',
           flexDirection: 'column',
@@ -285,7 +359,7 @@ export default function VerifyLanding() {
           {/* Company field */}
           <div>
             <label htmlFor="company" style={labelStyle}>
-              Company <span style={{ color: MUTED, fontSize: '10px', marginLeft: '6px', letterSpacing: '0.18em' }}>— Optional</span>
+              Company <span style={{ color: MUTED, fontSize: '10px', marginLeft: '6px', letterSpacing: '0.18em' }}>Ã¢â‚¬â€ Optional</span>
             </label>
             <input
               id="company"
@@ -302,10 +376,38 @@ export default function VerifyLanding() {
             />
           </div>
 
+          {/* Honeypot - hidden from real users, bots fill it */}
+          <input
+            type="text"
+            name="website"
+            tabIndex="-1"
+            autoComplete="off"
+            style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0 }}
+            aria-hidden="true"
+          />
+
+          {/* hCaptcha widget */}
+          <div>
+            <div
+              ref={captchaRef}
+              className="h-captcha-container"
+              style={{
+                minHeight: '78px',
+                display: 'flex',
+                justifyContent: 'center',
+                marginTop: '4px',
+              }}
+            />
+            {!captchaReady && (
+              <p style={{ ...helperStyle, textAlign: 'center' }}>Loading verificationÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</p>
+            )}
+            {errors.captcha && <p style={errorStyle}>{errors.captcha}</p>}
+          </div>
+
           {/* Submit CTA */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captchaToken}
             className="vault-btn-gold"
             style={{
               padding: '18px 32px',
@@ -313,6 +415,8 @@ export default function VerifyLanding() {
               letterSpacing: '0.22em',
               marginTop: '16px',
               width: '100%',
+              opacity: (loading || !captchaToken) ? 0.5 : 1,
+              cursor: (loading || !captchaToken) ? 'not-allowed' : 'pointer',
             }}
           >
             {loading ? (
@@ -328,7 +432,7 @@ export default function VerifyLanding() {
                 Verifying
               </span>
             ) : (
-              <>Verify Credential →</>
+              <>Verify Credential Ã¢â€ â€™</>
             )}
           </button>
 
@@ -349,7 +453,7 @@ export default function VerifyLanding() {
           </div>
         </form>
 
-        {/* ═══ HOW IT WORKS ═══ */}
+        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â HOW IT WORKS Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
         <section className="vault-up-4" style={{ marginTop: '112px' }}>
           <hr className="vault-rule-full" style={{ marginBottom: '36px' }} />
 
@@ -387,7 +491,7 @@ export default function VerifyLanding() {
           </div>
         </section>
 
-        {/* ═══ ENTERPRISE CTA ═══ */}
+        {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â ENTERPRISE CTA Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
         <section className="vault-up-5" style={{
           marginTop: '112px',
           padding: '48px',
@@ -451,12 +555,12 @@ export default function VerifyLanding() {
               textDecoration: 'none',
             }}
           >
-            Talk to Sales →
+            Talk to Sales Ã¢â€ â€™
           </a>
         </section>
       </main>
 
-      {/* ═══ FOOTER ═══ */}
+      {/* Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â FOOTER Ã¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚ÂÃ¢â€¢ÂÃ‚Â */}
       <footer style={{
         maxWidth: '1180px',
         margin: '0 auto',
@@ -473,7 +577,7 @@ export default function VerifyLanding() {
         letterSpacing: '0.06em',
       }}>
         <div>
-          © 2026 ATAC Anagenesis Inc. · ATAC Global CX™
+          Ã‚Â© 2026 ATAC Anagenesis Inc. Ã‚Â· ATAC Global CXÃ¢â€žÂ¢
         </div>
         <div style={{ display: 'flex', gap: '28px' }}>
           <a href="https://atacglobalcx.com/privacy" style={footerLinkStyle}>Privacy</a>
@@ -485,7 +589,7 @@ export default function VerifyLanding() {
   );
 }
 
-/* ── Sub-components ──────────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Sub-components Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 function Step({ num, title, body }) {
   return (
@@ -551,7 +655,7 @@ function DotDivider() {
   );
 }
 
-/* ── Shared style objects ────────────────────────────────── */
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Shared style objects Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 
 const labelStyle = {
   display: 'block',
