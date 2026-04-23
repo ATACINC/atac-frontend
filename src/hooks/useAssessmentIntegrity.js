@@ -1,34 +1,88 @@
 // frontend/src/hooks/useAssessmentIntegrity.js
-// Behavioral integrity tracking hook for assessments.
-// Detects blur/focus, visibility changes, copy/paste, right-click.
-// Posts events to the backend /api/integrity endpoints.
+// v2: Queue events locally during assessment, flush to backend on submit.
+//
+// v1 limitation: events fired during 'active' phase were dropped because
+// assessmentId was null (not available until /submit-direct returned).
+//
+// v2 fix: Queue events in a ref while assessmentId is null. When assessmentId
+// appears, flush the queue to POST /api/integrity/events/batch.
 //
 // Usage in Assessment.jsx:
-//   import { useAssessmentIntegrity } from '../hooks/useAssessmentIntegrity';
-//   useAssessmentIntegrity({ assessmentId, active: phase === 'active' });
+//   useAssessmentIntegrity({
+//     assessmentId: result?.assessmentId || null,
+//     active: phase === 'active' || phase === 'processing'
+//   });
 
 import { useEffect, useRef } from 'react';
 import API from '../api/client';
 
+const QUEUE_MAX = 200;   // backend caps at 200 per batch
+const FLUSH_MS = 2000;   // after assessmentId known, small delay before flush
+
 export function useAssessmentIntegrity({ assessmentId, active }) {
   const blurTimeRef = useRef(null);
   const startedRef = useRef(false);
+  const queueRef = useRef([]);
+  const flushedRef = useRef(false);
+  const flushTimerRef = useRef(null);
 
-  // Send event to backend (fire-and-forget)
-  const sendEvent = (eventType, durationMs = null, metadata = null) => {
-    if (!assessmentId) return;
-    try {
-      API.post('/api/integrity/event', {
-        assessmentId,
-        eventType,
-        clientTs: Date.now(),
-        durationMs,
-        metadata,
-      }).catch(() => {}); // silent fail - integrity shouldn't break the test
-    } catch (e) {
-      // swallow errors
+  // Push event to queue or send immediately depending on state
+  const recordEvent = (eventType, durationMs = null, metadata = null) => {
+    const ev = {
+      eventType,
+      clientTs: Date.now(),
+      durationMs,
+      metadata,
+    };
+
+    // If we have an assessmentId, send directly to the single-event endpoint
+    if (assessmentId) {
+      try {
+        API.post('/api/integrity/event', {
+          assessmentId,
+          ...ev,
+        }).catch(() => {});
+      } catch (e) {}
+      return;
     }
+
+    // Otherwise queue locally
+    if (queueRef.current.length < QUEUE_MAX) {
+      queueRef.current.push(ev);
+    }
+    // If queue is full, drop silently (don't block the student's session)
   };
+
+  // Flush queued events when assessmentId becomes available
+  useEffect(() => {
+    if (!assessmentId) return;
+    if (flushedRef.current) return;
+    if (queueRef.current.length === 0) {
+      flushedRef.current = true;
+      return;
+    }
+
+    // Small delay lets submit-direct complete writing IP/UA first
+    flushTimerRef.current = setTimeout(() => {
+      const eventsToFlush = queueRef.current.slice();
+      queueRef.current = [];
+      flushedRef.current = true;
+
+      try {
+        API.post('/api/integrity/events/batch', {
+          assessmentId,
+          events: eventsToFlush,
+        }).catch((err) => {
+          // If batch fails, the events are lost - acceptable tradeoff
+          // (alternative: write to localStorage, retry on next mount)
+        });
+      } catch (e) {}
+    }, FLUSH_MS);
+
+    return () => {
+      if (flushTimerRef.current) clearTimeout(flushTimerRef.current);
+    };
+  }, [assessmentId]);
 
   // Register assessment start once per mount
   useEffect(() => {
@@ -41,19 +95,19 @@ export function useAssessmentIntegrity({ assessmentId, active }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId, active]);
 
-  // Blur / focus tracking
+  // Event listeners
   useEffect(() => {
-    if (!active || !assessmentId) return;
+    if (!active) return;
 
     const handleBlur = () => {
       blurTimeRef.current = Date.now();
-      sendEvent('blur', null, { reason: 'window_blur' });
+      recordEvent('blur', null, { reason: 'window_blur' });
     };
 
     const handleFocus = () => {
       if (blurTimeRef.current) {
         const awayMs = Date.now() - blurTimeRef.current;
-        sendEvent('focus', awayMs, { reason: 'window_focus' });
+        recordEvent('focus', awayMs, { reason: 'window_focus' });
         blurTimeRef.current = null;
       }
     };
@@ -61,30 +115,28 @@ export function useAssessmentIntegrity({ assessmentId, active }) {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         blurTimeRef.current = Date.now();
-        sendEvent('visibility_hidden', null, { visibilityState: document.visibilityState });
+        recordEvent('visibility_hidden', null, { visibilityState: document.visibilityState });
       } else {
         if (blurTimeRef.current) {
           const awayMs = Date.now() - blurTimeRef.current;
-          sendEvent('visibility_visible', awayMs, { visibilityState: document.visibilityState });
+          recordEvent('visibility_visible', awayMs, { visibilityState: document.visibilityState });
           blurTimeRef.current = null;
         }
       }
     };
 
-    const handleCopy = (e) => {
-      sendEvent('copy_attempt', null, {
+    const handleCopy = () => {
+      recordEvent('copy_attempt', null, {
         selection: (window.getSelection()?.toString() || '').slice(0, 60),
       });
     };
 
-    const handlePaste = (e) => {
-      sendEvent('paste_attempt');
+    const handlePaste = () => {
+      recordEvent('paste_attempt');
     };
 
-    const handleContextMenu = (e) => {
-      // Don't suppress in dev mode (lets Tugs right-click during testing)
-      // In production, we could preventDefault() here. For now, just log.
-      sendEvent('right_click');
+    const handleContextMenu = () => {
+      recordEvent('right_click');
     };
 
     window.addEventListener('blur', handleBlur);
@@ -103,7 +155,7 @@ export function useAssessmentIntegrity({ assessmentId, active }) {
       document.removeEventListener('contextmenu', handleContextMenu);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, assessmentId]);
+  }, [active]);
 }
 
 export default useAssessmentIntegrity;
