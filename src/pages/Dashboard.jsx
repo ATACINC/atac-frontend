@@ -405,7 +405,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                  <a href="https://isora.clientclub.net"
+                  <a href="https://jeuumk0um700vulubke9.app.clientclub.net/communities/groups/cxgroup/home?invite=69eeca0963e5b0e52f07c03c"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
