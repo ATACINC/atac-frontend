@@ -21,8 +21,29 @@ const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D45C9A','#8A7DD4','#22A67E'];
-const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_work'];
-const DIM_LABELS = ['Prof','Comm','Ops','Tech','H&S','Remote'];
+const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','compliance_safety','remote_setup'];
+
+// Backwards compat: Normalize legacy dim_scores keys for credentials issued before Apr 28, 2026.
+// Maps health_safety -> compliance_safety and remote_work -> remote_setup in-place.
+function normalizeDims(dims) {
+  if (!dims) return {};
+  if (dims.health_safety !== undefined && dims.compliance_safety === undefined) {
+    dims.compliance_safety = dims.health_safety;
+  }
+  if (dims.remote_work !== undefined && dims.remote_setup === undefined) {
+    dims.remote_setup = dims.remote_work;
+  }
+  return dims;
+}
+
+// Apply normalizeDims to every candidate's dimensions object in a list (for setCandidates).
+function normalizeCandidates(list) {
+  return (list || []).map(c => ({
+    ...c,
+    dimensions: c.dimensions ? normalizeDims(c.dimensions) : c.dimensions,
+  }));
+}
+const DIM_LABELS = ['Prof','Comm','Ops','Tech','CMPL','Remote'];
 
 /* ── Keyframe injection ─────────────────────────────────── */
 const injectKF = () => {
@@ -71,7 +92,7 @@ export default function EmployerPortal() {
         API.get(`/api/employer/${emp.id}/candidates`),
       ]);
       setMetrics(mRes.data);
-      setCandidates(cRes.data.candidates || []);
+      setCandidates(normalizeCandidates(cRes.data.candidates || []));
     } catch (err) {
       if (err.response?.status === 404) {
         alert('No employer account found. Contact support to set up your team account.');
@@ -89,7 +110,7 @@ export default function EmployerPortal() {
       if (f && f !== 'all') params.set('filter', f);
       if (s) params.set('search', s);
       const res = await API.get(`/api/employer/${employerId}/candidates?${params}`);
-      setCandidates(res.data.candidates || []);
+      setCandidates(normalizeCandidates(res.data.candidates || []));
     } catch (err) { console.error(err); }
   };
 

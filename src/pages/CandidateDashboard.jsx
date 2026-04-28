@@ -20,8 +20,21 @@ const C = {
 };
 const F = { display:"'Cormorant Garamond','Times New Roman',serif", body:"'Syne','DM Sans',sans-serif" };
 const DIM_COLORS = ['#22B589','#5B9BD5','#C9A84C','#D4537E','#9B8FD4','#26B589'];
-const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Health & Safety','Remote Work'];
-const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_work'];
+const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Compliance & Safety','Remote Work Setup'];
+const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','compliance_safety','remote_setup'];
+
+// Backwards compat: Normalize legacy dim_scores keys for credentials issued before Apr 28, 2026.
+// Maps health_safety -> compliance_safety and remote_work -> remote_setup in-place.
+function normalizeDims(dims) {
+  if (!dims) return {};
+  if (dims.health_safety !== undefined && dims.compliance_safety === undefined) {
+    dims.compliance_safety = dims.health_safety;
+  }
+  if (dims.remote_work !== undefined && dims.remote_setup === undefined) {
+    dims.remote_setup = dims.remote_work;
+  }
+  return dims;
+}
 
 function getToken() { return localStorage.getItem('atac_token')||''; }
 function fmtDate(iso) { if(!iso) return '—'; return new Date(iso).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
@@ -119,7 +132,7 @@ export default function CandidateDashboard() {
     window.open('https://www.linkedin.com/feed/', '_blank');
   };
 
-  const dimScores=assessment?.dim_scores||{};
+  const dimScores=normalizeDims(assessment?.dim_scores||{});
   const txShort=cred?.tx_hash?`${cred.tx_hash.slice(0,6)}…${cred.tx_hash.slice(-4)}`:'Pending';
   const candidateName=candidate?.name||'Candidate';
   const programFull=cred?.program==='CRSA'?'Certified Remote Service Agent':(cred?.program||'CRSA');

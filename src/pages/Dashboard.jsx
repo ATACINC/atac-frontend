@@ -22,8 +22,21 @@ const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D4537E','#8A7DD4','#22A67E'];
-const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Health & Safety','Remote Work'];
-const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_setup'];
+const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Compliance & Safety','Remote Work Setup'];
+const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','compliance_safety','remote_setup'];
+
+// Backwards compat: Normalize legacy dim_scores keys for credentials issued before Apr 28, 2026.
+// Maps health_safety -> compliance_safety and remote_work -> remote_setup in-place.
+function normalizeDims(dims) {
+  if (!dims) return {};
+  if (dims.health_safety !== undefined && dims.compliance_safety === undefined) {
+    dims.compliance_safety = dims.health_safety;
+  }
+  if (dims.remote_work !== undefined && dims.remote_setup === undefined) {
+    dims.remote_setup = dims.remote_work;
+  }
+  return dims;
+}
 
 /* -- Keyframe injection ----------------------------------------------- */
 const injectKF = () => {
@@ -194,7 +207,7 @@ export default function Dashboard() {
   const logout = () => { localStorage.clear(); navigate('/login'); };
 
   const latestCred = credentials[0];
-  const dims       = result?.dimensions || {};
+  const dims       = normalizeDims(result?.dimensions || {});
   const hasCred    = credentials.length > 0;
 
   /* -- Shared button styles -- */

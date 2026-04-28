@@ -23,7 +23,9 @@ const DOMAIN_META = {
   communication:   { label: 'Communication',       color: '#5BA8D4',         abbr: 'COMM' },
   cx_operations:   { label: 'CX Operations',       color: '#5DCAA5',         abbr: 'OPER' },
   technology:      { label: 'Technology',          color: '#8A7DD4',         abbr: 'TECH' },
-  health_safety:   { label: 'Health & Safety',     color: '#C45C5C',         abbr: 'H&S'  },
+  compliance_safety: { label: 'Compliance & Safety', color: '#C45C5C',       abbr: 'CMPL' },
+  // Legacy alias — existing credentials with dimScores keyed by 'health_safety' still render correctly
+  health_safety:   { label: 'Compliance & Safety', color: '#C45C5C',       abbr: 'CMPL' },
   remote_setup:    { label: 'Remote Work Setup',    color: '#22A67E',         abbr: 'RWS'  },
 };
 
