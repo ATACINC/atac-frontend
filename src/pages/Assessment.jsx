@@ -185,15 +185,15 @@ export default function Assessment() {
   };
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  // Submission flow â€” async pattern
+  // Submission flow — async pattern
   //
-  // 1. POST /submit-direct â€” responds immediately with score + pass/fail
+  // 1. POST /submit-direct — responds immediately with score + pass/fail
   // 2. If user passed AND credentialStatus === 'pending', go to
   //    'processing' phase and begin polling /credential-status
   // 3. When polling returns status === 'issued', merge credential
   //    into result and show final 'result' phase
   // 4. If failed status or timeout, still show result but note
-  //    credential is "being issued â€” check email in a few minutes"
+  //    credential is "being issued — check email in a few minutes"
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   const handleSubmit = useCallback(async () => {
@@ -260,7 +260,7 @@ export default function Assessment() {
           // Show result but with a "we'll email you" note
           setPhase('result');
         } else if (pollCount >= maxPolls) {
-          // Give up polling â€” show result with note
+          // Give up polling — show result with note
           clearInterval(pollRef.current);
           pollRef.current = null;
           setPhase('result');
@@ -322,7 +322,7 @@ export default function Assessment() {
     </div>
   );
 
-  /* INTRO â€” bigger, clearer typography for CX demographic */
+  /* INTRO — bigger, clearer typography for CX demographic */
   if (phase === 'intro') return (
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <div style={{ maxWidth: 720, width: '100%' }} className="vault-up">
@@ -353,13 +353,13 @@ export default function Assessment() {
           ))}
         </div>
 
-        {/* Domain breakdown â€” larger text */}
+        {/* Domain breakdown — larger text */}
         <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 28px', marginBottom: 32 }}>
           <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>Assessment Domains</div>
           {Object.entries(DOMAIN_META).map(([key, meta], i) => {
             const qs = questions.filter(x => x.domain === key).length;
             return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 4 ? 12 : 0, marginBottom: i < 4 ? 12 : 0, borderBottom: i < 4 ? `1px solid ${BORDER2}` : 'none' }}>
+              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 5 ? 12 : 0, marginBottom: i < 5 ? 12 : 0, borderBottom: i < 5 ? `1px solid ${BORDER2}` : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 2, height: 18, background: meta.color, borderRadius: 1, flexShrink: 0 }} />
                   <span style={{ fontSize: 15, color: WHITE }}>{meta.label}</span>
@@ -370,7 +370,7 @@ export default function Assessment() {
           })}
         </div>
 
-        {/* Instructions â€” larger, more scannable */}
+        {/* Instructions — larger, more scannable */}
         <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 28px', marginBottom: 40 }}>
           <div style={{ color: WHITE, fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Before You Begin</div>
           {[
@@ -381,7 +381,7 @@ export default function Assessment() {
             'Your credential is issued immediately upon passing.'
           ].map((t, i) => (
             <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 14, color: 'rgba(238,233,223,0.75)', lineHeight: 1.7 }}>
-              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>â€”</span>
+              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>—</span>
               <span>{t}</span>
             </div>
           ))}
@@ -506,7 +506,7 @@ export default function Assessment() {
               <button
                 onClick={() => toggleFlag(q.id)}
                 style={{ background: flagged.has(q.id) ? 'rgba(196,92,92,0.1)' : FAINT, border: `1px solid ${flagged.has(q.id) ? 'rgba(196,92,92,0.35)' : BORDER2}`, color: flagged.has(q.id) ? RED : MUTED, fontSize: 10, padding: '5px 10px', borderRadius: 2, cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {flagged.has(q.id) ? 'âš‘ Flagged' : 'âš Flag'}
+                {flagged.has(q.id) ? '⚑ Flagged' : '⚐ Flag'}
               </button>
               <span style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, color: MUTED, fontWeight: 300 }}>
                 <span style={{ color: GOLD }}>{current + 1}</span> / 40
@@ -565,13 +565,13 @@ export default function Assessment() {
               onClick={() => goTo(Math.max(0, current - 1))}
               disabled={current === 0}
               style={{ ...btnOutline, opacity: current === 0 ? 0.3 : 1 }}>
-              â† Previous
+              ← Previous
             </button>
             <div style={{ fontSize: 11, color: MUTED, alignSelf: 'center' }}>
               {answered} of 40 answered
             </div>
             {current < 39
-              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next â†’</button>
+              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next →</button>
               : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
                   {submitting ? 'Submittingâ€¦' : 'Submit Assessment'}
                 </button>
@@ -582,7 +582,7 @@ export default function Assessment() {
     </div>
   );
 
-  /* PROCESSING â€” new async credential flow */
+  /* PROCESSING — new async credential flow */
   if (phase === 'processing') {
     const elapsed = processingStartedAt ? Math.floor((Date.now() - processingStartedAt) / 1000) : 0;
     const showLongWait = elapsed > 60; // after 1 minute, show "take your time" message
@@ -682,7 +682,7 @@ export default function Assessment() {
               <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Taking Longer Than Usual
               </div>
-              The blockchain is experiencing high traffic. You can safely close this page â€” we'll email your credential as soon as it's ready.
+              The blockchain is experiencing high traffic. You can safely close this page — we'll email your credential as soon as it's ready.
             </div>
           )}
 
@@ -730,7 +730,7 @@ export default function Assessment() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: VAULT_FONT_DISPLAY, fontSize: 36, color: passed ? TEAL : RED,
             }}>
-              {passed ? 'âœ“' : 'Ã—'}
+              {passed ? '✓' : '✕'}
             </div>
             <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 48, fontWeight: 300, color: passed ? TEAL : RED, lineHeight: 1 }}>
               {Math.round(score)}%
@@ -739,7 +739,7 @@ export default function Assessment() {
               {passed ? 'Assessment Passed' : 'Assessment Not Passed'}
             </div>
             <div style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
-              Pass threshold: 70% Â· {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
+              Pass threshold: 70% · {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
             </div>
           </div>
 
@@ -766,7 +766,7 @@ export default function Assessment() {
             </div>
           )}
 
-          {/* Credential info â€” issued */}
+          {/* Credential info — issued */}
           {passed && cred && (
             <div style={{ background: 'rgba(26,143,105,0.06)', border: `1px solid rgba(26,143,105,0.2)`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
               <div style={{ fontSize: 10, color: TEAL, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Blockchain Credential Issued</div>
@@ -775,7 +775,7 @@ export default function Assessment() {
             </div>
           )}
 
-          {/* Credential info â€” delayed */}
+          {/* Credential info — delayed */}
           {credentialDelayed && (
             <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
               <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Credential Being Issued</div>
