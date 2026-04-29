@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
-import { useAssessmentIntegrity } from '../hooks/useAssessmentIntegrity';
 
-/* â”€â”€ Vault Design Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
 const BG1   = '#0C1018';
 const BG3   = '#141B26';
@@ -23,8 +22,14 @@ const DOMAIN_META = {
   communication:   { label: 'Communication',       color: '#5BA8D4',         abbr: 'COMM' },
   cx_operations:   { label: 'CX Operations',       color: '#5DCAA5',         abbr: 'OPER' },
   technology:      { label: 'Technology',          color: '#8A7DD4',         abbr: 'TECH' },
-  compliance_safety: { label: 'Compliance & Safety', color: '#C45C5C',       abbr: 'CMPL' },
+  compliance_safety:{ label:'Compliance & Safety', color: '#C45C5C',         abbr: 'CMPL' },
   remote_setup:    { label: 'Remote Work Setup',    color: '#22A67E',         abbr: 'RWS'  },
+};
+const DOMAIN_KEYS = ['professionalism', 'communication', 'cx_operations', 'technology', 'compliance_safety', 'remote_setup'];
+const normalizeDomainKey = (domain) => {
+  if (domain === 'health_safety') return 'compliance_safety';
+  if (domain === 'remote_work') return 'remote_setup';
+  return domain;
 };
 
 const VAULT_FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
@@ -48,7 +53,7 @@ const STAGE_ORDER = [
   'done'
 ];
 
-/* â”€â”€ Keyframe injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Keyframe injection ──────────────────────────────────────────── */
 const injectKeyframes = () => {
   if (document.getElementById('vault-kf')) return;
   const style = document.createElement('style');
@@ -78,14 +83,14 @@ const injectKeyframes = () => {
   document.head.appendChild(style);
 };
 
-/* â”€â”€ Timer display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Timer display ───────────────────────────────────────────────── */
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
-/* â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Main Component ──────────────────────────────────────────────── */
 export default function Assessment() {
   const navigate = useNavigate();
 
@@ -113,14 +118,6 @@ export default function Assessment() {
   const pollRef    = useRef(null);
 
   useEffect(() => { injectKeyframes(); checkAccess(); }, []);
-
-  // Integrity tracking: logs blur/focus/visibility events to backend
-  // Active during all post-loading phases. Events during 'active' phase
-  // are queued locally until assessmentId exists (after /submit-direct).
-  useAssessmentIntegrity({
-    assessmentId: result?.assessmentId || null,
-    active: phase === 'active' || phase === 'processing',
-  });
 
   // Clean up polling on unmount
   useEffect(() => {
@@ -184,7 +181,7 @@ export default function Assessment() {
     });
   };
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════════════
   // Submission flow — async pattern
   //
   // 1. POST /submit-direct — responds immediately with score + pass/fail
@@ -194,7 +191,7 @@ export default function Assessment() {
   //    into result and show final 'result' phase
   // 4. If failed status or timeout, still show result but note
   //    credential is "being issued — check email in a few minutes"
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ═════════════════════════════════════════════════════════════════
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -231,7 +228,7 @@ export default function Assessment() {
     if (pollRef.current) clearInterval(pollRef.current);
 
     let pollCount = 0;
-    const maxPolls = 180; // 180 polls Ã— 3s = 9 min max
+    const maxPolls = 180; // 180 polls × 3s = 9 min max
 
     const poll = async () => {
       pollCount++;
@@ -284,15 +281,15 @@ export default function Assessment() {
   const progress   = questions.length ? (answered / questions.length) * 100 : 0;
   const q          = questions[current] || null;
   const isLowTime  = timeLeft < 300;
-  const domainList = Object.keys(DOMAIN_META);
+  const domainList = DOMAIN_KEYS;
 
   const domainProgress = domainList.map(d => {
-    const qs = questions.filter(x => x.domain === d);
+    const qs = questions.filter(x => normalizeDomainKey(x.domain) === d);
     const ans = qs.filter(x => answers[x.id] !== undefined).length;
     return { key: d, total: qs.length, answered: ans, ...DOMAIN_META[d] };
   });
 
-  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RENDER PHASES â”€â”€â”€â”€â”€â”€ */
+  /* ─────────────────────────────────────── RENDER PHASES ────── */
   const base = { minHeight: '100vh', background: BG, fontFamily: VAULT_FONT_BODY, color: WHITE };
 
   /* LOADING */
@@ -300,7 +297,7 @@ export default function Assessment() {
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>ATAC Global CX</div>
-        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessmentâ€¦</div>
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessment…</div>
       </div>
     </div>
   );
@@ -323,85 +320,103 @@ export default function Assessment() {
   );
 
   /* INTRO — bigger, clearer typography for CX demographic */
-  if (phase === 'intro') return (
-    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <div style={{ maxWidth: 720, width: '100%' }} className="vault-up">
+  if (phase === 'intro') {
+    const questionTotal = questions.length || 40;
+    const domainTiles = DOMAIN_KEYS.map(key => {
+      const meta = DOMAIN_META[key];
+      const count = questions.filter(x => normalizeDomainKey(x.domain) === key).length;
+      return { key, count, ...meta };
+    });
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 14, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 20 }}>Remote CX Readiness</div>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 52, fontWeight: 300, lineHeight: 1.1, marginBottom: 16 }}>
-            Certification Assessment
-          </div>
-          <div style={{ width: 48, height: 1, background: GOLD, margin: '0 auto 24px', opacity: 0.4 }} />
-          <div style={{ fontSize: 16, color: 'rgba(238,233,223,0.7)', lineHeight: 1.8, maxWidth: 540, margin: '0 auto' }}>
-            40 professional questions across 5 CX competency domains. Your results determine your blockchain-verified credential.
-          </div>
-        </div>
+    return (
+      <div style={{ ...base, padding: '56px 44px 48px', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
 
-        {/* Stats row - larger, more prominent */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 36 }}>
-          {[
-            { val: '40', lbl: 'Questions' },
-            { val: '40', lbl: 'Minutes' },
-            { val: '70%', lbl: 'Pass Threshold' },
-          ].map((s, i) => (
-            <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 0', textAlign: 'center', animationDelay: `${i * 60}ms` }} className="vault-up">
-              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 40, color: GOLD, fontWeight: 300 }}>{s.val}</div>
-              <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 6 }}>{s.lbl}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Domain breakdown — larger text */}
-        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 28px', marginBottom: 32 }}>
-          <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>Assessment Domains</div>
-          {Object.entries(DOMAIN_META).map(([key, meta], i) => {
-            const qs = questions.filter(x => x.domain === key).length;
-            return (
-              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: i < 5 ? 12 : 0, marginBottom: i < 5 ? 12 : 0, borderBottom: i < 5 ? `1px solid ${BORDER2}` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 2, height: 18, background: meta.color, borderRadius: 1, flexShrink: 0 }} />
-                  <span style={{ fontSize: 15, color: WHITE }}>{meta.label}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 28, alignItems: 'stretch', marginBottom: 28 }}>
+            <section style={{ background: `linear-gradient(135deg, rgba(201,168,76,0.10), rgba(12,16,24,0.92) 46%, rgba(34,166,126,0.08))`, border: `1px solid ${BORDER}`, borderRadius: 4, padding: '44px 46px', minHeight: 520, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.24em', textTransform: 'uppercase', marginBottom: 18 }}>
+                  Remote CX Readiness
                 </div>
-                <span style={{ fontSize: 13, color: MUTED }}>{qs} questions</span>
+                <h1 style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 72, fontWeight: 300, lineHeight: 0.98, margin: 0, color: WHITE, maxWidth: 620 }}>
+                  Certification Assessment
+                </h1>
+                <div style={{ width: 64, height: 1, background: GOLD, margin: '28px 0', opacity: 0.55 }} />
+                <p style={{ fontSize: 18, color: 'rgba(238,233,223,0.76)', lineHeight: 1.75, maxWidth: 650, margin: 0 }}>
+                  A timed readiness check across six call center and remote-work competencies. Passing unlocks your blockchain-verified credential and confirms you are ready for the next step.
+                </p>
               </div>
-            );
-          })}
-        </div>
 
-        {/* Instructions — larger, more scannable */}
-        <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 28px', marginBottom: 40 }}>
-          <div style={{ color: WHITE, fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Before You Begin</div>
-          {[
-            'The timer starts immediately when you click Begin.',
-            'You may navigate between questions freely.',
-            'Flag questions to revisit before final submission.',
-            'All 40 questions must be answered before submitting.',
-            'Your credential is issued immediately upon passing.'
-          ].map((t, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 14, color: 'rgba(238,233,223,0.75)', lineHeight: 1.7 }}>
-              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>—</span>
-              <span>{t}</span>
-            </div>
-          ))}
-        </div>
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, margin: '34px 0 22px' }}>
+                  {[
+                    { val: questionTotal, lbl: 'Questions' },
+                    { val: '40', lbl: 'Minutes' },
+                    { val: '70%', lbl: 'Pass Mark' },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: 'rgba(8,11,18,0.56)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '22px 18px' }}>
+                      <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 44, color: GOLD, fontWeight: 300, lineHeight: 1 }}>{s.val}</div>
+                      <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 8 }}>{s.lbl}</div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={startAssessment} style={{ ...btnGold, width: '100%', padding: '20px 24px', fontSize: 14, letterSpacing: '0.2em' }}>
+                  Begin Assessment
+                </button>
+                <div style={{ marginTop: 16 }}>
+                  <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
+                </div>
+              </div>
+            </section>
 
-        <button onClick={startAssessment} style={{ ...btnGold, width: '100%', padding: '18px', fontSize: 14, letterSpacing: '0.2em' }}>
-          BEGIN ASSESSMENT
-        </button>
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
+            <section style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '34px 34px 32px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-end', marginBottom: 24 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>Assessment Domains</div>
+                  <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, color: WHITE, lineHeight: 1.1 }}>What will be measured</div>
+                </div>
+                <div style={{ color: GOLD, fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300 }}>{DOMAIN_KEYS.length}</div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14 }}>
+                {domainTiles.map((d, i) => (
+                  <div key={d.key} style={{ minHeight: 126, background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '20px 18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', animationDelay: `${i * 45}ms` }} className="vault-up">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start' }}>
+                      <div style={{ width: 3, height: 30, background: d.color, borderRadius: 2, flexShrink: 0 }} />
+                      <div style={{ fontSize: 11, color: d.color, letterSpacing: '0.16em', textTransform: 'uppercase' }}>{d.abbr}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: WHITE, fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>{d.label}</div>
+                      <div style={{ color: MUTED, fontSize: 12, marginTop: 8 }}>{questions.length ? `${d.count} questions` : 'Included in assessment'}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: 26 }}>
+            {[
+              { title: 'Timer Starts On Begin', body: 'You have 40 minutes and can move freely between questions.' },
+              { title: 'Answer Every Question', body: 'Use the question tracker and flags to revisit anything before submitting.' },
+              { title: 'Credential On Passing', body: 'Passing candidates receive a blockchain-verifiable ATAC credential.' },
+            ].map((item, i) => (
+              <div key={item.title} style={{ borderLeft: `3px solid ${i === 2 ? TEAL2 : GOLD}`, paddingLeft: 18, minHeight: 70 }}>
+                <div style={{ color: WHITE, fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>{item.title}</div>
+                <div style={{ color: 'rgba(238,233,223,0.68)', fontSize: 14, lineHeight: 1.65 }}>{item.body}</div>
+              </div>
+            ))}
+          </section>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   /* ACTIVE */
   if (phase === 'active' && q) return (
     <div style={{ ...base, display: 'grid', gridTemplateColumns: '240px 1fr', minHeight: '100vh' }}>
 
-      {/* â”€â”€ Sidebar â”€â”€ */}
+      {/* ── Sidebar ── */}
       <div style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         {/* Branding */}
@@ -430,24 +445,8 @@ export default function Assessment() {
           </div>
         </div>
 
-        {/* Domain progress */}
-        <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER2}` }}>
-          <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>Domains</div>
-          {domainProgress.map(d => (
-            <div key={d.key} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: d.answered === d.total ? d.color : MUTED }}>{d.abbr}</span>
-                <span style={{ fontSize: 10, color: MUTED }}>{d.answered}/{d.total}</span>
-              </div>
-              <div style={{ height: 2, background: BORDER2, borderRadius: 1 }}>
-                <div style={{ height: 2, width: `${d.total ? (d.answered / d.total) * 100 : 0}%`, background: d.color, borderRadius: 1, transition: 'width 0.3s' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Q Navigator */}
-        <div style={{ padding: '14px 18px', flex: 1 }}>
+        <div style={{ padding: '18px', flex: 1 }}>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 10 }}>Questions</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 4 }}>
             {questions.map((q2, i) => {
@@ -483,13 +482,13 @@ export default function Assessment() {
             onClick={handleSubmit}
             disabled={submitting}
             style={{ width: '100%', ...btnGold, fontSize: 11, padding: '10px 0', opacity: submitting ? 0.6 : 1 }}>
-            {submitting ? 'SUBMITTINGâ€¦' : 'SUBMIT ASSESSMENT'}
+            {submitting ? 'SUBMITTING…' : 'SUBMIT ASSESSMENT'}
           </button>
           {error && <div style={{ fontSize: 10, color: RED, marginTop: 8 }}>{error}</div>}
         </div>
       </div>
 
-      {/* â”€â”€ Question Area â”€â”€ */}
+      {/* ── Question Area ── */}
       <div style={{ background: BG, display: 'flex', flexDirection: 'column', padding: '32px 40px', overflowY: 'auto' }}>
 
         <div key={animKey} className="vault-in" style={{ flex: 1 }}>
@@ -497,9 +496,9 @@ export default function Assessment() {
           {/* Domain + Q number */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 2, height: 16, background: DOMAIN_META[q.domain]?.color || GOLD, borderRadius: 1 }} />
+              <div style={{ width: 2, height: 16, background: DOMAIN_META[normalizeDomainKey(q.domain)]?.color || GOLD, borderRadius: 1 }} />
               <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-                {DOMAIN_META[q.domain]?.label || q.domain}
+                {DOMAIN_META[normalizeDomainKey(q.domain)]?.label || q.domain}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -551,7 +550,7 @@ export default function Assessment() {
                   </div>
                   {selected && (
                     <div style={{ marginLeft: 'auto', flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: BG, fontSize: 10, fontWeight: 700 }}>âœ“</span>
+                      <span style={{ color: BG, fontSize: 10, fontWeight: 700 }}>✓</span>
                     </div>
                   )}
                 </div>
@@ -573,9 +572,54 @@ export default function Assessment() {
             {current < 39
               ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next →</button>
               : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Submittingâ€¦' : 'Submit Assessment'}
+                  {submitting ? 'Submitting…' : 'Submit Assessment'}
                 </button>
             }
+          </div>
+
+          {/* Domain tracker */}
+          <div style={{ marginTop: 28, padding: '22px 24px', background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 18, marginBottom: 18 }}>
+              <div>
+                <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 5 }}>Domain Tracker</div>
+                <div style={{ fontSize: 13, color: MUTED }}>Progress updates as questions are answered across the six assessment domains.</div>
+              </div>
+              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 24, color: WHITE, fontWeight: 300, whiteSpace: 'nowrap' }}>
+                <span style={{ color: GOLD }}>{answered}</span> / 40
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 10 }}>
+              {domainProgress.map(d => {
+                const pct = d.total ? (d.answered / d.total) * 100 : 0;
+                const complete = d.total > 0 && d.answered === d.total;
+                return (
+                  <div key={d.key} style={{
+                    minHeight: 118,
+                    background: complete ? 'rgba(26,143,105,0.08)' : FAINT,
+                    border: `1px solid ${complete ? 'rgba(26,143,105,0.28)' : BORDER2}`,
+                    borderRadius: 4,
+                    padding: '14px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}>
+                    <div>
+                      <div style={{ width: 28, height: 3, background: d.color, borderRadius: 2, marginBottom: 12 }} />
+                      <div style={{ fontSize: 13, color: WHITE, lineHeight: 1.25, minHeight: 34 }}>{d.label}</div>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 26, color: complete ? TEAL2 : GOLD, fontWeight: 300 }}>{d.answered}</div>
+                        <div style={{ fontSize: 11, color: MUTED }}>of {d.total || 0}</div>
+                      </div>
+                      <div style={{ height: 5, background: 'rgba(238,233,223,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: 5, width: `${pct}%`, background: d.color, borderRadius: 3, transition: 'width 0.3s ease' }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -601,7 +645,7 @@ export default function Assessment() {
               {result?.percentage}%
             </div>
             <div style={{ fontSize: 13, color: MUTED, letterSpacing: '0.1em' }}>
-              {result?.score} of 40 correct Â· Pass threshold 70%
+              {result?.score} of 40 correct · Pass threshold 70%
             </div>
           </div>
 
@@ -646,7 +690,7 @@ export default function Assessment() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.3s ease',
                     }}>
-                      {isDone && <span style={{ color: BG, fontSize: 8, fontWeight: 700 }}>âœ“</span>}
+                      {isDone && <span style={{ color: BG, fontSize: 8, fontWeight: 700 }}>✓</span>}
                       {isCurrent && (
                         <div style={{
                           width: 6, height: 6, borderRadius: '50%',
@@ -661,7 +705,7 @@ export default function Assessment() {
                       </div>
                       {isCurrent && (
                         <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-                          In progressâ€¦
+                          In progress…
                         </div>
                       )}
                     </div>
@@ -708,94 +752,161 @@ export default function Assessment() {
 
   /* RESULT */
   if (phase === 'result' && result) {
-    const passed  = result.passed;
-    const score   = result.percentage || result.score || result.percentageScore || 0;
-    const cred    = result.credentialId;
-    const dims    = result.dimScores || result.domainScores || result.dimensions || {};
-    const credentialDelayed = passed && !cred; // passed but no credential yet
+    const passed = !!result.passed;
+    const scoreValue = result.percentage ?? result.percentageScore ?? result.score ?? 0;
+    const scorePct = Math.max(0, Math.min(100, Math.round(scoreValue)));
+    const cred = result.credentialId;
+    const dims = result.dimScores || result.domainScores || result.dimensions || {};
+    const credentialDelayed = passed && !cred;
+    const gap = passed ? Math.max(0, scorePct - 70) : Math.max(0, 70 - scorePct);
+    const statusColor = passed ? TEAL2 : RED;
+    const statusBg = passed ? 'rgba(34,166,126,0.09)' : 'rgba(196,92,92,0.09)';
+    const statusBorder = passed ? 'rgba(34,166,126,0.28)' : 'rgba(196,92,92,0.28)';
+    const domainRows = Object.entries(dims).map(([domain, sc]) => {
+      const key = normalizeDomainKey(domain);
+      const meta = DOMAIN_META[key] || { label: domain, color: GOLD, abbr: String(domain).slice(0, 4).toUpperCase() };
+      const pct = typeof sc === 'number'
+        ? Math.round(sc)
+        : Math.round(sc?.pct ?? sc?.percentage ?? sc?.score ?? (sc?.total ? ((sc.correct || 0) / sc.total) * 100 : 0));
+      return { key, pct: Math.max(0, Math.min(100, pct)), ...meta };
+    });
+    const rankedDomains = [...domainRows].sort((a, b) => b.pct - a.pct);
+    const topDomain = rankedDomains[0];
+    const focusDomain = rankedDomains[rankedDomains.length - 1];
 
     return (
-      <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: '100vh' }}>
-        <div style={{ maxWidth: 680, width: '100%' }} className="vault-up">
+      <div style={{ ...base, padding: '52px 44px', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
 
-          {/* Result header */}
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 12, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>
-              Assessment Complete
-            </div>
-            <div style={{
-              width: 100, height: 100, borderRadius: '50%', margin: '0 auto 24px',
-              border: `2px solid ${passed ? TEAL : RED}`,
-              background: passed ? 'rgba(26,143,105,0.08)' : 'rgba(196,92,92,0.08)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: VAULT_FONT_DISPLAY, fontSize: 36, color: passed ? TEAL : RED,
-            }}>
-              {passed ? '✓' : '✕'}
-            </div>
-            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 48, fontWeight: 300, color: passed ? TEAL : RED, lineHeight: 1 }}>
-              {Math.round(score)}%
-            </div>
-            <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, fontWeight: 300, color: WHITE, marginTop: 8 }}>
-              {passed ? 'Assessment Passed' : 'Assessment Not Passed'}
-            </div>
-            <div style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
-              Pass threshold: 70% · {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
-            </div>
-          </div>
+          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 28, alignItems: 'stretch', marginBottom: 28 }}>
+            <div style={{ background: `linear-gradient(135deg, ${passed ? 'rgba(34,166,126,0.16)' : 'rgba(196,92,92,0.14)'}, rgba(12,16,24,0.96) 48%, rgba(201,168,76,0.08))`, border: `1px solid ${statusBorder}`, borderRadius: 4, padding: '44px 46px', minHeight: 470, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.24em', textTransform: 'uppercase', marginBottom: 18 }}>
+                  Assessment Complete
+                </div>
+                <h1 style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 76, fontWeight: 300, lineHeight: 0.96, margin: 0, color: WHITE, maxWidth: 680 }}>
+                  {passed ? 'Credential Ready' : 'Readiness Snapshot'}
+                </h1>
+                <div style={{ width: 64, height: 1, background: statusColor, margin: '30px 0', opacity: 0.75 }} />
+                <p style={{ fontSize: 18, color: 'rgba(238,233,223,0.76)', lineHeight: 1.75, maxWidth: 680, margin: 0 }}>
+                  {passed
+                    ? 'You passed the Remote CX Readiness Assessment. Your result now becomes a clear, employer-facing credential moment with proof, performance, and next steps in one place.'
+                    : 'This result is a readiness signal, not a dead end. The page now gives candidates a clear view of where they stand and what to focus on before the next attempt or course step.'}
+                </p>
+              </div>
 
-          {/* Domain breakdown */}
-          {Object.keys(dims).length > 0 && (
-            <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '20px 24px', marginBottom: 20 }}>
-              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Domain Breakdown</div>
-              {Object.entries(dims).map(([domain, sc], i) => {
-                const meta  = DOMAIN_META[domain] || { label: domain, color: GOLD };
-                const pct   = typeof sc === 'number' ? Math.round(sc) : Math.round(sc.pct || (sc.correct / sc.total) * 100 || 0);
-                const pass  = pct >= 70;
-                return (
-                  <div key={domain} style={{ marginBottom: i < Object.keys(dims).length - 1 ? 14 : 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 12, color: WHITE }}>{meta.label}</span>
-                      <span style={{ fontSize: 12, color: pass ? meta.color : RED, fontFamily: VAULT_FONT_DISPLAY }}>{pct}%</span>
-                    </div>
-                    <div style={{ height: 3, background: BORDER2, borderRadius: 2 }}>
-                      <div style={{ height: 3, width: `${pct}%`, background: pass ? meta.color : RED, borderRadius: 2, transition: 'width 1s ease' }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Credential info — issued */}
-          {passed && cred && (
-            <div style={{ background: 'rgba(26,143,105,0.06)', border: `1px solid rgba(26,143,105,0.2)`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
-              <div style={{ fontSize: 10, color: TEAL, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Blockchain Credential Issued</div>
-              <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 16, color: WHITE }}>{cred}</div>
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Minted on the blockchain Â· Verifiable by any employer worldwide</div>
-            </div>
-          )}
-
-          {/* Credential info — delayed */}
-          {credentialDelayed && (
-            <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
-              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Credential Being Issued</div>
-              <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.6 }}>
-                Your blockchain credential is still being minted. We'll send an email with your credential ID and verification link within a few minutes.
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 34 }}>
+                <button onClick={() => navigate('/dashboard')} style={{ ...btnGold, minWidth: 220, padding: '16px 24px' }}>
+                  View Dashboard
+                </button>
+                {passed && cred && (
+                  <button onClick={() => window.open('/api/certificate/download', '_blank')} style={{ ...btnOutline, minWidth: 220, padding: '16px 24px' }}>
+                    Download Certificate
+                  </button>
+                )}
               </div>
             </div>
-          )}
 
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => navigate('/dashboard')} style={{ ...btnGold, flex: 1, padding: '14px', letterSpacing: '0.12em', textAlign: 'center' }}>
-              View Dashboard
-            </button>
-            {passed && cred && (
-              <button onClick={() => window.open('/api/certificate/download', '_blank')} style={{ ...btnOutline, flex: 1, padding: '14px', textAlign: 'center' }}>
-                Download Certificate
-              </button>
+            <aside style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '34px 34px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'center', marginBottom: 34 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>Final Score</div>
+                  <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>{passed ? 'Assessment Passed' : 'Assessment Not Passed'}</div>
+                </div>
+                <div style={{ width: 88, height: 88, borderRadius: '50%', border: `1px solid ${statusBorder}`, background: statusBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: statusColor, fontWeight: 700, letterSpacing: '0.14em' }}>
+                  {passed ? 'PASS' : 'REVIEW'}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 104, color: statusColor, fontWeight: 300, lineHeight: 0.9 }}>{scorePct}%</div>
+                <div style={{ color: MUTED, fontSize: 14, margin: '16px 0 18px' }}>
+                  Pass threshold: 70% | {passed ? `${gap}% above threshold` : `${gap}% below threshold`}
+                </div>
+                <div style={{ height: 8, background: BORDER2, borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ height: '100%', width: `${scorePct}%`, background: statusColor, borderRadius: 999 }} />
+                  <div style={{ position: 'absolute', left: '70%', top: -4, width: 2, height: 16, background: GOLD }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 30 }}>
+                {[
+                  { label: 'Questions', value: questions.length || 40 },
+                  { label: 'Pass Mark', value: '70%' },
+                  { label: passed ? 'Status' : 'Gap', value: passed ? 'Ready' : `${gap}%` },
+                ].map(item => (
+                  <div key={item.label} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '16px 14px' }}>
+                    <div style={{ color: WHITE, fontSize: 20, fontFamily: VAULT_FONT_DISPLAY }}>{item.value}</div>
+                    <div style={{ color: MUTED, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 6 }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          </section>
+
+          <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(360px, 0.65fr)', gap: 28, alignItems: 'start' }}>
+            {domainRows.length > 0 && (
+              <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 32px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-end', marginBottom: 24 }}>
+                  <div>
+                    <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>Domain Breakdown</div>
+                    <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, color: WHITE }}>Performance by competency</div>
+                  </div>
+                  <div style={{ color: statusColor, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase' }}>{domainRows.length} domains</div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                  {domainRows.map(row => {
+                    const domainPassed = row.pct >= 70;
+                    return (
+                      <div key={row.key} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '18px 18px 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+                          <div>
+                            <div style={{ color: WHITE, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.label}</div>
+                            <div style={{ color: MUTED, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 7 }}>{domainPassed ? 'Meets mark' : 'Review area'}</div>
+                          </div>
+                          <div style={{ color: domainPassed ? row.color : RED, fontFamily: VAULT_FONT_DISPLAY, fontSize: 28, lineHeight: 1 }}>{row.pct}%</div>
+                        </div>
+                        <div style={{ height: 5, background: BORDER2, borderRadius: 999, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${row.pct}%`, background: domainPassed ? row.color : RED, borderRadius: 999 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
-          </div>
+
+            <div style={{ display: 'grid', gap: 18 }}>
+              <div style={{ background: statusBg, border: `1px solid ${statusBorder}`, borderRadius: 4, padding: '26px 28px' }}>
+                <div style={{ fontSize: 11, color: statusColor, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  {passed ? 'Credential Status' : 'Recommended Focus'}
+                </div>
+                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, lineHeight: 1.15 }}>
+                  {passed ? (cred ? 'Blockchain Credential Issued' : 'Credential Being Minted') : (focusDomain ? focusDomain.label : 'Build readiness first')}
+                </div>
+                <div style={{ color: 'rgba(238,233,223,0.70)', fontSize: 14, lineHeight: 1.65, marginTop: 12 }}>
+                  {passed && cred && `Credential ID: ${cred}`}
+                  {credentialDelayed && 'Your credential is being finalized. We will send the credential ID and verification details by email.'}
+                  {!passed && 'Start with the lowest-scoring area, then use the course path to build confidence before reassessment.'}
+                </div>
+              </div>
+
+              <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '24px 26px' }}>
+                <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>Result Summary</div>
+                {[
+                  { label: 'Strongest Area', value: topDomain?.label || 'Not available', color: topDomain?.color || GOLD },
+                  { label: passed ? 'Credential Path' : 'Primary Opportunity', value: passed ? 'Unlocked' : (focusDomain?.label || 'Review course foundations'), color: passed ? TEAL2 : RED },
+                  { label: 'Next Step', value: passed ? 'Claim and share credential' : 'Review dashboard guidance', color: GOLD },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', padding: '13px 0', borderBottom: `1px solid ${BORDER2}` }}>
+                    <span style={{ color: MUTED, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{item.label}</span>
+                    <span style={{ color: item.color, fontSize: 14, textAlign: 'right', fontWeight: 600 }}>{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -804,7 +915,7 @@ export default function Assessment() {
   return null;
 }
 
-/* â”€â”€ Shared button styles â”€â”€ */
+/* ── Shared button styles ── */
 const btnGold = {
   background: GOLD, color: BG, border: 'none', borderRadius: 2,
   padding: '11px 24px', fontSize: 11, fontWeight: 600,
