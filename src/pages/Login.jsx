@@ -7,10 +7,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../api/client';
 
-export default function Login({ defaultAction = null }) {
+export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const defaultTab = (defaultAction === 'register' || new URLSearchParams(location.search).get('action') === 'register') ? 'register' : 'login';
+  const defaultTab = new URLSearchParams(location.search).get('action') === 'register' ? 'register' : 'login';
 
   const [tab,         setTab]         = useState(defaultTab);
   const [email,       setEmail]       = useState('');
