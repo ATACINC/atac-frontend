@@ -343,6 +343,12 @@ export default function Dashboard() {
                 Proceed to Call Readiness Simulator™ →
               </button>
             )}
+
+            {!result.passed && (
+              <button className="btn-gold-h" style={{ ...btnGold, marginTop: 16, marginBottom: 0 }} onClick={() => navigate('/assessment')}>
+                Retake Assessment →
+              </button>
+            )}
           </div>
         )}
 

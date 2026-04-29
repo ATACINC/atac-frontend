@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { useAssessmentIntegrity } from '../hooks/useAssessmentIntegrity';
 
-/* ── Vault Design Tokens ─────────────────────────────────────────── */
+/* â”€â”€ Vault Design Tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const BG    = '#080B12';
 const BG1   = '#0C1018';
 const BG3   = '#141B26';
@@ -24,8 +24,6 @@ const DOMAIN_META = {
   cx_operations:   { label: 'CX Operations',       color: '#5DCAA5',         abbr: 'OPER' },
   technology:      { label: 'Technology',          color: '#8A7DD4',         abbr: 'TECH' },
   compliance_safety: { label: 'Compliance & Safety', color: '#C45C5C',       abbr: 'CMPL' },
-  // Legacy alias — existing credentials with dimScores keyed by 'health_safety' still render correctly
-  health_safety:   { label: 'Compliance & Safety', color: '#C45C5C',       abbr: 'CMPL' },
   remote_setup:    { label: 'Remote Work Setup',    color: '#22A67E',         abbr: 'RWS'  },
 };
 
@@ -50,7 +48,7 @@ const STAGE_ORDER = [
   'done'
 ];
 
-/* ── Keyframe injection ──────────────────────────────────────────── */
+/* â”€â”€ Keyframe injection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const injectKeyframes = () => {
   if (document.getElementById('vault-kf')) return;
   const style = document.createElement('style');
@@ -80,14 +78,14 @@ const injectKeyframes = () => {
   document.head.appendChild(style);
 };
 
-/* ── Timer display ───────────────────────────────────────────────── */
+/* â”€â”€ Timer display â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function formatTime(s) {
   const m = Math.floor(s / 60);
   const sec = s % 60;
   return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
 }
 
-/* ── Main Component ──────────────────────────────────────────────── */
+/* â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export default function Assessment() {
   const navigate = useNavigate();
 
@@ -186,17 +184,17 @@ export default function Assessment() {
     });
   };
 
-  // ═════════════════════════════════════════════════════════════════
-  // Submission flow — async pattern
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // Submission flow â€” async pattern
   //
-  // 1. POST /submit-direct — responds immediately with score + pass/fail
+  // 1. POST /submit-direct â€” responds immediately with score + pass/fail
   // 2. If user passed AND credentialStatus === 'pending', go to
   //    'processing' phase and begin polling /credential-status
   // 3. When polling returns status === 'issued', merge credential
   //    into result and show final 'result' phase
   // 4. If failed status or timeout, still show result but note
-  //    credential is "being issued — check email in a few minutes"
-  // ═════════════════════════════════════════════════════════════════
+  //    credential is "being issued â€” check email in a few minutes"
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
@@ -233,7 +231,7 @@ export default function Assessment() {
     if (pollRef.current) clearInterval(pollRef.current);
 
     let pollCount = 0;
-    const maxPolls = 180; // 180 polls × 3s = 9 min max
+    const maxPolls = 180; // 180 polls Ã— 3s = 9 min max
 
     const poll = async () => {
       pollCount++;
@@ -262,7 +260,7 @@ export default function Assessment() {
           // Show result but with a "we'll email you" note
           setPhase('result');
         } else if (pollCount >= maxPolls) {
-          // Give up polling — show result with note
+          // Give up polling â€” show result with note
           clearInterval(pollRef.current);
           pollRef.current = null;
           setPhase('result');
@@ -294,7 +292,7 @@ export default function Assessment() {
     return { key: d, total: qs.length, answered: ans, ...DOMAIN_META[d] };
   });
 
-  /* ─────────────────────────────────────── RENDER PHASES ────── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ RENDER PHASES â”€â”€â”€â”€â”€â”€ */
   const base = { minHeight: '100vh', background: BG, fontFamily: VAULT_FONT_BODY, color: WHITE };
 
   /* LOADING */
@@ -302,7 +300,7 @@ export default function Assessment() {
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>ATAC Global CX</div>
-        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessment…</div>
+        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessmentâ€¦</div>
       </div>
     </div>
   );
@@ -324,7 +322,7 @@ export default function Assessment() {
     </div>
   );
 
-  /* INTRO — bigger, clearer typography for CX demographic */
+  /* INTRO â€” bigger, clearer typography for CX demographic */
   if (phase === 'intro') return (
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <div style={{ maxWidth: 720, width: '100%' }} className="vault-up">
@@ -355,7 +353,7 @@ export default function Assessment() {
           ))}
         </div>
 
-        {/* Domain breakdown — larger text */}
+        {/* Domain breakdown â€” larger text */}
         <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '24px 28px', marginBottom: 32 }}>
           <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 20 }}>Assessment Domains</div>
           {Object.entries(DOMAIN_META).map(([key, meta], i) => {
@@ -372,7 +370,7 @@ export default function Assessment() {
           })}
         </div>
 
-        {/* Instructions — larger, more scannable */}
+        {/* Instructions â€” larger, more scannable */}
         <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 28px', marginBottom: 40 }}>
           <div style={{ color: WHITE, fontSize: 13, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Before You Begin</div>
           {[
@@ -383,7 +381,7 @@ export default function Assessment() {
             'Your credential is issued immediately upon passing.'
           ].map((t, i) => (
             <div key={i} style={{ display: 'flex', gap: 12, marginBottom: 10, fontSize: 14, color: 'rgba(238,233,223,0.75)', lineHeight: 1.7 }}>
-              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>—</span>
+              <span style={{ color: GOLD, flexShrink: 0, fontSize: 16 }}>â€”</span>
               <span>{t}</span>
             </div>
           ))}
@@ -403,7 +401,7 @@ export default function Assessment() {
   if (phase === 'active' && q) return (
     <div style={{ ...base, display: 'grid', gridTemplateColumns: '240px 1fr', minHeight: '100vh' }}>
 
-      {/* ── Sidebar ── */}
+      {/* â”€â”€ Sidebar â”€â”€ */}
       <div style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         {/* Branding */}
@@ -485,13 +483,13 @@ export default function Assessment() {
             onClick={handleSubmit}
             disabled={submitting}
             style={{ width: '100%', ...btnGold, fontSize: 11, padding: '10px 0', opacity: submitting ? 0.6 : 1 }}>
-            {submitting ? 'SUBMITTING…' : 'SUBMIT ASSESSMENT'}
+            {submitting ? 'SUBMITTINGâ€¦' : 'SUBMIT ASSESSMENT'}
           </button>
           {error && <div style={{ fontSize: 10, color: RED, marginTop: 8 }}>{error}</div>}
         </div>
       </div>
 
-      {/* ── Question Area ── */}
+      {/* â”€â”€ Question Area â”€â”€ */}
       <div style={{ background: BG, display: 'flex', flexDirection: 'column', padding: '32px 40px', overflowY: 'auto' }}>
 
         <div key={animKey} className="vault-in" style={{ flex: 1 }}>
@@ -508,7 +506,7 @@ export default function Assessment() {
               <button
                 onClick={() => toggleFlag(q.id)}
                 style={{ background: flagged.has(q.id) ? 'rgba(196,92,92,0.1)' : FAINT, border: `1px solid ${flagged.has(q.id) ? 'rgba(196,92,92,0.35)' : BORDER2}`, color: flagged.has(q.id) ? RED : MUTED, fontSize: 10, padding: '5px 10px', borderRadius: 2, cursor: 'pointer', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {flagged.has(q.id) ? '⚑ Flagged' : '⚐ Flag'}
+                {flagged.has(q.id) ? 'âš‘ Flagged' : 'âš Flag'}
               </button>
               <span style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, color: MUTED, fontWeight: 300 }}>
                 <span style={{ color: GOLD }}>{current + 1}</span> / 40
@@ -553,7 +551,7 @@ export default function Assessment() {
                   </div>
                   {selected && (
                     <div style={{ marginLeft: 'auto', flexShrink: 0, width: 18, height: 18, borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ color: BG, fontSize: 10, fontWeight: 700 }}>✓</span>
+                      <span style={{ color: BG, fontSize: 10, fontWeight: 700 }}>âœ“</span>
                     </div>
                   )}
                 </div>
@@ -567,15 +565,15 @@ export default function Assessment() {
               onClick={() => goTo(Math.max(0, current - 1))}
               disabled={current === 0}
               style={{ ...btnOutline, opacity: current === 0 ? 0.3 : 1 }}>
-              ← Previous
+              â† Previous
             </button>
             <div style={{ fontSize: 11, color: MUTED, alignSelf: 'center' }}>
               {answered} of 40 answered
             </div>
             {current < 39
-              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next →</button>
+              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next â†’</button>
               : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Submitting…' : 'Submit Assessment'}
+                  {submitting ? 'Submittingâ€¦' : 'Submit Assessment'}
                 </button>
             }
           </div>
@@ -584,7 +582,7 @@ export default function Assessment() {
     </div>
   );
 
-  /* PROCESSING — new async credential flow */
+  /* PROCESSING â€” new async credential flow */
   if (phase === 'processing') {
     const elapsed = processingStartedAt ? Math.floor((Date.now() - processingStartedAt) / 1000) : 0;
     const showLongWait = elapsed > 60; // after 1 minute, show "take your time" message
@@ -603,7 +601,7 @@ export default function Assessment() {
               {result?.percentage}%
             </div>
             <div style={{ fontSize: 13, color: MUTED, letterSpacing: '0.1em' }}>
-              {result?.score} of 40 correct · Pass threshold 70%
+              {result?.score} of 40 correct Â· Pass threshold 70%
             </div>
           </div>
 
@@ -648,7 +646,7 @@ export default function Assessment() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.3s ease',
                     }}>
-                      {isDone && <span style={{ color: BG, fontSize: 8, fontWeight: 700 }}>✓</span>}
+                      {isDone && <span style={{ color: BG, fontSize: 8, fontWeight: 700 }}>âœ“</span>}
                       {isCurrent && (
                         <div style={{
                           width: 6, height: 6, borderRadius: '50%',
@@ -663,7 +661,7 @@ export default function Assessment() {
                       </div>
                       {isCurrent && (
                         <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
-                          In progress…
+                          In progressâ€¦
                         </div>
                       )}
                     </div>
@@ -684,7 +682,7 @@ export default function Assessment() {
               <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Taking Longer Than Usual
               </div>
-              The blockchain is experiencing high traffic. You can safely close this page — we'll email your credential as soon as it's ready.
+              The blockchain is experiencing high traffic. You can safely close this page â€” we'll email your credential as soon as it's ready.
             </div>
           )}
 
@@ -732,7 +730,7 @@ export default function Assessment() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: VAULT_FONT_DISPLAY, fontSize: 36, color: passed ? TEAL : RED,
             }}>
-              {passed ? '✓' : '×'}
+              {passed ? 'âœ“' : 'Ã—'}
             </div>
             <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 48, fontWeight: 300, color: passed ? TEAL : RED, lineHeight: 1 }}>
               {Math.round(score)}%
@@ -741,7 +739,7 @@ export default function Assessment() {
               {passed ? 'Assessment Passed' : 'Assessment Not Passed'}
             </div>
             <div style={{ fontSize: 13, color: MUTED, marginTop: 8 }}>
-              Pass threshold: 70% · {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
+              Pass threshold: 70% Â· {passed ? `You scored ${Math.round(score) - 70}% above threshold.` : `${70 - Math.round(score)}% below threshold.`}
             </div>
           </div>
 
@@ -768,16 +766,16 @@ export default function Assessment() {
             </div>
           )}
 
-          {/* Credential info — issued */}
+          {/* Credential info â€” issued */}
           {passed && cred && (
             <div style={{ background: 'rgba(26,143,105,0.06)', border: `1px solid rgba(26,143,105,0.2)`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
               <div style={{ fontSize: 10, color: TEAL, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Blockchain Credential Issued</div>
               <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 16, color: WHITE }}>{cred}</div>
-              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Minted on the blockchain · Verifiable by any employer worldwide</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>Minted on the blockchain Â· Verifiable by any employer worldwide</div>
             </div>
           )}
 
-          {/* Credential info — delayed */}
+          {/* Credential info â€” delayed */}
           {credentialDelayed && (
             <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 24px', marginBottom: 20 }}>
               <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Credential Being Issued</div>
@@ -806,7 +804,7 @@ export default function Assessment() {
   return null;
 }
 
-/* ── Shared button styles ── */
+/* â”€â”€ Shared button styles â”€â”€ */
 const btnGold = {
   background: GOLD, color: BG, border: 'none', borderRadius: 2,
   padding: '11px 24px', fontSize: 11, fontWeight: 600,
