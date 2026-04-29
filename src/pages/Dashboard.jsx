@@ -252,16 +252,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '32px 28px' }}>
+      <div style={{ maxWidth: 1360, margin: '0 auto', padding: '44px 40px' }}>
 
         {/* -- Payment success banner -- */}
         {paymentSuccess && (
-          <div className="vault-up" style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.25)', borderRadius: 3, padding: '18px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div className="vault-up" style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.25)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
-              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 18, color: TEAL2, marginBottom: 4 }}>Payment Confirmed — You're Ready to Begin</div>
-              <div style={{ fontSize: 12, color: MUTED }}>Your assessment session is ready. Click to start your 40-question timed assessment.</div>
+              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: TEAL2, marginBottom: 6 }}>Payment Confirmed — You're Ready to Begin</div>
+              <div style={{ fontSize: 14, color: MUTED }}>Your assessment session is ready. Click to start your 40-question timed assessment.</div>
             </div>
-            <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '12px 28px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
+            <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting…' : 'Start Assessment →'}
             </button>
           </div>
@@ -277,26 +277,53 @@ export default function Dashboard() {
 
         {/* -- Assessment ready banner (paid, not started) -- */}
         {!paymentSuccess && paymentVerified && !result && credentials.length === 0 && (
-          <div className="vault-up" style={{ background: 'rgba(91,168,212,0.07)', border: '1px solid rgba(91,168,212,0.22)', borderRadius: 3, padding: '18px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div className="vault-up" style={{ background: 'rgba(91,168,212,0.07)', border: '1px solid rgba(91,168,212,0.22)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
-              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 18, color: '#5BA8D4', marginBottom: 4 }}>Your Assessment Is Ready</div>
-              <div style={{ fontSize: 12, color: MUTED }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.</div>
+              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: '#5BA8D4', marginBottom: 6 }}>Your Assessment Is Ready</div>
+              <div style={{ fontSize: 14, color: MUTED }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.</div>
             </div>
-            <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '12px 28px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
+            <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting…' : 'Start Assessment →'}
             </button>
           </div>
         )}
 
         {/* -- Welcome line -- */}
-        <div className="vault-up" style={{ marginBottom: 28 }}>
-          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 32, fontWeight: 300, color: WHITE, lineHeight: 1.1 }}>
+        <div className="vault-up" style={{ marginBottom: 32 }}>
+          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 46, fontWeight: 300, color: WHITE, lineHeight: 1.05 }}>
             {hasCred ? `Welcome back, ${candidate.name?.split(' ')[0] || 'Candidate'}.` : `Welcome, ${candidate.name?.split(' ')[0] || 'Candidate'}.`}
           </div>
-          <div style={{ fontSize: 12, color: MUTED, marginTop: 6 }}>
+          <div style={{ fontSize: 15, color: MUTED, marginTop: 8 }}>
             {hasCred ? 'Your certification is active and verifiable on the blockchain.' : 'Complete your assessment to earn your blockchain-verified credential.'}
           </div>
         </div>
+
+        {!result && credentials.length === 0 && paymentVerified && (
+          <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 34px', marginBottom: 28, display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 30, alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 22 }}>
+              <div>
+                <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>Assessment Launch</div>
+                <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 42, color: WHITE, fontWeight: 300, lineHeight: 1.08, marginBottom: 10 }}>Remote CX Readiness Assessment</div>
+                <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, maxWidth: 680 }}>Your payment is verified. Complete the timed assessment to unlock your blockchain-verified credential path.</div>
+              </div>
+              <button className="btn-gold-h" style={{ ...btnGold, width: 300, padding: '16px 24px', marginBottom: 0, fontSize: 12 }} onClick={startAssessment} disabled={startingAssessment}>
+                {startingAssessment ? 'Starting...' : 'Start Assessment'}
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+              {[
+                { val: '40', lbl: 'Questions' },
+                { val: '40', lbl: 'Minutes' },
+                { val: '70%', lbl: 'Pass Mark' },
+              ].map((m, i) => (
+                <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '20px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 42, color: GOLD, fontWeight: 300, lineHeight: 1 }}>{m.val}</div>
+                  <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 9 }}>{m.lbl}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* -- Assessment result -- */}
         {result && (
@@ -353,22 +380,23 @@ export default function Dashboard() {
         )}
 
         {/* -- Main grid -- */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 420px', gap: 28 }}>
 
           {/* -- LEFT: credentials / get started -- */}
           <div>
 
             {/* My Credentials card */}
-            <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 24px', marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>My Credentials</div>
+            <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '32px 36px', marginBottom: 20, minHeight: 230 }}>
+              <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 20 }}>My Credentials</div>
 
               {loading ? (
                 <div style={{ color: MUTED, fontSize: 13 }}>Loading…</div>
               ) : credentials.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <div style={{ fontSize: 14, color: MUTED, marginBottom: 20 }}>No credentials issued yet.</div>
+                <div style={{ textAlign: 'center', padding: '42px 0' }}>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, marginBottom: 8 }}>No credentials issued yet.</div>
+                  <div style={{ fontSize: 14, color: MUTED, marginBottom: 24 }}>Your certificate appears here after you pass the assessment.</div>
                   {paymentVerified ? (
-                    <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '12px 28px', margin: '0 auto' }} onClick={startAssessment}>
+                    <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '14px 34px', margin: '0 auto' }} onClick={startAssessment}>
                       Start Assessment →
                     </button>
                   ) : (
@@ -424,7 +452,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                  <a href="https://jeuumk0um700vulubke9.app.clientclub.net/communities/groups/cxgroup/home?invite=69eeca0963e5b0e52f07c03c"
+                  <a href="https://isora.clientclub.net"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -466,12 +494,12 @@ export default function Dashboard() {
 
             {/* Start assessment (paid, no result) */}
             {!result && credentials.length === 0 && paymentVerified && (
-              <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 24px', marginBottom: 16 }}>
-                <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Ready to Begin</div>
-                <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 20 }}>
+              <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 36px', marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Ready to Begin</div>
+                <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 22 }}>
                   Your payment is verified. Launch the Remote CX Readiness Assessment™ when you're ready.
                 </div>
-                <button className="btn-gold-h" style={btnGold} onClick={startAssessment}>
+                <button className="btn-gold-h" style={{ ...btnGold, padding: '15px' }} onClick={startAssessment}>
                   {startingAssessment ? 'Starting…' : 'Start Assessment — CRSA'}
                 </button>
               </div>
@@ -653,9 +681,9 @@ export default function Dashboard() {
                 )}
               </div>
             ) : (
-              <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '22px 24px' }}>
-                <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Your Certificate</div>
-                <div style={{ fontSize: 13, color: MUTED, textAlign: 'center', padding: '32px 0', lineHeight: 1.7 }}>
+              <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '32px 36px', minHeight: 230 }}>
+                <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Your Certificate</div>
+                <div style={{ fontSize: 15, color: MUTED, textAlign: 'center', padding: '52px 0', lineHeight: 1.8 }}>
                   Complete your assessment to earn your<br />blockchain-verified certificate.
                 </div>
               </div>
@@ -692,5 +720,4 @@ export default function Dashboard() {
     </div>
   );
 }
-
 

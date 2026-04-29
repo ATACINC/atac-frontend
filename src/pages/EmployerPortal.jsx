@@ -22,6 +22,7 @@ const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D45C9A','#8A7DD4','#22A67E'];
 const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','compliance_safety','remote_setup'];
+const DIM_LABELS = ['Prof','Comm','Ops','Tech','C&S','Remote'];
 
 // Backwards compat: Normalize legacy dim_scores keys for credentials issued before Apr 28, 2026.
 // Maps health_safety -> compliance_safety and remote_work -> remote_setup in-place.
@@ -43,7 +44,6 @@ function normalizeCandidates(list) {
     dimensions: c.dimensions ? normalizeDims(c.dimensions) : c.dimensions,
   }));
 }
-const DIM_LABELS = ['Prof','Comm','Ops','Tech','CMPL','Remote'];
 
 /* ── Keyframe injection ─────────────────────────────────── */
 const injectKF = () => {
