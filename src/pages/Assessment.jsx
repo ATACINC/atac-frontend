@@ -160,6 +160,25 @@ export default function Assessment() {
     }, 1000);
   };
 
+  const downloadCertificate = (credId) => {
+    const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
+    if (!token || !credId) return;
+    const win = window.open('', '_blank');
+    fetch(`https://atac-backend-production.up.railway.app/api/credentials/${credId}/certificate/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => { if (!r.ok) throw new Error('Failed'); return r.text(); })
+      .then(html => {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+      })
+      .catch(() => {
+        if (win) win.close();
+        alert('Certificate download failed. Please try again.');
+      });
+  };
+
   const selectAnswer = (qId, optIdx) => {
     setAnswers(prev => {
       const u = { ...prev, [qId]: optIdx };
@@ -800,7 +819,7 @@ export default function Assessment() {
                   View Dashboard
                 </button>
                 {passed && cred && (
-                  <button onClick={() => window.open('/api/certificate/download', '_blank')} style={{ ...btnOutline, minWidth: 220, padding: '16px 24px' }}>
+                  <button onClick={() => downloadCertificate(cred)} style={{ ...btnOutline, minWidth: 220, padding: '16px 24px' }}>
                     Download Certificate
                   </button>
                 )}
