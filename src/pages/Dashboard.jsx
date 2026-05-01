@@ -396,7 +396,7 @@ export default function Dashboard() {
                     <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 30, fontWeight: 300, color: WHITE, marginBottom: 8 }}>You're invited to join the network.</div>
                     <div style={{ fontSize: 14, color: 'rgba(238,233,223,0.66)', lineHeight: 1.75 }}>Connect with certified CX professionals, access job leads, peer support, and resources built for remote CX excellence.</div>
                   </div>
-                  <a href="https://isora.clientclub.net" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: TEAL, color: WHITE, textDecoration: 'none', padding: '15px 20px', borderRadius: 2, fontFamily: VAULT_BODY, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase' }}>
+                  <a href="https://jeuumk0um700vulubke9.app.clientclub.net/communities/groups/cxgroup/home?invite=69ef67f4271fe1ed0adb9f82" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: TEAL, color: WHITE, textDecoration: 'none', padding: '15px 20px', borderRadius: 2, fontFamily: VAULT_BODY, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase' }}>
                     Join ISORA
                   </a>
                 </div>
@@ -664,7 +664,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                  <a href="https://isora.clientclub.net"
+                  <a href="https://jeuumk0um700vulubke9.app.clientclub.net/communities/groups/cxgroup/home?invite=69ef67f4271fe1ed0adb9f82"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -907,31 +907,6 @@ export default function Dashboard() {
           </div>
 
         </div>}
-        {/* Full-width certificate preview */}
-        {hasCred && latestCred && (
-          <div className="vault-up" style={{ marginTop: 20 }}>
-            <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 12 }}>Certificate Preview</div>
-            <div style={{ background: '#04040A', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 3, padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' }}>ATAC Global CX · Verified Credential · ERC-721 · Blockchain-Verified</div>
-              <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 42, color: WHITE, marginTop: 8 }}>{candidate.name}</div>
-              <div style={{ fontSize: 13, color: TEAL2, fontWeight: 600, letterSpacing: '0.08em' }}>{latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}</div>
-              <img src={certificateSeal} alt="ATAC Global CX Certification Authority" style={{ width: 132, height: 132, borderRadius: '50%', objectFit: 'cover', border: '2px solid #C9A84C', margin: '12px 0', boxShadow: '0 0 0 4px rgba(201,168,76,0.08), 0 0 38px rgba(201,168,76,0.30)' }} />
-              <div style={{ fontSize: 12, color: MUTED, maxWidth: 600, textAlign: 'center', lineHeight: 1.8, fontStyle: 'italic' }}>In recognition of demonstrated excellence in remote customer experience operations, professional conduct, and commitment to the highest standards of the global CX industry.</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 640, marginTop: 16 }}>
-                {[{ k: 'Credential ID', v: latestCred.credentialId },{ k: 'Issue Date', v: new Date(latestCred.issuedAt).toLocaleDateString() },{ k: 'Status', v: 'Valid', vc: TEAL2 },{ k: 'Expires', v: new Date(latestCred.expiresAt).toLocaleDateString() }].map((m, i) => (
-                  <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.15)', borderRadius: 3, padding: '10px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', color: GOLD, marginBottom: 4 }}>{m.k}</div>
-                    <div style={{ fontSize: 11, color: m.vc || WHITE, fontWeight: 600 }}>{m.v}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL2 }} />
-                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified · ERC-721 · Mainnet</span>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
