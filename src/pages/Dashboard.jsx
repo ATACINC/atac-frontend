@@ -2,6 +2,8 @@ import LanguageSelector from '../components/LanguageSelector';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import brandLogo from '../assets/atac-globalcx-logo-header.png';
+import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -22,21 +24,8 @@ const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const DIM_COLORS = ['#C9A84C','#5BA8D4','#5DCAA5','#D4537E','#8A7DD4','#22A67E'];
-const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Compliance & Safety','Remote Work Setup'];
-const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','compliance_safety','remote_setup'];
-
-// Backwards compat: Normalize legacy dim_scores keys for credentials issued before Apr 28, 2026.
-// Maps health_safety -> compliance_safety and remote_work -> remote_setup in-place.
-function normalizeDims(dims) {
-  if (!dims) return {};
-  if (dims.health_safety !== undefined && dims.compliance_safety === undefined) {
-    dims.compliance_safety = dims.health_safety;
-  }
-  if (dims.remote_work !== undefined && dims.remote_setup === undefined) {
-    dims.remote_setup = dims.remote_work;
-  }
-  return dims;
-}
+const DIM_LABELS = ['Professionalism','Communication','CX Operations','Technology','Health & Safety','Remote Work'];
+const DIM_KEYS   = ['professionalism','communication','cx_operations','technology','health_safety','remote_setup'];
 
 /* -- Keyframe injection ----------------------------------------------- */
 const injectKF = () => {
@@ -207,8 +196,15 @@ export default function Dashboard() {
   const logout = () => { localStorage.clear(); navigate('/login'); };
 
   const latestCred = credentials[0];
-  const dims       = normalizeDims(result?.dimensions || {});
+  const dims       = result?.dimensions || {};
   const hasCred    = credentials.length > 0;
+  const firstName  = candidate.name?.split(' ')[0] || 'Candidate';
+  const programLabel = latestCred?.program === 'CRSA'
+    ? 'Certified Remote Service Agent (CRSA)'
+    : (latestCred?.program || 'Credential');
+  const issuedDate = latestCred?.issuedAt ? new Date(latestCred.issuedAt).toLocaleDateString() : 'Pending';
+  const expiresDate = latestCred?.expiresAt ? new Date(latestCred.expiresAt).toLocaleDateString() : 'Pending';
+  const verifyUrl = latestCred?.credentialId ? `https://app.atacglobalcx.com/verify/${latestCred.credentialId}` : '';
 
   /* -- Shared button styles -- */
   const btnGold = {
@@ -236,23 +232,23 @@ export default function Dashboard() {
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE }}>
 
       {/* -- Topbar -- */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 13, color: WHITE }}>{candidate.name}</div>
+      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '18px 34px', minHeight: 84, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 62, width: 230, objectFit: 'contain', objectPosition: 'left center' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <div style={{ fontSize: 15, color: WHITE, fontWeight: 600 }}>{candidate.name}</div>
           {paymentTier && (
-            <div style={{ fontSize: 9, background: 'rgba(201,168,76,0.08)', border: `1px solid ${BORDER}`, borderRadius: 2, padding: '3px 10px', color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 11, background: 'rgba(201,168,76,0.08)', border: `1px solid ${BORDER}`, borderRadius: 2, padding: '5px 12px', color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
               {paymentTier}
             </div>
           )}
           <LanguageSelector />
-          <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '5px 12px', fontSize: 11, cursor: 'pointer' }}>
+          <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '9px 16px', fontSize: 14, cursor: 'pointer', fontFamily: VAULT_BODY }}>
             Sign Out
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1360, margin: '0 auto', padding: '44px 40px' }}>
+      <div style={{ maxWidth: 1540, margin: '0 auto', padding: '52px 48px' }}>
 
         {/* -- Payment success banner -- */}
         {paymentSuccess && (
@@ -288,15 +284,237 @@ export default function Dashboard() {
           </div>
         )}
 
+        {hasCred && latestCred && (
+          <div className="vault-up">
+            <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(460px,0.95fr)', gap: 30, alignItems: 'stretch', marginBottom: 30 }}>
+              <div style={{ background: 'linear-gradient(135deg, rgba(34,166,126,0.13), rgba(12,16,24,0.96) 48%, rgba(201,168,76,0.07))', border: '1px solid rgba(34,166,126,0.28)', borderRadius: 4, padding: '42px 46px', minHeight: 430, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 12, color: TEAL2, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>Certified Agent Dashboard</div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 64, fontWeight: 300, color: WHITE, lineHeight: 0.98, marginBottom: 18 }}>
+                    Welcome back, {firstName}.
+                  </div>
+                  <div style={{ fontSize: 17, color: 'rgba(238,233,223,0.72)', lineHeight: 1.75, maxWidth: 720 }}>
+                    Your certification is active, verifiable, and ready to share. This dashboard should feel like a credential command center, not a small receipt.
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 12, margin: '30px 0 22px' }}>
+                    {[
+                      { label: 'Status', value: 'Valid', color: TEAL2 },
+                      { label: 'Program', value: latestCred.program || 'CRSA', color: GOLD },
+                      { label: 'Issued', value: issuedDate, color: WHITE },
+                      { label: 'Expires', value: expiresDate, color: WHITE },
+                    ].map(item => (
+                      <div key={item.label} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '18px 16px', minHeight: 86 }}>
+                        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: item.color, lineHeight: 1 }}>{item.value}</div>
+                        <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 10 }}>{item.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                    <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', minWidth: 210, padding: '15px 24px', marginBottom: 0, fontSize: 12 }} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
+                      {downloading ? 'Generating PDF...' : 'Download PDF Certificate'}
+                    </button>
+                    <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 210, padding: '14px 24px', marginBottom: 0, color: WHITE, fontSize: 12 }} onClick={() => copyLink(latestCred.credentialId)}>
+                      {copied ? 'Copied' : 'Copy Verification Link'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 34px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                  <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Your Certificate</div>
+                  <div style={{ fontSize: 12, color: TEAL2, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Blockchain Verified</div>
+                </div>
+                <div style={{ background: '#F5F0E4', border: '1px solid #D4C89A', borderRadius: 3, padding: '26px', color: '#1a1208', minHeight: 330 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #e0d5b0', paddingBottom: 14, marginBottom: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#8a7040', marginBottom: 4 }}>ATAC Global CX - Verified Credentials</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#3d2e0a' }}>Certificate of Achievement</div>
+                    </div>
+                    <div aria-label="ATAC Global CX verified credential seal" style={{ width: 48, height: 48, borderRadius: '50%', background: 'radial-gradient(circle at 50% 38%, #173251 0%, #0D1B2E 44%, #07101F 100%)', border: '2px solid #C9A84C', boxShadow: '0 0 0 4px rgba(201,168,76,0.10), inset 0 0 0 2px rgba(245,240,228,0.16), 0 0 16px rgba(201,168,76,0.30)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ fontSize: 8, lineHeight: 1, color: '#F5F0E4', fontWeight: 800, letterSpacing: 0 }}>ATAC</div>
+                      <div style={{ width: 22, height: 1, background: '#C9A84C', margin: '3px 0 2px' }} />
+                      <div style={{ fontSize: 13, lineHeight: 1, color: '#F3C642', fontWeight: 900, letterSpacing: 0 }}>CX</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#8a7040', textAlign: 'center', marginBottom: 5 }}>Certificate of Achievement</div>
+                  <div style={{ fontSize: 11, color: '#8a7040', textAlign: 'center', marginBottom: 6 }}>Proudly Presented To</div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 30, color: '#1a1208', textAlign: 'center', marginBottom: 6 }}>{candidate.name}</div>
+                  <div style={{ fontSize: 14, color: '#0F6E56', textAlign: 'center', fontWeight: 700, marginBottom: 22 }}>{programLabel}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, borderTop: '1px solid #e0d5b0', paddingTop: 16, marginBottom: 16 }}>
+                    {[
+                      { k: 'Credential ID', v: latestCred.credentialId },
+                      { k: 'Issue Date', v: issuedDate },
+                      { k: 'Status', v: 'Valid', vc: '#0F6E56' },
+                      { k: 'Expires', v: expiresDate },
+                    ].map(item => (
+                      <div key={item.k}>
+                        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#8a7040' }}>{item.k}</div>
+                        <div style={{ fontSize: 13, color: item.vc || '#1a1208', fontWeight: 700, marginTop: 3 }}>{item.v}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, borderTop: '1px solid #e0d5b0', paddingTop: 10 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#0F6E56', flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: '#8a7040' }}>Blockchain-verified credential</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 460px', gap: 30, alignItems: 'start' }}>
+              <div style={{ display: 'grid', gap: 20 }}>
+                <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 34px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-end', marginBottom: 22 }}>
+                    <div>
+                      <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>My Credentials</div>
+                      <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>Active credential record</div>
+                    </div>
+                    <span style={{ fontSize: 12, padding: '6px 12px', background: 'rgba(26,143,105,0.12)', border: '1px solid rgba(26,143,105,0.25)', color: TEAL2, borderRadius: 2, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Valid</span>
+                  </div>
+
+                  {credentials.map((cred, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '48px minmax(0,1fr) 150px', gap: 18, alignItems: 'center', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '20px 22px', marginBottom: i < credentials.length - 1 ? 12 : 0 }}>
+                      <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(26,143,105,0.12)', border: '1px solid rgba(26,143,105,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: TEAL2, fontSize: 20 }}>✓</div>
+                      <div>
+                        <div style={{ fontSize: 17, color: WHITE, fontWeight: 700, marginBottom: 5 }}>{cred.program}</div>
+                        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{cred.credentialId} | Issued {new Date(cred.issuedAt).toLocaleDateString()}</div>
+                      </div>
+                      <button className="btn-out-h" style={{ ...btnOut, marginBottom: 0, padding: '12px 14px', fontSize: 11, color: WHITE }} onClick={() => window.open(`https://app.atacglobalcx.com/verify/${cred.credentialId}`, '_blank')}>
+                        View Public Page
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ background: 'linear-gradient(135deg, rgba(26,143,105,0.10), rgba(201,168,76,0.06))', border: '1px solid rgba(26,143,105,0.28)', borderRadius: 4, padding: '28px 34px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 180px', gap: 24, alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: TEAL2, marginBottom: 10 }}>ISORA Community</div>
+                    <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 30, fontWeight: 300, color: WHITE, marginBottom: 8 }}>You're invited to join the network.</div>
+                    <div style={{ fontSize: 14, color: 'rgba(238,233,223,0.66)', lineHeight: 1.75 }}>Connect with certified CX professionals, access job leads, peer support, and resources built for remote CX excellence.</div>
+                  </div>
+                  <a href="https://isora.clientclub.net" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: TEAL, color: WHITE, textDecoration: 'none', padding: '15px 20px', borderRadius: 2, fontFamily: VAULT_BODY, fontSize: 12, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase' }}>
+                    Join ISORA
+                  </a>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 18 }}>
+                <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '24px 26px' }}>
+                  <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>Credential Actions</div>
+                  <button className="btn-gold-h" style={{ ...btnTeal, padding: '14px', fontSize: 12, marginBottom: 0 }} onClick={() => {
+                    const url = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Certified+Remote+Service+Agent+(CRSA)&organizationId=ATAC&certUrl=${verifyUrl}&certId=${latestCred.credentialId}`;
+                    window.open(url, '_blank');
+                  }}>
+                    Add to LinkedIn Profile
+                  </button>
+                </div>
+
+                <div style={{ background: BG1, border: '1px solid rgba(10,102,194,0.32)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ background: 'rgba(10,102,194,0.13)', borderBottom: '1px solid rgba(10,102,194,0.2)', padding: '14px 18px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#5B9BD5' }}>Share on LinkedIn</div>
+                  </div>
+                  <div style={{ padding: '18px' }}>
+                    {[
+                      { n: '01', t: 'Copy your caption' },
+                      { n: '02', t: 'Open LinkedIn and paste it' },
+                    ].map(step => (
+                      <div key={step.n} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 0', borderBottom: `1px solid ${BORDER2}` }}>
+                        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 18, color: 'rgba(10,102,194,0.8)', minWidth: 28 }}>{step.n}</div>
+                        <div style={{ fontSize: 14, color: WHITE, fontWeight: 600 }}>{step.t}</div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: 16, background: 'rgba(0,0,0,0.22)', border: `1px solid ${BORDER2}`, borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 12px', borderBottom: `1px solid ${BORDER2}` }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Your Caption</div>
+                        <button onClick={() => copyLinkedInCaption(latestCred)} style={{ background: linkedInCopied ? 'rgba(26,143,105,0.15)' : 'rgba(201,168,76,0.10)', border: `1px solid ${linkedInCopied ? 'rgba(26,143,105,0.4)' : BORDER}`, borderRadius: 2, padding: '5px 11px', fontSize: 10, color: linkedInCopied ? TEAL2 : GOLD, cursor: 'pointer', fontFamily: VAULT_BODY, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                          {linkedInCopied ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                      <div style={{ padding: '12px', fontSize: 12, color: MUTED, lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: VAULT_BODY }}>
+                        {buildLinkedInCaption(latestCred)}
+                      </div>
+                    </div>
+                    <button onClick={() => window.open('https://www.linkedin.com/feed/?shareActive=true', '_blank')} style={{ width: '100%', marginTop: 14, background: '#0A66C2', border: 'none', color: '#fff', borderRadius: 2, padding: '13px', fontSize: 12, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: VAULT_BODY }}>
+                      Open LinkedIn → Create Post
+                    </button>
+                  </div>
+                </div>
+
+                {!candidateWallet ? (
+                  <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 4, padding: '22px 24px' }}>
+                    <div style={{ fontSize: 12, color: GOLD, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Enable Blockchain Verification</div>
+                    <div style={{ fontSize: 14, color: MUTED, marginBottom: 14, lineHeight: 1.65 }}>Add your wallet address to receive blockchain credentials directly.</div>
+                    <input style={{ width: '100%', background: FAINT, border: `1px solid ${walletError ? 'rgba(196,92,92,0.5)' : BORDER2}`, borderRadius: 2, padding: '13px 14px', fontSize: 14, color: WHITE, outline: 'none', boxSizing: 'border-box', marginBottom: 10, fontFamily: VAULT_BODY }} placeholder="0x... your EVM wallet address" value={walletInput} onChange={e => { setWalletInput(e.target.value); setWalletError(''); }} />
+                    {walletError && <div style={{ fontSize: 12, color: RED, marginBottom: 10 }}>{walletError}</div>}
+                    <button className="btn-gold-h" style={{ ...btnGold, marginBottom: 0, padding: '13px', fontSize: 12, opacity: walletSaving ? 0.7 : 1 }} onClick={saveWallet} disabled={walletSaving || !walletInput}>
+                      {walletSaving ? 'Saving...' : 'Save Wallet Address'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(26,143,105,0.05)', border: '1px solid rgba(26,143,105,0.18)', borderRadius: 4, padding: '20px 22px' }}>
+                    {walletSaved && <div style={{ fontSize: 13, color: TEAL2, marginBottom: 8 }}>Wallet saved - blockchain minting enabled</div>}
+                    <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Blockchain Wallet</div>
+                    <div style={{ fontSize: 13, color: MUTED, wordBreak: 'break-all', fontFamily: 'monospace' }}>{candidateWallet}</div>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <section style={{ marginTop: 32 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-end', marginBottom: 14 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Public Certificate Preview</div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>How your credential appears when shared</div>
+                </div>
+                <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 190, marginBottom: 0, padding: '12px 18px', color: WHITE }} onClick={() => copyLink(latestCred.credentialId)}>
+                  {copied ? 'Copied' : 'Copy Public Link'}
+                </button>
+              </div>
+
+              <div style={{ background: 'radial-gradient(circle at 50% 42%, rgba(201,168,76,0.08), rgba(4,4,10,0) 34%), #04040A', border: '1px solid rgba(201,168,76,0.22)', borderRadius: 4, padding: '46px 54px', minHeight: 430, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', inset: 18, border: '1px solid rgba(201,168,76,0.10)', borderRadius: 3, pointerEvents: 'none' }} />
+                <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ATAC Global CX - Verified Credential - ERC-721 - Blockchain Verified</div>
+                <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 58, color: WHITE, marginTop: 8 }}>{candidate.name}</div>
+                <div style={{ fontSize: 16, color: TEAL2, fontWeight: 700, letterSpacing: '0.08em' }}>{programLabel}</div>
+                <img src={certificateSeal} alt="ATAC Global CX Certification Authority" style={{ width: 180, height: 180, borderRadius: '50%', objectFit: 'cover', border: '2px solid #C9A84C', margin: '14px 0', boxShadow: '0 0 0 5px rgba(201,168,76,0.08), 0 0 56px rgba(201,168,76,0.34)' }} />
+                <div style={{ fontSize: 14, color: 'rgba(238,233,223,0.62)', maxWidth: 760, lineHeight: 1.8, fontStyle: 'italic' }}>
+                  In recognition of demonstrated excellence in remote customer experience operations, professional conduct, and commitment to the highest standards of the global CX industry.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 14, width: '100%', maxWidth: 840, marginTop: 20 }}>
+                  {[
+                    { k: 'Credential ID', v: latestCred.credentialId },
+                    { k: 'Issue Date', v: issuedDate },
+                    { k: 'Status', v: 'Valid', vc: TEAL2 },
+                    { k: 'Expires', v: expiresDate },
+                  ].map(item => (
+                    <div key={item.k} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 3, padding: '14px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.12em', color: GOLD, marginBottom: 5 }}>{item.k}</div>
+                      <div style={{ fontSize: 13, color: item.vc || WHITE, fontWeight: 700 }}>{item.v}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: TEAL2 }} />
+                  <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified - ERC-721 - Mainnet</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
         {/* -- Welcome line -- */}
-        <div className="vault-up" style={{ marginBottom: 32 }}>
+        {!hasCred && <div className="vault-up" style={{ marginBottom: 32 }}>
           <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 46, fontWeight: 300, color: WHITE, lineHeight: 1.05 }}>
-            {hasCred ? `Welcome back, ${candidate.name?.split(' ')[0] || 'Candidate'}.` : `Welcome, ${candidate.name?.split(' ')[0] || 'Candidate'}.`}
+            {`Welcome, ${firstName}.`}
           </div>
           <div style={{ fontSize: 15, color: MUTED, marginTop: 8 }}>
-            {hasCred ? 'Your certification is active and verifiable on the blockchain.' : 'Complete your assessment to earn your blockchain-verified credential.'}
+            Complete your assessment to earn your blockchain-verified credential.
           </div>
-        </div>
+        </div>}
 
         {!result && credentials.length === 0 && paymentVerified && (
           <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 34px', marginBottom: 28, display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 30, alignItems: 'stretch' }}>
@@ -326,7 +544,7 @@ export default function Dashboard() {
         )}
 
         {/* -- Assessment result -- */}
-        {result && (
+        {!hasCred && result && (
           <div className="vault-up" style={{ background: BG1, border: `1px solid ${result.passed ? 'rgba(26,143,105,0.25)' : 'rgba(196,92,92,0.25)'}`, borderRadius: 3, padding: '22px 24px', marginBottom: 24 }}>
             <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Latest Assessment Result</div>
 
@@ -370,17 +588,11 @@ export default function Dashboard() {
                 Proceed to Call Readiness Simulator™ →
               </button>
             )}
-
-            {!result.passed && (
-              <button className="btn-gold-h" style={{ ...btnGold, marginTop: 16, marginBottom: 0 }} onClick={() => navigate('/assessment')}>
-                Retake Assessment →
-              </button>
-            )}
           </div>
         )}
 
         {/* -- Main grid -- */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 420px', gap: 28 }}>
+        {!hasCred && <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 420px', gap: 28 }}>
 
           {/* -- LEFT: credentials / get started -- */}
           <div>
@@ -521,7 +733,11 @@ export default function Dashboard() {
                       <div style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#8a7040', marginBottom: 3 }}>ATAC Global CX · Verified Credentials</div>
                       <div style={{ fontSize: 11, fontWeight: 600, color: '#3d2e0a' }}>Certificate of Achievement</div>
                     </div>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#C9A84C' }}>★</div>
+                    <div aria-label="ATAC Global CX verified credential seal" style={{ width: 40, height: 40, borderRadius: '50%', background: 'radial-gradient(circle at 50% 38%, #173251 0%, #0D1B2E 44%, #07101F 100%)', border: '2px solid #C9A84C', boxShadow: '0 0 0 3px rgba(201,168,76,0.10), inset 0 0 0 2px rgba(245,240,228,0.16)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ fontSize: 7, lineHeight: 1, color: '#F5F0E4', fontWeight: 800, letterSpacing: 0 }}>ATAC</div>
+                      <div style={{ width: 18, height: 1, background: '#C9A84C', margin: '2px 0' }} />
+                      <div style={{ fontSize: 11, lineHeight: 1, color: '#F3C642', fontWeight: 900, letterSpacing: 0 }}>CX</div>
+                    </div>
                   </div>
 
                   <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#8a7040', textAlign: 'center', marginBottom: 4 }}>Certificate of Achievement</div>
@@ -690,16 +906,16 @@ export default function Dashboard() {
             )}
           </div>
 
-        </div>
+        </div>}
         {/* Full-width certificate preview */}
-        {latestCred && (
+        {hasCred && latestCred && (
           <div className="vault-up" style={{ marginTop: 20 }}>
             <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 12 }}>Certificate Preview</div>
             <div style={{ background: '#04040A', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 3, padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
               <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.16em', textTransform: 'uppercase' }}>ATAC Global CX · Verified Credential · ERC-721 · Blockchain-Verified</div>
               <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 42, color: WHITE, marginTop: 8 }}>{candidate.name}</div>
               <div style={{ fontSize: 13, color: TEAL2, fontWeight: 600, letterSpacing: '0.08em' }}>{latestCred.program === 'CRSA' ? 'Certified Remote Service Agent (CRSA)' : latestCred.program}</div>
-              <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#0D1B2E', border: '2px solid #C9A84C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: GOLD, margin: '12px 0' }}>★</div>
+              <img src={certificateSeal} alt="ATAC Global CX Certification Authority" style={{ width: 132, height: 132, borderRadius: '50%', objectFit: 'cover', border: '2px solid #C9A84C', margin: '12px 0', boxShadow: '0 0 0 4px rgba(201,168,76,0.08), 0 0 38px rgba(201,168,76,0.30)' }} />
               <div style={{ fontSize: 12, color: MUTED, maxWidth: 600, textAlign: 'center', lineHeight: 1.8, fontStyle: 'italic' }}>In recognition of demonstrated excellence in remote customer experience operations, professional conduct, and commitment to the highest standards of the global CX industry.</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, width: '100%', maxWidth: 640, marginTop: 16 }}>
                 {[{ k: 'Credential ID', v: latestCred.credentialId },{ k: 'Issue Date', v: new Date(latestCred.issuedAt).toLocaleDateString() },{ k: 'Status', v: 'Valid', vc: TEAL2 },{ k: 'Expires', v: new Date(latestCred.expiresAt).toLocaleDateString() }].map((m, i) => (
@@ -711,7 +927,7 @@ export default function Dashboard() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: TEAL2 }} />
-                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified · ERC-721ainnet</span>
+                <span style={{ fontSize: 9, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified · ERC-721 · Mainnet</span>
               </div>
             </div>
           </div>
@@ -720,4 +936,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
