@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import { isValidEmail } from '../utils/validation';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -122,6 +123,10 @@ export default function EmployerPortal() {
   };
 
   const handleInvite = async () => {
+    if (!isValidEmail(inviteEmail)) {
+      setInviteMsg('Please enter a valid email address.');
+      return;
+    }
     try {
       const res = await API.post(`/api/employer/${employerId}/invite`, { candidateEmail: inviteEmail });
       setInviteMsg(res.data.message || 'Candidate invited successfully.');

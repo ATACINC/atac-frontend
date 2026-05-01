@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API from '../api/client';
+import { isValidEmail } from '../utils/validation';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -108,6 +109,7 @@ export default function Login() {
 
   const handleLogin = async () => {
     if (!email || !password) { setError('Email and password are required.'); return; }
+    if (!isValidEmail(email)) { setError('Please enter a valid email address.'); return; }
     setError(''); setLoading(true);
     try {
       const res = await API.post('/api/auth/login', { email: email.trim(), password });
@@ -123,6 +125,7 @@ export default function Login() {
   const handleRegister = async () => {
     const name = `${regFirst.trim()} ${regLast.trim()}`.trim();
     if (!name || !regEmail || !regPassword) { setError('All fields are required.'); return; }
+    if (!isValidEmail(regEmail)) { setError('Please enter a valid email address.'); return; }
     if (regPassword !== regConfirm) { setError('Passwords do not match.'); return; }
     if (regPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (!termsAccepted) { setError('You must accept the Terms of Certification to continue.'); return; }

@@ -10,8 +10,9 @@ import logoUrl from '../assets/agcx-logo.png';
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 const HCAPTCHA_SITEKEY = import.meta.env.VITE_HCAPTCHA_SITEKEY || '29525f8e-3e9c-41be-a0a0-a50abd621964';
 
+import { isValidEmail } from '../utils/validation';
+
 const CREDENTIAL_ID_REGEX = /^ATAC-C-\d{4}-\d{5}$/i;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG      = '#080B12';
@@ -104,7 +105,7 @@ export default function VerifyLanding() {
       e.credentialId = 'Format: ATAC-C-YYYY-NNNNN';
     }
     if (!email.trim()) e.email = 'Email required';
-    else if (!EMAIL_REGEX.test(email.trim())) e.email = 'Valid email required';
+    else if (!isValidEmail(email)) e.email = 'Please enter a valid email address';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
