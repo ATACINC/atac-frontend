@@ -71,10 +71,29 @@ export default function Dashboard() {
   useEffect(() => {
     injectKF();
     const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success')    { setPaymentSuccess(true);   window.history.replaceState({}, '', '/dashboard'); }
+    const isPaymentSuccess = params.get('payment') === 'success';
+    if (isPaymentSuccess)                       { setPaymentSuccess(true);   window.history.replaceState({}, '', '/dashboard'); }
     if (params.get('payment') === 'cancelled')  { setPaymentCancelled(true); window.history.replaceState({}, '', '/dashboard'); }
-    if (candidate.id) { loadCredentials(); checkPaymentStatus(); }
-    else { setLoading(false); }
+
+    // Post-payment JWT refresh: the user's localStorage token was issued
+    // before Stripe webhook fired, so it has paymentVerified=false stale.
+    // Hit /api/auth/refresh to mint a fresh JWT from current DB state
+    // before any other authenticated calls go out.
+    const init = async () => {
+      if (isPaymentSuccess && candidate.id) {
+        try {
+          const refreshRes = await API.post('/api/auth/refresh');
+          if (refreshRes.data && refreshRes.data.token) {
+            localStorage.setItem('atac_token', refreshRes.data.token);
+          }
+        } catch (err) {
+          console.error('JWT refresh failed (continuing with stale token):', err);
+        }
+      }
+      if (candidate.id) { loadCredentials(); checkPaymentStatus(); }
+      else { setLoading(false); }
+    };
+    init();
   }, []);
 
   const checkPaymentStatus = async () => {
