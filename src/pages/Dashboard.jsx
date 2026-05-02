@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
+import { useToast } from '../hooks/useToast';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -48,6 +49,7 @@ const injectKF = () => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const result    = JSON.parse(localStorage.getItem('atac_result')    || 'null');
 
@@ -132,7 +134,13 @@ export default function Dashboard() {
       localStorage.setItem('atac_session', JSON.stringify(res.data));
       navigate('/assessment');
     } catch (err) {
-      alert(err.response?.data?.message || err.response?.data?.error || 'Failed to start assessment');
+      const data = err.response?.data || {};
+      const isCooldown = data.code === 'RETAKE_COOLDOWN' || err.response?.status === 429;
+      showToast(data.message || data.error || 'Failed to start assessment', {
+        type: isCooldown ? 'warning' : 'error',
+        title: isCooldown ? 'Retake cooldown' : 'Assessment start failed',
+        duration: isCooldown ? 7000 : 4500,
+      });
       setStartingAssessment(false);
     }
   };
@@ -159,8 +167,8 @@ export default function Dashboard() {
         setDownloading(false);
       })
       .catch(() => {
-        win.close();
-        alert('Certificate download failed. Please try again.');
+        if (win) win.close();
+        showToast('Certificate download failed. Please try again.', true);
         setDownloading(false);
       });
   };
@@ -208,7 +216,7 @@ export default function Dashboard() {
       setLinkedInCopied(true);
       setTimeout(() => setLinkedInCopied(false), 3000);
     }).catch(() => {
-      alert('Could not copy — please select the caption text and copy manually.');
+      showToast('Could not copy — please select the caption text and copy manually.', true);
     });
   };
 

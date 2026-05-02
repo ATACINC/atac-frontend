@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../hooks/useToast';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -40,6 +41,7 @@ const injectKF = () => {
 /* ── Phase: intro | questions | result ── */
 export default function Trial() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [phase,      setPhase]      = useState('intro');
   const [questions,  setQuestions]  = useState([]);
@@ -64,7 +66,7 @@ export default function Trial() {
       setCurrent(0);
       setAnswers({});
     } catch {
-      alert('Failed to load questions. Please try again.');
+      showToast('Failed to load questions. Please try again.', true);
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export default function Trial() {
       setResult(data);
       setPhase('result');
     } catch {
-      alert('Submission failed. Please try again.');
+      showToast('Submission failed. Please try again.', true);
       setSubmitting(false);
     }
   };
@@ -368,5 +370,3 @@ export default function Trial() {
 }
 
 const AMBER = '#C48A2A';
-
-

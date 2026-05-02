@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { isValidEmail } from '../utils/validation';
+import { useToast } from '../hooks/useToast';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -65,6 +66,7 @@ const injectKF = () => {
 
 export default function EmployerPortal() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [employerId, setEmployerId]     = useState(null);
   const [metrics, setMetrics]           = useState(null);
   const [candidates, setCandidates]     = useState([]);
@@ -96,8 +98,14 @@ export default function EmployerPortal() {
       setCandidates(normalizeCandidates(cRes.data.candidates || []));
     } catch (err) {
       if (err.response?.status === 404) {
-        alert('No employer account found. Contact support to set up your team account.');
-        navigate('/dashboard');
+        showToast('No employer account found. Contact support to set up your team account.', {
+          type: 'error',
+          title: 'No employer account',
+          duration: 4500,
+        });
+        // Delay navigation so user has time to read the toast before route change.
+        // alert() was synchronous; this preserves the original UX intent.
+        setTimeout(() => navigate('/dashboard'), 2000);
       }
     } finally {
       setLoading(false);
@@ -507,4 +515,3 @@ export default function EmployerPortal() {
     </div>
   );
 }
-

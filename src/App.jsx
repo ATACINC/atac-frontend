@@ -10,6 +10,7 @@ import EmployerPortal from './pages/EmployerPortal';
 import Trial from './pages/Trial';
 import Verify from './pages/Verify';
 import VerifyLanding from './pages/VerifyLanding';
+import { ToastProvider } from './components/ToastProvider';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
@@ -18,22 +19,23 @@ function PrivateRoute({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login"      element={<Login />} />
-        <Route path="/signup"     element={<SignupPage />} />
-        <Route path="/payment"    element={<PrivateRoute><Payment /></PrivateRoute>} />
-        <Route path="/assessment" element={<PrivateRoute><Assessment /></PrivateRoute>} />
-        <Route path="/simulator"  element={<PrivateRoute><Simulator /></PrivateRoute>} />
-        <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/employer" element={<PrivateRoute><EmployerPortal /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
-        <Route path="/"           element={<Navigate to="/dashboard" replace />} />
-        <Route path="/try" element={<Trial />} />
-        <Route path="/verify" element={<VerifyLanding />} />
-        <Route path="/verify/:credentialId" element={<Verify />} />
-      </Routes>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login"      element={<Login />} />
+          <Route path="/signup"     element={<SignupPage />} />
+          <Route path="/payment"    element={<PrivateRoute><Payment /></PrivateRoute>} />
+          <Route path="/assessment" element={<PrivateRoute><Assessment /></PrivateRoute>} />
+          <Route path="/simulator"  element={<PrivateRoute><Simulator /></PrivateRoute>} />
+          <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/employer" element={<PrivateRoute><EmployerPortal /></PrivateRoute>} />
+          <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+          <Route path="/"           element={<Navigate to="/dashboard" replace />} />
+          <Route path="/try" element={<Trial />} />
+          <Route path="/verify" element={<VerifyLanding />} />
+          <Route path="/verify/:credentialId" element={<Verify />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
-

@@ -4,8 +4,9 @@
  * File: src/pages/CandidateDashboard.jsx
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../hooks/useToast';
 
 const API_BASE    = 'https://atac-backend-production.up.railway.app';
 const BLOCKCHAIN_EXPLORER = 'https://polygonscan.com/tx/';
@@ -42,19 +43,14 @@ function initials(name) { if(!name) return '?'; return name.split(' ').map(w=>w[
 
 export default function CandidateDashboard() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [tab,setTab]=useState('overview');
   const [cred,setCred]=useState(null);
   const [assessment,setAssessment]=useState(null);
   const [candidate,setCandidate]=useState(null);
   const [loading,setLoading]=useState(true);
   const [downloading,setDownloading]=useState(false);
-  const [toast,setToast]=useState({show:false,msg:'',err:false});
   const [linkedInCopied,setLinkedInCopied]=useState(false);
-
-  const showToast = useCallback((msg,err=false)=>{
-    setToast({show:true,msg,err});
-    setTimeout(()=>setToast(t=>({...t,show:false})),3000);
-  },[]);
 
   useEffect(()=>{
     const token=getToken();
@@ -436,10 +432,5 @@ export default function CandidateDashboard() {
         </div>
       </div>
     </div>
-    <div style={{position:'fixed',top:24,right:24,background:toast.err?'#1A0A0A':'#0A1A12',border:`1px solid ${toast.err?'rgba(224,92,82,.4)':'rgba(34,181,137,.4)'}`,color:toast.err?C.red:C.teal2,fontFamily:F.body,fontSize:11,letterSpacing:'0.06em',padding:'12px 20px',borderRadius:3,opacity:toast.show?1:0,transform:toast.show?'translateY(0)':'translateY(-8px)',transition:'all 0.3s',pointerEvents:'none',zIndex:9999}}>
-      {toast.msg}
-    </div>
   </>);
 }
-
-

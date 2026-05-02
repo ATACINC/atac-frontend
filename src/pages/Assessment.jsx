@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import { useToast } from '../hooks/useToast';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
@@ -93,6 +94,7 @@ function formatTime(s) {
 /* ── Main Component ──────────────────────────────────────────────── */
 export default function Assessment() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Phase: 'loading' | 'locked' | 'intro' | 'active' | 'processing' | 'result'
   const [phase, setPhase]           = useState('loading');
@@ -175,7 +177,7 @@ export default function Assessment() {
       })
       .catch(() => {
         if (win) win.close();
-        alert('Certificate download failed. Please try again.');
+        showToast('Certificate download failed. Please try again.', true);
       });
   };
 

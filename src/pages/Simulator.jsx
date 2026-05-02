@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import { useToast } from '../hooks/useToast';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -43,6 +44,7 @@ const injectKF = () => {
 
 export default function Simulator() {
   const navigate   = useNavigate();
+  const { showToast } = useToast();
   const candidate  = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const assessmentId = localStorage.getItem('atac_assessment');
 
@@ -64,7 +66,7 @@ export default function Simulator() {
       const res = await API.post('/api/simulator/assign', { candidateId: candidate.id });
       setScenario(res.data);
       setSimSessionId(res.data.simSessionId);
-    } catch { alert('Failed to load simulator. Please try again.'); }
+    } catch { showToast('Failed to load simulator. Please try again.', true); }
   };
 
   const startCall = () => { setPhase('call'); loadExchange(0); };
@@ -100,7 +102,7 @@ export default function Simulator() {
       const res = await API.post('/api/simulator/complete', { simSessionId, assessmentId });
       setResult(res.data);
       setPhase('result');
-    } catch { alert('Failed to complete simulator.'); }
+    } catch { showToast('Failed to complete simulator.', true); }
   };
 
   const issueCredential = async () => {
@@ -109,7 +111,7 @@ export default function Simulator() {
       await API.post('/api/credentials/issue', { candidateId: candidate.id, assessmentId, program: 'CRSA' });
       navigate('/dashboard');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to issue credential.');
+      showToast(err.response?.data?.error || 'Failed to issue credential.', true);
     } finally { setLoading(false); }
   };
 
@@ -337,4 +339,3 @@ export default function Simulator() {
     </div>
   );
 }
-
