@@ -45,7 +45,9 @@ function normalizeResult(result) {
     expiresAt: result?.expiresAt || result?.expires_at,
     score,
     status: result?.status || 'Valid',
-    valid: result?.valid !== false && String(result?.status || 'valid').toLowerCase() !== 'revoked',
+    valid: result?.valid === false
+      ? false
+      : !['revoked', 'invalid', 'expired'].includes(String(result?.status || 'valid').toLowerCase()),
     tokenId: result?.tokenId || result?.token_id,
     txHash: result?.txHash || result?.tx_hash,
   };
