@@ -115,7 +115,7 @@ function ToastViewport({ toasts, onDismiss }) {
                 lineHeight: 1,
               }}
             >
-              x
+              ×
             </button>
           </div>
         );
