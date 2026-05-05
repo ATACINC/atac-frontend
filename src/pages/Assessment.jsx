@@ -119,6 +119,30 @@ export default function Assessment() {
   const timerRef   = useRef(null);
   const pollRef    = useRef(null);
 
+  // ── Phase 6: integrity telemetry ─────────────────────────────────────────
+  // The frontend doesn't know assessmentId until /submit-direct returns it,
+  // so we buffer all events client-side and flush one batch on submit. This
+  // means zero mid-assessment API calls (good — no rate-limit risk during
+  // the test) but also no real-time visibility into the active session.
+  const eventBufferRef       = useRef([]);     // queued integrity events
+  const questionStartTimeRef = useRef(null);   // ms timestamp current question rendered
+  const tabBlurCountRef      = useRef(0);      // local counter for UX (server tallies from events)
+  const fullscreenExitsRef   = useRef(0);
+  const [showFullscreenModal, setShowFullscreenModal] = useState(false);
+
+  // Push an integrity event into the buffer. Fire-and-forget — never throws,
+  // never blocks. Buffer is flushed in handleSubmit() once we have an assessmentId.
+  const pushEvent = useCallback((eventType, durationMs, metadata) => {
+    try {
+      eventBufferRef.current.push({
+        eventType,
+        clientTs:   Date.now(),
+        durationMs: durationMs != null ? Math.floor(durationMs) : null,
+        metadata:   metadata || null,
+      });
+    } catch (_) { /* silent — telemetry is best-effort */ }
+  }, []);
+
   useEffect(() => { injectKeyframes(); checkAccess(); }, []);
 
   // Clean up polling on unmount
@@ -128,6 +152,54 @@ export default function Assessment() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // ── Phase 6: lockdown listeners — bind only during 'active' phase ────────
+  // Bound on phase=='active', cleaned on phase change OR unmount. Behavior:
+  //   visibilitychange → record visibility_hidden / visibility_visible
+  //   fullscreenchange → on exit, record fullscreen_exit + show modal
+  //   copy / cut / paste / contextmenu → preventDefault + record + toast
+  // No API calls — events go into eventBufferRef, flushed on submit.
+  useEffect(() => {
+    if (phase !== 'active') return undefined;
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        tabBlurCountRef.current++;
+        pushEvent('visibility_hidden');
+      } else {
+        pushEvent('visibility_visible');
+      }
+    };
+    const onFsChange = () => {
+      if (!document.fullscreenElement) {
+        fullscreenExitsRef.current++;
+        pushEvent('fullscreen_exit');
+        setShowFullscreenModal(true);
+      } else {
+        setShowFullscreenModal(false);
+      }
+    };
+    const onCopy  = (e) => { e.preventDefault(); pushEvent('copy_attempt');  showToast('Copy and paste is disabled during the assessment'); };
+    const onCut   = (e) => { e.preventDefault(); pushEvent('copy_attempt');  showToast('Copy and paste is disabled during the assessment'); };
+    const onPaste = (e) => { e.preventDefault(); pushEvent('paste_attempt'); showToast('Copy and paste is disabled during the assessment'); };
+    const onCtx   = (e) => { e.preventDefault(); pushEvent('right_click'); };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('copy',        onCopy);
+    document.addEventListener('cut',         onCut);
+    document.addEventListener('paste',       onPaste);
+    document.addEventListener('contextmenu', onCtx);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('fullscreenchange', onFsChange);
+      document.removeEventListener('copy',        onCopy);
+      document.removeEventListener('cut',         onCut);
+      document.removeEventListener('paste',       onPaste);
+      document.removeEventListener('contextmenu', onCtx);
+    };
+  }, [phase, pushEvent, showToast]);
 
   const checkAccess = async () => {
     try {
@@ -160,6 +232,15 @@ export default function Assessment() {
         return t - 1;
       });
     }, 1000);
+
+    // Phase 6: integrity telemetry
+    pushEvent('start');
+    questionStartTimeRef.current = Date.now();
+    // Best-effort fullscreen request. Older browsers / headless contexts may
+    // reject; we just continue without crashing.
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => { /* silent */ });
+    }
   };
 
   const downloadCertificate = (credId) => {
@@ -190,6 +271,15 @@ export default function Assessment() {
   };
 
   const goTo = (idx) => {
+    // Phase 6: record duration for the question being left.
+    if (questionStartTimeRef.current && idx !== current) {
+      const durationMs = Date.now() - questionStartTimeRef.current;
+      const leavingQ = questions[current];
+      if (leavingQ) {
+        pushEvent('question_answered', durationMs, { question_id: leavingQ.id });
+      }
+      questionStartTimeRef.current = Date.now();
+    }
     setCurrent(idx);
     setAnimKey(k => k + 1);
   };
@@ -220,6 +310,17 @@ export default function Assessment() {
     setSubmitting(true);
     setError('');
     try {
+      // Phase 6: record duration of the LAST question (no goTo() fires after
+      // submit, so this is the only place that question's timing is captured).
+      if (questionStartTimeRef.current) {
+        const durationMs = Date.now() - questionStartTimeRef.current;
+        const lastQ = questions[current];
+        if (lastQ) {
+          pushEvent('question_answered', durationMs, { question_id: lastQ.id });
+        }
+        questionStartTimeRef.current = null;
+      }
+
       const payload = questions.map(q => ({
         questionId: q.id,
         selectedOption: answers[q.id] ?? null
@@ -227,6 +328,17 @@ export default function Assessment() {
       const res = await API.post('/api/assessment/submit-direct', { answers: payload });
       setResult(res.data);
       localStorage.removeItem('atac_answers');
+
+      // Phase 6: flush the integrity event buffer with the now-known assessmentId.
+      // Fire-and-forget — the response shape is what the user sees; telemetry
+      // is best-effort and must NEVER block or fail the assessment.
+      const assessmentId = res.data && res.data.assessmentId;
+      if (assessmentId && eventBufferRef.current.length > 0) {
+        const events = eventBufferRef.current.slice(0, 200); // /events/batch caps at 200
+        eventBufferRef.current = [];
+        API.post('/api/integrity/events/batch', { assessmentId, events })
+          .catch(() => { /* silent */ });
+      }
 
       // If credential is still pending, go to processing phase and poll
       if (res.data.passed && res.data.credentialStatus === 'pending') {
@@ -243,7 +355,7 @@ export default function Assessment() {
       setError(err.response?.data?.error || 'Submission failed. Please try again.');
       setSubmitting(false);
     }
-  }, [submitting, questions, answers]);
+  }, [submitting, questions, answers, current, pushEvent]);
 
   const startPolling = (assessmentId) => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -644,6 +756,62 @@ export default function Assessment() {
           </div>
         </div>
       </div>
+      {/* Phase 6: fullscreen-exit modal — fixed overlay, only visible when
+          showFullscreenModal is true (set on fullscreenchange event when
+          the user has dropped out of fullscreen). */}
+      {showFullscreenModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="atac-fs-modal-title"
+          style={{
+            position: 'fixed', inset: 0,
+            background: 'rgba(7, 17, 31, 0.85)', backdropFilter: 'blur(4px)',
+            zIndex: 999999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, fontFamily: VAULT_FONT_BODY,
+          }}
+        >
+          <div style={{
+            background: BG1, border: `2px solid ${GOLD}`, borderRadius: 12,
+            maxWidth: 460, width: '100%', padding: '32px 28px 28px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(201,168,76,0.15)',
+            color: WHITE, textAlign: 'center',
+          }}>
+            <h2
+              id="atac-fs-modal-title"
+              style={{
+                fontFamily: VAULT_FONT_DISPLAY, fontSize: 26, fontWeight: 400,
+                color: WHITE, margin: '0 0 14px',
+              }}
+            >
+              Return to fullscreen
+            </h2>
+            <p style={{ fontSize: 14, lineHeight: 1.55, color: MUTED, margin: '0 0 22px' }}>
+              Please return to fullscreen to continue. Fullscreen exits are logged with your assessment.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                if (document.documentElement.requestFullscreen) {
+                  document.documentElement.requestFullscreen()
+                    .then(() => setShowFullscreenModal(false))
+                    .catch(() => { /* silent — modal stays open */ });
+                }
+              }}
+              style={{
+                background: GOLD, color: BG, border: 'none', borderRadius: 4,
+                padding: '13px 28px', fontSize: 12, fontWeight: 700,
+                letterSpacing: '0.16em', textTransform: 'uppercase',
+                cursor: 'pointer', fontFamily: VAULT_FONT_BODY,
+              }}
+            >
+              Return to fullscreen
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 
