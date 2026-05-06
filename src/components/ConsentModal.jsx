@@ -280,6 +280,7 @@ const styles = {
     marginTop: 14, padding: '14px 16px',
     background: 'rgba(200,164,75,0.04)', border: `1px solid ${VAULT_BORDER}`,
     borderRadius: 3, color: MUTED, fontSize: 13, lineHeight: 1.6,
+    whiteSpace: 'pre-wrap',
   },
   attestation: {
     marginTop: 10, padding: '8px 12px',
