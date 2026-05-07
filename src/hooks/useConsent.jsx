@@ -15,8 +15,10 @@ import ConsentModal from '../components/ConsentModal';
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
-// Human-readable summaries shown in the "Show summary" expand
-const DOCUMENT_SUMMARIES = {
+// Human-readable summaries shown in the "Show summary" expand.
+// Exported so PhotoVerificationModal can render photo_consent inline
+// without duplicating the body copy.
+export const DOCUMENT_SUMMARIES = {
   tos: 'Governs your overall use of the ATAC Global CX platform. Covers account responsibility, acceptable use, intellectual property, limitation of liability, and dispute resolution via binding arbitration in Toronto with class action waiver.',
   privacy: 'Explains how we collect, use, and share your personal information across Canada (PIPEDA), the EU/UK (GDPR), and California (CCPA). Names our subprocessors (Stripe, Postmark, Alchemy, etc.) and outlines your rights including access, correction, and deletion requests.',
   refund: 'Our refund rules. Full refund within 48 hours if the assessment has not been started; non-refundable once started. Subscriptions cancellable anytime with access through billing period end.',
@@ -31,6 +33,23 @@ This record is permanent and publicly verifiable. By proceeding, you acknowledge
   cookies_analytics: 'Optional - allow ATAC to use analytics cookies to measure page performance and improve the platform.',
   cookies_marketing: 'Optional - allow marketing cookies used for retargeting and conversion tracking.',
   marketing_email: 'Optional - receive occasional emails about new certifications, platform updates, and industry content. You can unsubscribe anytime.',
+  photo_consent: `By selecting a Headshot or Verified Identity tier, you authorize the following photo collection.
+
+WHAT IS CAPTURED: For the Headshot tier, a profile photo you upload before starting your assessment. For the Verified Identity tier, the headshot above plus a selfie captured by your device camera at the moment your assessment begins.
+
+WHERE IT IS STORED: The headshot is pinned to IPFS via Pinata. IPFS is a public content-addressable network, so the headshot is intentionally publicly retrievable, since it appears on your verify page and printed certificate. The selfie is stored only in our private database, never on a public network or third-party storage service.
+
+WHO CAN ACCESS IT: The headshot is publicly accessible by design, since it appears on your public verify page. The selfie is accessible only to ATAC Global CX administrators, and to employers on a per-request basis when verifying a credential. The selfie is never publicly accessible.
+
+RETENTION: Photos are retained for the lifetime of your credential. If your credential is revoked, the headshot's IPFS pin remains (we cannot remove it from the broader IPFS network) and the selfie remains in our database for fraud-investigation audit.
+
+DELETION PATH: To request deletion, contact support@atacglobalcx.com. We will delete the selfie from our database within 30 days, and best-effort unpin the headshot from our Pinata account. The IPFS hash may persist on the wider network if cached by other nodes. Deletion does not retroactively change credentials already issued; their on-chain metadata remains unchanged.
+
+CONSENT SCOPE: This consent applies only when you select a Headshot or Verified Identity tier. The 'none' tier requires no photo consent and remains available regardless.
+
+DATA MINIMIZATION: We capture only what is necessary to support the selected tier. The 'none' tier requires no photos. The 'Headshot' tier requires only the headshot you upload. The 'Verified Identity' tier requires the headshot plus a single selfie at assessment start. We do not capture facial recognition data, biometric templates, or running camera feeds beyond the moment of selfie capture.
+
+By proceeding, you acknowledge and consent to this disclosure under photo consent version 1.0.0.`,
 };
 
 // ---- Internal fetch helpers ---------------------------------------------

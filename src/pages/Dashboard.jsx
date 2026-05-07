@@ -5,6 +5,7 @@ import API from '../api/client';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { useToast } from '../hooks/useToast';
+import { usePhotoVerification } from '../hooks/usePhotoVerification';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -50,6 +51,7 @@ const injectKF = () => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const photoVerification = usePhotoVerification();
   const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const result    = JSON.parse(localStorage.getItem('atac_result')    || 'null');
 
@@ -127,6 +129,15 @@ export default function Dashboard() {
   };
 
   const startAssessment = async () => {
+    // Photo verification gate. Modal handles tier selection, consent, and
+    // headshot upload. Resolves with a result object on success, or null
+    // if the user cancels at any step. setStartingAssessment is only set
+    // true AFTER the gate resolves with a non-null result.
+    const photoResult = await photoVerification.ensure();
+    if (!photoResult) {
+      return; // user cancelled, no loading state was ever set
+    }
+
     setStartingAssessment(true);
     try {
       const tier = paymentTier || 'standard';
@@ -135,6 +146,19 @@ export default function Dashboard() {
       navigate('/assessment');
     } catch (err) {
       const data = err.response?.data || {};
+
+      // Defensive recovery: server detected verification drift between the
+      // candidate row and what the assessment gate requires. Re-open the
+      // photo modal and retry the start call after the user re-completes.
+      if (data.code === 'HEADSHOT_REQUIRED' || data.code === 'SELFIE_REQUIRED') {
+        setStartingAssessment(false);
+        const retryResult = await photoVerification.ensure();
+        if (retryResult) {
+          return startAssessment();
+        }
+        return;
+      }
+
       const isCooldown = data.code === 'RETAKE_COOLDOWN' || err.response?.status === 429;
       showToast(data.message || data.error || 'Failed to start assessment', {
         type: isCooldown ? 'warning' : 'error',
@@ -935,6 +959,8 @@ export default function Dashboard() {
 
         </div>}
       </div>
+
+      {photoVerification.modal}
     </div>
   );
 }
