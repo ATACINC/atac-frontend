@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { useToast } from '../hooks/useToast';
+import SelfieCapture from '../components/SelfieCapture';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
@@ -96,7 +97,7 @@ export default function Assessment() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Phase: 'loading' | 'locked' | 'intro' | 'active' | 'processing' | 'result'
+  // Phase: 'loading' | 'locked' | 'selfie' | 'intro' | 'active' | 'processing' | 'result'
   const [phase, setPhase]           = useState('loading');
   const [questions, setQuestions]   = useState([]);
   const [current, setCurrent]       = useState(0);
@@ -207,11 +208,50 @@ export default function Assessment() {
       const cand = me.data.candidate || me.data;
       if (!cand.payment_verified) { setPhase('locked'); return; }
       if (cand.assessmentCompleted) { setPhase('result'); fetchResult(); return; }
-      const qRes = await API.get('/api/assessment/questions');
-      setQuestions(qRes.data.questions || []);
-      setPhase('intro');
+
+      // Selfie gate. The candidate's INTENDED tier (set by Dashboard from
+      // the photo modal resolution) may be 'verified' even though the
+      // backend stored tier is still 'headshot' (selfie not yet captured).
+      // If so, route to the 'selfie' phase and mount SelfieCapture before
+      // fetching questions. SelfieCapture handles upload, PATCH to
+      // 'verified', and the downgrade path; on completion it calls back
+      // to handleSelfieComplete which loads questions and proceeds.
+      const intendedTier = localStorage.getItem('atac_intended_tier');
+      const hasSelfie    = !!cand.selfie_uploaded_at;
+      if (intendedTier === 'verified' && !hasSelfie) {
+        setPhase('selfie');
+        return;
+      }
+      // Clear stale intent (e.g., candidate already finished selfie or
+      // downgraded on a previous attempt).
+      if (intendedTier) localStorage.removeItem('atac_intended_tier');
+
+      await loadQuestionsAndProceedToIntro();
     } catch {
       navigate('/login');
+    }
+  };
+
+  const loadQuestionsAndProceedToIntro = async () => {
+    const qRes = await API.get('/api/assessment/questions');
+    setQuestions(qRes.data.questions || []);
+    setPhase('intro');
+  };
+
+  // SelfieCapture completion handler. Both 'success' (verified tier
+  // promoted on the backend) and 'downgraded' (candidate continues with
+  // headshot tier) advance to the questions fetch + intro phase.
+  // SelfieCapture itself clears localStorage.atac_intended_tier before
+  // calling this back.
+  const handleSelfieComplete = async () => {
+    try {
+      await loadQuestionsAndProceedToIntro();
+    } catch (err) {
+      // Surface fetch failure but keep the user on the assessment route;
+      // a retry button is not yet wired here so the candidate would need
+      // to refresh. Acceptable for a rare post-selfie failure path.
+      console.error('[Assessment] post-selfie loadQuestions failed', err);
+      navigate('/dashboard');
     }
   };
 
@@ -432,6 +472,13 @@ export default function Assessment() {
         <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 18, color: GOLD, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>ATAC Global CX</div>
         <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Loading Assessment…</div>
       </div>
+    </div>
+  );
+
+  /* SELFIE - Verified Identity tier capture gate */
+  if (phase === 'selfie') return (
+    <div style={base}>
+      <SelfieCapture onComplete={handleSelfieComplete} />
     </div>
   );
 

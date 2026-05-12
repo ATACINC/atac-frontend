@@ -138,6 +138,17 @@ export default function Dashboard() {
       return; // user cancelled, no loading state was ever set
     }
 
+    // Intended-tier vs backend-stored-tier handoff: when the candidate
+    // intends 'verified', the modal could not promote backend state past
+    // 'headshot' because the selfie is not on file yet. Persist the
+    // intent so Assessment.jsx can trigger SelfieCapture on mount. For
+    // any other tier outcome, clear stale intent from a prior attempt.
+    if (photoResult.verificationTier === 'verified') {
+      localStorage.setItem('atac_intended_tier', 'verified');
+    } else {
+      localStorage.removeItem('atac_intended_tier');
+    }
+
     setStartingAssessment(true);
     try {
       const tier = paymentTier || 'standard';

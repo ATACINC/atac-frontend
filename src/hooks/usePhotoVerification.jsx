@@ -8,14 +8,24 @@
  *   const photo = usePhotoVerification();
  *   const result = await photo.ensure();
  *   if (!result) return; // user cancelled
- *   // result.verificationTier is 'none' or 'headshot'
+ *   // result.verificationTier is 'none' or 'headshot' or 'verified'
  *   // result.headshotUrl is null or a gateway URL
  *   ...
  *   return (<>...{photo.modal}</>);
  *
- * Commit 2 of 3 ships TIER_SELECT, PHOTO_CONSENT, HEADSHOT_UPLOAD,
- * and HEADSHOT_PREVIEW. The Verified Identity tier and selfie steps
- * land in Commit 3.
+ * Commit 2 shipped TIER_SELECT (headshot / none), PHOTO_CONSENT,
+ * HEADSHOT_UPLOAD, and HEADSHOT_PREVIEW. Commit 3 adds the Verified
+ * Identity tier, the STEP_HEADSHOT_DONE post-upload step, and the
+ * uploadSelfie + patchTier API helpers consumed by SelfieCapture.jsx
+ * at assessment start.
+ *
+ * Intended-tier vs backend-stored-tier architecture: when the candidate
+ * selects 'verified', the modal calls patchTier('verified') after the
+ * headshot upload succeeds. The backend gates 'verified' on selfie
+ * presence and returns 400 SELFIE_REQUIRED. The modal accepts this
+ * gracefully: backend tier stays 'headshot', candidate intent is
+ * 'verified', and Dashboard.jsx persists the intent flag to
+ * localStorage for SelfieCapture.jsx to read at assessment start.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -93,6 +103,47 @@ export async function uploadHeadshot(file) {
   return apiPostMultipart('/api/photo/headshot', formData);
 }
 
+// Uploads the selfie blob as multipart/form-data. Field key is 'file' to
+// match upload.single('file') in backend/routes/photo.js (same field name
+// as the headshot endpoint per the Commit 1 audit). Returns
+// { selfieId, capturedAt } on success.
+export async function uploadSelfie(blob) {
+  const formData = new FormData();
+  // Provide a filename so multer's mime sniffing is happy; JPEG matches the
+  // canvas.toBlob('image/jpeg') output from SelfieCapture.captureSelfie().
+  formData.append('file', blob, 'selfie.jpg');
+  return apiPostMultipart('/api/photo/selfie', formData);
+}
+
+// Patches candidates.verification_tier via PATCH /api/photo/tier.
+// Body: { verificationTier: 'none' | 'headshot' | 'verified' }
+// Backend returns 400 SELFIE_REQUIRED if 'verified' is requested without a
+// selfie on file. Callers handle that case explicitly (see SelfieCapture
+// and PhotoVerificationModal). Same-tier PATCH is an intended no-op write.
+export async function patchTier(verificationTier) {
+  return apiPatchJson('/api/photo/tier', { verificationTier });
+}
+
+async function apiPatchJson(path, body) {
+  const token = localStorage.getItem('atac_token');
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `PATCH ${path} failed (${res.status})`);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
 // ----- The hook -----------------------------------------------------------
 
 export function usePhotoVerification() {
@@ -122,6 +173,7 @@ export function usePhotoVerification() {
       onResolve={handleResolve}
       postConsent={postPhotoConsent}
       uploadHeadshot={uploadHeadshot}
+      patchTier={patchTier}
     />
   );
 

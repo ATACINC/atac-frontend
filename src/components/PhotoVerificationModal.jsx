@@ -43,23 +43,32 @@ const STEP_TIER_SELECT      = 'TIER_SELECT';
 const STEP_PHOTO_CONSENT    = 'PHOTO_CONSENT';
 const STEP_HEADSHOT_UPLOAD  = 'HEADSHOT_UPLOAD';
 const STEP_HEADSHOT_PREVIEW = 'HEADSHOT_PREVIEW';
+const STEP_HEADSHOT_DONE    = 'HEADSHOT_DONE';
 
 export default function PhotoVerificationModal({
   isOpen,
   onResolve,
   postConsent,
   uploadHeadshot,
+  patchTier,
 }) {
   // ----- Internal state machine ------------------------------------------
   const [step, setStep] = useState(STEP_TIER_SELECT);
-  const [selectedTier, setSelectedTier] = useState(null); // null | 'none' | 'headshot'
+  const [selectedTier, setSelectedTier] = useState(null); // null | 'none' | 'headshot' | 'verified'
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentSubmitting, setConsentSubmitting] = useState(false);
   const [declinedRecently, setDeclinedRecently] = useState(false);
 
   const [headshotFile, setHeadshotFile] = useState(null);
   const [headshotPreviewUrl, setHeadshotPreviewUrl] = useState(null);
+  const [uploadedHeadshotUrl, setUploadedHeadshotUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Tier-PATCH submission flag used by STEP_HEADSHOT_DONE when the candidate
+  // commits to the 'verified' path. The PATCH is attempted optimistically;
+  // backend returns 400 SELFIE_REQUIRED, which we handle as the expected
+  // path and resolve with verificationTier='verified' anyway.
+  const [tierPatchSubmitting, setTierPatchSubmitting] = useState(false);
 
   const [error, setError] = useState(null); // string or null, contextual to current step
   const [dragOver, setDragOver] = useState(false);
@@ -77,7 +86,9 @@ export default function PhotoVerificationModal({
       setConsentSubmitting(false);
       setDeclinedRecently(false);
       setHeadshotFile(null);
+      setUploadedHeadshotUrl(null);
       setUploading(false);
+      setTierPatchSubmitting(false);
       setError(null);
       setDragOver(false);
       // Object URL is cleaned up in the effect below when headshotFile clears.
@@ -107,7 +118,7 @@ export default function PhotoVerificationModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => {
-      if (e.key === 'Escape' && !consentSubmitting && !uploading) {
+      if (e.key === 'Escape' && !consentSubmitting && !uploading && !tierPatchSubmitting) {
         e.preventDefault();
         cancel();
       }
@@ -115,7 +126,7 @@ export default function PhotoVerificationModal({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, consentSubmitting, uploading]);
+  }, [isOpen, consentSubmitting, uploading, tierPatchSubmitting]);
 
   // ----- Cancel / resolve handlers --------------------------------------
   const cancel = useCallback(() => {
@@ -128,7 +139,9 @@ export default function PhotoVerificationModal({
       onResolve({ verificationTier: 'none', headshotUrl: null });
       return;
     }
-    // headshot: advance to consent
+    // 'headshot' and 'verified' both advance through the same consent +
+    // upload steps. The difference shows up at STEP_HEADSHOT_DONE where
+    // the CTAs branch per the originally selected tier.
     setError(null);
     setStep(STEP_PHOTO_CONSENT);
   };
@@ -218,7 +231,12 @@ export default function PhotoVerificationModal({
     try {
       const response = await uploadHeadshot(headshotFile);
       const headshotUrl = response.gatewayUrl || response.ipfsUri || null;
-      onResolve({ verificationTier: 'headshot', headshotUrl });
+      setUploadedHeadshotUrl(headshotUrl);
+      setUploading(false);
+      // Advance to STEP_HEADSHOT_DONE instead of resolving immediately so
+      // the candidate can confirm tier (and optionally upgrade Headshot
+      // selections to Verified Identity in-modal).
+      setStep(STEP_HEADSHOT_DONE);
     } catch (err) {
       setUploading(false);
       const status = err?.status;
@@ -238,6 +256,41 @@ export default function PhotoVerificationModal({
     }
   };
 
+  // ----- STEP_HEADSHOT_DONE terminal actions ---------------------------
+  // Resolve as 'headshot' tier. Backend was already auto-promoted from
+  // 'none' to 'headshot' by the headshot upload writeback.
+  const finishWithHeadshot = () => {
+    onResolve({ verificationTier: 'headshot', headshotUrl: uploadedHeadshotUrl });
+  };
+
+  // Resolve as 'verified' tier (intended). The PATCH attempt is expected
+  // to return 400 SELFIE_REQUIRED because no selfie is on file yet. We
+  // handle that as the expected path and resolve with intended='verified'
+  // anyway. Dashboard.jsx persists this intent to localStorage for
+  // SelfieCapture.jsx to consume at assessment start.
+  const finishWithVerified = async () => {
+    if (tierPatchSubmitting) return;
+    setTierPatchSubmitting(true);
+    setError(null);
+    try {
+      await patchTier('verified');
+      // Unexpected: backend accepted the PATCH (would mean a selfie is
+      // already on file from a previous attempt). Resolve verified.
+    } catch (err) {
+      const code = err?.data?.code;
+      const status = err?.status;
+      if (code === 'SELFIE_REQUIRED' || status === 400) {
+        // Expected path. Backend tier stays 'headshot'; intent is 'verified'.
+      } else {
+        setError('Could not save your tier preference. Please try again.');
+        setTierPatchSubmitting(false);
+        return;
+      }
+    }
+    setTierPatchSubmitting(false);
+    onResolve({ verificationTier: 'verified', headshotUrl: uploadedHeadshotUrl });
+  };
+
   // ----- Back from upload step (preserves consent acceptance) ------------
   const backToConsent = () => {
     setError(null);
@@ -253,7 +306,7 @@ export default function PhotoVerificationModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="photo-verify-title"
-      onClick={() => !consentSubmitting && !uploading && cancel()}
+      onClick={() => !consentSubmitting && !uploading && !tierPatchSubmitting && cancel()}
       style={overlayStyle}
     >
       <div
@@ -268,7 +321,7 @@ export default function PhotoVerificationModal({
           <button
             type="button"
             onClick={cancel}
-            disabled={consentSubmitting || uploading}
+            disabled={consentSubmitting || uploading || tierPatchSubmitting}
             style={cancelLinkStyle}
           >
             Cancel
@@ -318,19 +371,105 @@ export default function PhotoVerificationModal({
             error={error}
           />
         )}
+
+        {step === STEP_HEADSHOT_DONE && (
+          <HeadshotDoneStep
+            previewUrl={headshotPreviewUrl}
+            selectedTier={selectedTier}
+            onFinishHeadshot={finishWithHeadshot}
+            onFinishVerified={finishWithVerified}
+            submitting={tierPatchSubmitting}
+            error={error}
+          />
+        )}
       </div>
     </div>
   );
 }
 
 // =========================================================================
-// Step 1: TIER_SELECT
+// Step 1: TIER_SELECT (three-card layout per Commit 3 design)
 // =========================================================================
 function TierSelectStep({ selectedTier, onSelect, onContinue, declinedRecently }) {
+  // Mobile breakpoint detection. On narrow screens the cards stack 1-column
+  // and the prominent Verified Identity card floats to the top of the stack
+  // (visual hierarchy carries over from the middle-position desktop layout).
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 600px)');
+    setIsMobile(mq.matches);
+    const handler = (e) => setIsMobile(e.matches);
+    // addEventListener is the modern API; addListener kept for older Safari fallback
+    if (mq.addEventListener) mq.addEventListener('change', handler);
+    else mq.addListener(handler);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', handler);
+      else mq.removeListener(handler);
+    };
+  }, []);
+
   const continueLabel =
     selectedTier === 'headshot' ? 'Continue with Headshot'
+    : selectedTier === 'verified' ? 'Continue with Verified Identity'
     : selectedTier === 'none'   ? 'Continue with No Photo'
     : 'Continue';
+
+  const headshotCard = (
+    <TierCard
+      key="headshot"
+      tier="headshot"
+      selected={selectedTier === 'headshot'}
+      onSelect={() => onSelect('headshot')}
+      title="Headshot"
+      subtitle="Public profile photo on your credential"
+      bullets={[
+        'Photo appears on your verify page',
+        'Photo appears on your printed certificate',
+        'Adds a face to your credential for employers',
+      ]}
+    />
+  );
+
+  const verifiedCard = (
+    <TierCard
+      key="verified"
+      tier="verified"
+      selected={selectedTier === 'verified'}
+      onSelect={() => onSelect('verified')}
+      title="Verified Identity"
+      subtitle="Public photo + private selfie, strongest fraud deterrent"
+      bullets={[
+        'Photo appears on your verify page',
+        'Photo appears on your printed certificate',
+        '"Verified Identity" badge on your credential',
+        'Selfie captured at assessment start (private, never shown publicly)',
+      ]}
+      recommended
+    />
+  );
+
+  const noPhotoCard = (
+    <TierCard
+      key="none"
+      tier="none"
+      selected={selectedTier === 'none'}
+      onSelect={() => onSelect('none')}
+      title="No Photo"
+      subtitle="Standard credential, name only"
+      bullets={[
+        'No photos uploaded or stored',
+        'Certificate displays your name only',
+        'Verify page shows your name only',
+      ]}
+    />
+  );
+
+  // Desktop: [Headshot | Verified (prominent middle) | No Photo]
+  // Mobile:  [Verified (top) | Headshot | No Photo]   - prominence moves to top
+  const cardsInOrder = isMobile
+    ? [verifiedCard, headshotCard, noPhotoCard]
+    : [headshotCard, verifiedCard, noPhotoCard];
 
   return (
     <>
@@ -354,42 +493,15 @@ function TierSelectStep({ selectedTier, onSelect, onContinue, declinedRecently }
         </div>
       )}
 
-      {/*
-        Two-card grid today. Commit 3 will add a Verified Identity card in
-        the middle slot; switching to repeat(3, 1fr) is a one-line change.
-      */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: 14,
           marginBottom: 16,
         }}
       >
-        <TierCard
-          tier="headshot"
-          selected={selectedTier === 'headshot'}
-          onSelect={() => onSelect('headshot')}
-          title="Headshot"
-          subtitle="Public profile photo on your credential"
-          bullets={[
-            'Photo appears on your verify page',
-            'Photo appears on your printed certificate',
-            'Adds a face to your credential for employers',
-          ]}
-        />
-        <TierCard
-          tier="none"
-          selected={selectedTier === 'none'}
-          onSelect={() => onSelect('none')}
-          title="No Photo"
-          subtitle="Standard credential, name only"
-          bullets={[
-            'No photos uploaded or stored',
-            'Certificate displays your name only',
-            'Verify page shows your name only',
-          ]}
-        />
+        {cardsInOrder}
       </div>
 
       <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.5, marginBottom: 24 }}>
@@ -411,27 +523,65 @@ function TierSelectStep({ selectedTier, onSelect, onContinue, declinedRecently }
   );
 }
 
-function TierCard({ selected, onSelect, title, subtitle, bullets }) {
+function TierCard({ selected, onSelect, title, subtitle, bullets, recommended }) {
+  // Recommended card (Verified Identity) gets a full gold border by default
+  // even when unselected. Side cards use the muted border-2 token when
+  // unselected and the lit gold border when selected.
+  const borderColor = recommended
+    ? GOLD
+    : (selected ? BORDER_LIT : BORDER2);
+  const background = recommended
+    ? (selected ? 'rgba(201,168,76,0.10)' : 'rgba(201,168,76,0.04)')
+    : (selected ? 'rgba(201,168,76,0.07)' : BG1);
+  const innerGlow = recommended && selected
+    ? 'inset 0 0 0 1px rgba(201,168,76,0.32)'
+    : 'none';
+
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       style={{
+        position: 'relative',
         textAlign: 'left',
-        background: selected ? 'rgba(201,168,76,0.07)' : BG1,
-        border: `1px solid ${selected ? BORDER_LIT : BORDER2}`,
+        background,
+        border: `1px solid ${borderColor}`,
         borderRadius: 4,
         padding: '20px 22px',
         cursor: 'pointer',
         fontFamily: VAULT_BODY,
         color: WHITE,
-        transition: 'border-color 0.15s, background 0.15s',
+        transition: 'border-color 0.15s, background 0.15s, box-shadow 0.15s',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
+        boxShadow: recommended
+          ? `0 4px 16px rgba(201,168,76,0.10)${innerGlow !== 'none' ? `, ${innerGlow}` : ''}`
+          : 'none',
       }}
     >
+      {recommended && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            background: GOLD,
+            color: BG,
+            fontSize: 9,
+            fontWeight: 800,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            padding: '3px 8px',
+            borderRadius: 999,
+            lineHeight: 1,
+          }}
+        >
+          Recommended
+        </span>
+      )}
       <div style={{
         fontFamily: VAULT_DISPLAY,
         fontSize: 24,
@@ -642,6 +792,92 @@ function HeadshotPreviewStep({ previewUrl, onChooseDifferent, onConfirm, uploadi
           {uploading ? 'Uploading...' : 'Use This Photo'}
         </button>
       </div>
+    </>
+  );
+}
+
+// =========================================================================
+// Step 5: HEADSHOT_DONE - confirm tier, optionally upgrade to Verified
+// =========================================================================
+function HeadshotDoneStep({ previewUrl, selectedTier, onFinishHeadshot, onFinishVerified, submitting, error }) {
+  const isVerifiedPath = selectedTier === 'verified';
+  return (
+    <>
+      <h2 id="photo-verify-title" style={{ ...titleStyle, color: TEAL2 }}>Headshot Saved</h2>
+      <p style={{ fontSize: 14, color: MUTED, margin: '6px 0 8px', lineHeight: 1.55 }}>
+        Your headshot is saved and ready to ship with your credential.
+      </p>
+
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0 22px' }}>
+        <div
+          aria-hidden="true"
+          style={{
+            width: 200,
+            height: 200,
+            borderRadius: '50%',
+            overflow: 'hidden',
+            border: `2px solid ${BORDER_LIT}`,
+            boxShadow: '0 0 0 5px rgba(201,168,76,0.06), 0 12px 32px rgba(0,0,0,0.45)',
+            background: BG,
+          }}
+        >
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          )}
+        </div>
+      </div>
+
+      {isVerifiedPath ? (
+        <>
+          <div style={{ fontSize: 13, color: MUTED, textAlign: 'center', marginBottom: 18, lineHeight: 1.55 }}>
+            You'll capture a selfie when you start your assessment.
+          </div>
+          {error && <ErrorBanner>{error}</ErrorBanner>}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 20 }}>
+            <button
+              type="button"
+              onClick={onFinishVerified}
+              disabled={submitting}
+              style={{ ...primaryBtn(submitting), minWidth: 280 }}
+            >
+              {submitting ? 'Saving...' : 'Continue to Assessment'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {error && <ErrorBanner>{error}</ErrorBanner>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={onFinishHeadshot}
+              disabled={submitting}
+              style={primaryBtn(submitting)}
+            >
+              Continue with Headshot
+            </button>
+            <button
+              type="button"
+              onClick={onFinishVerified}
+              disabled={submitting}
+              style={{
+                ...secondaryBtn(submitting),
+                color: GOLD,
+                borderColor: BORDER,
+              }}
+            >
+              {submitting ? 'Saving...' : 'Upgrade to Verified Identity →'}
+            </button>
+            <div style={{ fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 1.55, marginTop: 4 }}>
+              You'll capture a selfie when you start your assessment.
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

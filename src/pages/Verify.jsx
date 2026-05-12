@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import API from '../api/client';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
+import VerifiedBadge from '../components/VerifiedBadge';
+import { ipfsUriToGatewayUrl } from '../utils/ipfs';
 
 const BG      = '#080B12';
 const BG1     = '#0C1018';
@@ -36,6 +38,14 @@ function normalizeResult(result) {
   const program = result?.program || 'CRSA';
   const score = result?.score ?? result?.assessmentScore ?? result?.assessment_score;
 
+  // Photo verification fields. Backend pre-converts the headshot URI to a
+  // gateway URL via services/pinata.ipfsUriToGatewayUrl; we defensively
+  // normalize again in case the response carries a raw ipfs:// URI.
+  const rawTier = result?.verificationTierAtIssue || result?.verification_tier_at_issue || 'none';
+  const rawHeadshot = result?.headshotUrl || result?.headshot_url || null;
+  const verificationTierAtIssue = ['headshot', 'verified'].includes(rawTier) ? rawTier : 'none';
+  const headshotUrl = ipfsUriToGatewayUrl(rawHeadshot);
+
   return {
     credentialId,
     candidateName,
@@ -50,6 +60,8 @@ function normalizeResult(result) {
       : !['revoked', 'invalid', 'expired'].includes(String(result?.status || 'valid').toLowerCase()),
     tokenId: result?.tokenId || result?.token_id,
     txHash: result?.txHash || result?.tx_hash,
+    verificationTierAtIssue,
+    headshotUrl,
   };
 }
 
@@ -177,13 +189,47 @@ export default function Verify() {
       <main style={s.wrap}>
         <section className="verify-hero vault-up" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.1fr) 430px', gap: 30, alignItems: 'stretch' }}>
           <div className="verify-card" style={{ ...s.panel, padding: '46px 50px', borderColor: 'rgba(26,143,105,0.24)', background: 'linear-gradient(135deg, rgba(26,143,105,0.10), rgba(17,23,34,0.98) 45%, rgba(8,11,18,0.98))' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26, flexWrap: 'wrap' }}>
               <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(34,166,126,0.12)', border: '1px solid rgba(34,166,126,0.38)', color: TEAL, display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 800 }}>V</div>
               <div>
                 <div style={{ fontSize: 12, color: TEAL, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Credential Verified</div>
                 <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Blockchain record confirmed by ATAC Global CX.</div>
               </div>
+              {/*
+                Verified Identity badge renders only for credentials issued
+                at verification_tier_at_issue='verified'. Pre-feature legacy
+                credentials carry 'none' and render exactly as before.
+              */}
+              {credential.verificationTierAtIssue === 'verified' && (
+                <div style={{ marginLeft: 'auto' }}>
+                  <VerifiedBadge />
+                </div>
+              )}
             </div>
+
+            {/*
+              Headshot panel for 'headshot' and 'verified' tiers. Circular
+              cropped frame above the candidate name. Renders silently
+              (no header text) when present. Legacy 'none' credentials skip
+              this entirely and the hero reads exactly as pre-feature.
+            */}
+            {(credential.verificationTierAtIssue === 'headshot' || credential.verificationTierAtIssue === 'verified') && credential.headshotUrl && (
+              <div style={{ marginBottom: 22 }}>
+                <img
+                  src={credential.headshotUrl}
+                  alt={`${credential.candidateName} headshot`}
+                  style={{
+                    width: 180,
+                    height: 180,
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: `2px solid ${GOLD}`,
+                    boxShadow: '0 0 0 5px rgba(201,168,76,0.06), 0 12px 32px rgba(0,0,0,0.32)',
+                    display: 'block',
+                  }}
+                />
+              </div>
+            )}
 
             <h1 className="verify-title" style={{ fontFamily: FONT_D, fontSize: 72, lineHeight: 1.02, fontWeight: 300, margin: '0 0 12px', color: WHITE }}>
               {credential.candidateName}
