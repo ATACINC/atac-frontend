@@ -190,6 +190,13 @@ export default function Dashboard() {
     const token = localStorage.getItem('atac_token') || localStorage.getItem('token');
     if (!token) return;
     const win = window.open('', '_blank');
+    // Popup blocker guard: if the new tab was blocked, window.open returns
+    // null. Abort before entering the loading state so the button does not
+    // appear stuck. Toast tells the candidate how to recover.
+    if (!win) {
+      showToast('Allow popups for this site to download the certificate, then try again.', true);
+      return;
+    }
     setDownloading(true);
     fetch(`https://atac-backend-production.up.railway.app/api/credentials/${credId}/certificate/download`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -376,7 +383,7 @@ export default function Dashboard() {
                   </div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', minWidth: 210, padding: '15px 24px', marginBottom: 0, fontSize: 12 }} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
-                      {downloading ? 'Generating PDF...' : 'Download PDF Certificate'}
+                      {downloading ? 'Opening certificate...' : 'Download PDF Certificate'}
                     </button>
                     <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 210, padding: '14px 24px', marginBottom: 0, color: WHITE, fontSize: 12 }} onClick={() => copyLink(latestCred.credentialId)}>
                       {copied ? 'Copied' : 'Copy Verification Link'}
@@ -841,7 +848,7 @@ export default function Dashboard() {
 
                 {/* Action buttons */}
                 <button className="btn-gold-h" style={btnGold} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
-                  {downloading ? 'Generating PDF…' : '↓ Download PDF Certificate'}
+                  {downloading ? 'Opening certificate...' : '↓ Download PDF Certificate'}
                 </button>
                 <button className="btn-gold-h" style={btnGold} onClick={() => copyLink(latestCred.credentialId)}>
                   {copied ? '✓ Copied!' : 'Copy Verification Link'}
