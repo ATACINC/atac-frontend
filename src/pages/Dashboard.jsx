@@ -327,7 +327,7 @@ export default function Dashboard() {
               <div style={{ fontSize: 14, color: MUTED }}>Your assessment session is ready. Click to start your 40-question timed assessment.</div>
             </div>
             <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
-              {startingAssessment ? 'Starting…' : 'Start Assessment →'}
+              {startingAssessment ? 'Starting...' : 'Start Assessment →'}
             </button>
           </div>
         )}
@@ -348,7 +348,7 @@ export default function Dashboard() {
               <div style={{ fontSize: 14, color: MUTED }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.</div>
             </div>
             <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
-              {startingAssessment ? 'Starting…' : 'Start Assessment →'}
+              {startingAssessment ? 'Starting...' : 'Start Assessment →'}
             </button>
           </div>
         )}
@@ -677,8 +677,13 @@ export default function Dashboard() {
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, marginBottom: 8 }}>No credentials issued yet.</div>
                   <div style={{ fontSize: 14, color: MUTED, marginBottom: 24 }}>Your certificate appears here after you pass the assessment.</div>
                   {paymentVerified ? (
-                    <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '14px 34px', margin: '0 auto' }} onClick={startAssessment}>
-                      Start Assessment →
+                    <button
+                      className="btn-gold-h"
+                      style={{ ...btnGold, width: 'auto', padding: '14px 34px', margin: '0 auto', opacity: startingAssessment ? 0.7 : 1 }}
+                      onClick={startAssessment}
+                      disabled={startingAssessment}
+                    >
+                      {startingAssessment ? 'Starting...' : 'Start Assessment →'}
                     </button>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
@@ -780,8 +785,13 @@ export default function Dashboard() {
                 <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 22 }}>
                   Your payment is verified. Launch the Remote CX Readiness Assessment™ when you're ready.
                 </div>
-                <button className="btn-gold-h" style={{ ...btnGold, padding: '15px' }} onClick={startAssessment}>
-                  {startingAssessment ? 'Starting…' : 'Start Assessment — CRSA'}
+                <button
+                  className="btn-gold-h"
+                  style={{ ...btnGold, padding: '15px', opacity: startingAssessment ? 0.7 : 1 }}
+                  onClick={startAssessment}
+                  disabled={startingAssessment}
+                >
+                  {startingAssessment ? 'Starting...' : 'Start Assessment: CRSA'}
                 </button>
               </div>
             )}
