@@ -402,7 +402,7 @@ export default function Login({ defaultAction }) {
             marginBottom: 24,
           }}
         >
-          — Remote CX Certification
+          · Remote CX Certification
         </div>
 
         {/* Headline */}

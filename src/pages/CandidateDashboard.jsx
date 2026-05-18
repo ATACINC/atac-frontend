@@ -38,7 +38,7 @@ function normalizeDims(dims) {
 }
 
 function getToken() { return localStorage.getItem('atac_token')||''; }
-function fmtDate(iso) { if(!iso) return '—'; return new Date(iso).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
+function fmtDate(iso) { if(!iso) return '-'; return new Date(iso).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
 function initials(name) { if(!name) return '?'; return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 
 export default function CandidateDashboard() {
@@ -82,7 +82,7 @@ export default function CandidateDashboard() {
       const url=URL.createObjectURL(blob);
       const win=window.open(url,'_blank');
       if(!win)showToast('Allow pop-ups to download.',true);
-      else showToast('Certificate opened — File › Print › Save as PDF');
+      else showToast('Certificate opened. File › Print › Save as PDF');
       setTimeout(()=>URL.revokeObjectURL(url),60000);
     }catch{showToast('Network error.',true);}
     finally{setDownloading(false);}
@@ -110,17 +110,17 @@ export default function CandidateDashboard() {
       : program === 'CCSS' ? 'Certified Customer Service Supervisor (CCSS)'
       : program === 'CCSM' ? 'Certified Customer Service Manager (CCSM)'
       : program;
-    return `Proud to have earned my ${programLabel} from @ATACGlobalCX — blockchain-verified, globally recognized.\n\nVerify my credential: atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
+    return `Proud to have earned my ${programLabel} from @ATACGlobalCX. Blockchain-verified, globally recognized.\n\nVerify my credential: atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
   };
 
   const copyLinkedInCaption = () => {
     const caption = buildLinkedInCaption();
     navigator.clipboard?.writeText(caption).then(() => {
       setLinkedInCopied(true);
-      showToast('Caption copied — paste it into your LinkedIn post');
+      showToast('Caption copied. Paste it into your LinkedIn post');
       setTimeout(() => setLinkedInCopied(false), 3000);
     }).catch(() => {
-      showToast('Could not copy — please select and copy manually', true);
+      showToast('Could not copy. Please select and copy manually', true);
     });
   };
 
@@ -190,13 +190,13 @@ export default function CandidateDashboard() {
           </div>
 
           {tab==='overview'&&<>
-            <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:C.gold,marginBottom:16}}>Assessment Results — {cred?.program||'CRSA'} · {fmtDate(assessment?.completed_at||cred?.issued_at)}</div>
+            <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:C.gold,marginBottom:16}}>Assessment Results: {cred?.program||'CRSA'} · {fmtDate(assessment?.completed_at||cred?.issued_at)}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:28}}>
               {[
-                {num:assessment?.score??'—',lbl:'Score / 40',pass:false},
-                {num:assessment?.percentage!=null?`${assessment.percentage}%`:'—',lbl:'Percentage',pass:true},
-                {num:assessment?.duration_minutes!=null?`${assessment.duration_minutes}m`:'—',lbl:'Duration',pass:false},
-                {num:assessment?.passed?'PASS':assessment?'FAIL':'—',lbl:'Status',pass:assessment?.passed},
+                {num:assessment?.score??'-',lbl:'Score / 40',pass:false},
+                {num:assessment?.percentage!=null?`${assessment.percentage}%`:'-',lbl:'Percentage',pass:true},
+                {num:assessment?.duration_minutes!=null?`${assessment.duration_minutes}m`:'-',lbl:'Duration',pass:false},
+                {num:assessment?.passed?'PASS':assessment?'FAIL':'-',lbl:'Status',pass:assessment?.passed},
               ].map((card,i)=>(
                 <div key={i} style={{background:C.bg1,border:`1px solid ${card.pass?C.border:C.border2}`,borderRadius:4,padding:'16px 14px',textAlign:'center'}}>
                   <div style={{fontFamily:F.display,fontSize:28,fontWeight:300,color:card.pass?C.teal2:C.white,lineHeight:1,marginBottom:6}}>{card.num}</div>
@@ -214,7 +214,7 @@ export default function CandidateDashboard() {
                   <div style={{flex:1,height:3,background:'rgba(238,233,223,0.05)',borderRadius:2,overflow:'hidden'}}>
                     <div style={{height:3,width:`${pct??0}%`,background:DIM_COLORS[i],borderRadius:2,transition:'width 1s ease'}}/>
                   </div>
-                  <div style={{fontSize:12,color:C.white,width:34,textAlign:'right',fontFamily:F.display,fontWeight:300}}>{pct!=null?`${pct}%`:'—'}</div>
+                  <div style={{fontSize:12,color:C.white,width:34,textAlign:'right',fontFamily:F.display,fontWeight:300}}>{pct!=null?`${pct}%`:'-'}</div>
                 </div>);
               })}
             </div>
@@ -235,7 +235,7 @@ export default function CandidateDashboard() {
             {[
               {num:'01',title:'Download your certificate',desc:'Your signed PDF includes your credential ID, blockchain hash, and QR code.',action:downloadCertificate,cta:downloading?'Generating…':'Download PDF →'},
               {num:'02',title:'Add CRSA to LinkedIn',desc:'Share your blockchain-verified credential as a professional certification.',action:addToLinkedIn,cta:'Share on LinkedIn →'},
-              {num:'03',title:'Upgrade to CCSA — $129',desc:'Your Pro assessment credit is waiting. Apply it toward the next designation.',action:()=>showToast('Loading upgrade options…'),cta:'Claim credit →'},
+              {num:'03',title:'Upgrade to CCSA: $129',desc:'Your Pro assessment credit is waiting. Apply it toward the next designation.',action:()=>showToast('Loading upgrade options…'),cta:'Claim credit →'},
             ].map((step,i)=>(
               <div key={i} className="vstep" onClick={step.action} style={{display:'flex',gap:16,padding:'14px 16px',background:C.bg1,border:`1px solid ${C.border2}`,borderRadius:4,marginBottom:8,cursor:'pointer',transition:'background 0.2s'}}>
                 <div style={{fontFamily:F.display,fontSize:20,fontWeight:300,color:C.gold,opacity:0.5,flexShrink:0,lineHeight:1,paddingTop:2}}>{step.num}</div>
@@ -276,12 +276,12 @@ export default function CandidateDashboard() {
 
           {tab==='pathway'&&<>
             <div style={{fontSize:9,fontWeight:600,letterSpacing:'0.2em',textTransform:'uppercase',color:C.gold,marginBottom:8}}>Certification Pathway</div>
-            <div style={{fontSize:13,color:C.muted,lineHeight:1.8,marginBottom:24}}>Your full pathway to senior designation — each credential builds on the last.</div>
+            <div style={{fontSize:13,color:C.muted,lineHeight:1.8,marginBottom:24}}>Your full pathway to senior designation. Each credential builds on the last.</div>
             {[
-              {num:'01',label:'CRSA — Certified Remote Service Agent',sub:`Completed · ${fmtDate(cred?.issued_at)} · Score ${assessment?.percentage??'—'}%`,done:true},
-              {num:'02',label:'CCSA — Certified Customer Service Agent · $129',sub:'$20 credit applied. Psychology, service recovery, product knowledge.',done:false,cta:'Enrol with credit →'},
-              {num:'03',label:'CRSS — Supervisor Designation · $249',sub:'Remote QA, coaching at a distance, workforce management.',done:false,dim:true},
-              {num:'04',label:'CCSM — Certified Customer Service Manager · $349',sub:'ISO-aligned. Leadership, HR, CX program design.',done:false,dim:true},
+              {num:'01',label:'CRSA: Certified Remote Service Agent',sub:`Completed · ${fmtDate(cred?.issued_at)} · Score ${assessment?.percentage??'-'}%`,done:true},
+              {num:'02',label:'CCSA: Certified Customer Service Agent · $129',sub:'$20 credit applied. Psychology, service recovery, product knowledge.',done:false,cta:'Enrol with credit →'},
+              {num:'03',label:'CRSS: Supervisor Designation · $249',sub:'Remote QA, coaching at a distance, workforce management.',done:false,dim:true},
+              {num:'04',label:'CCSM: Certified Customer Service Manager · $349',sub:'ISO-aligned. Leadership, HR, CX program design.',done:false,dim:true},
             ].map((step,i)=>(
               <div key={i} style={{display:'flex',gap:20,padding:'16px 20px',background:step.done?'rgba(26,143,105,0.04)':C.bg1,border:`1px solid ${step.done?'rgba(26,143,105,0.2)':C.border2}`,borderRadius:4,marginBottom:8,opacity:step.dim?.4:1}}>
                 <div style={{fontFamily:F.display,fontSize:22,fontWeight:300,color:step.done?C.teal2:C.gold,opacity:step.done?1:.45,flexShrink:0,lineHeight:1,paddingTop:3}}>{step.done?'✓':step.num}</div>
@@ -369,7 +369,7 @@ export default function CandidateDashboard() {
                 {n:'01', t:'Download your certificate', d:'Click "Download Certificate" above to save your PDF.'},
                 {n:'02', t:'Go to LinkedIn → Create a Post', d:'Click the "Start a post" box on your LinkedIn feed, then upload your certificate image.'},
                 {n:'03', t:'Copy the caption below', d:'Click the copy button, then paste the caption into your post.'},
-                {n:'04', t:'Post it', d:'Hit Post — your blockchain-verified credential is now visible to employers worldwide.'},
+                {n:'04', t:'Post it', d:'Your credential is now visible to employers worldwide. Hit Post to share it.'},
               ].map((step,i)=>(
                 <div key={i} className="li-step" style={{display:'flex',gap:12,padding:'8px 6px',borderRadius:3,marginBottom:4,transition:'background 0.15s'}}>
                   <div style={{fontFamily:F.display,fontSize:14,fontWeight:300,color:'rgba(10,102,194,0.7)',flexShrink:0,lineHeight:1,paddingTop:2,minWidth:20}}>{step.n}</div>

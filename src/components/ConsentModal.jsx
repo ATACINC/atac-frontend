@@ -80,7 +80,7 @@ export default function ConsentModal({
   }[mode];
 
   const subheading = {
-    checkout:            'Please review and accept each of the following before completing your purchase. Each is a separate agreement — we present them individually so your consent is informed and specific.',
+    checkout:            'Please review and accept each of the following before completing your purchase. Each is a separate agreement. We present them individually so your consent is informed and specific.',
     registration:        'Four separate agreements govern your use of ATAC Global CX. Please review each one before accepting.',
     reacceptance:        'We have updated one or more of our legal documents. Please review and accept the current versions before continuing.',
     employer_onboarding: 'As an employer purchasing seats on behalf of your team, you must accept the Master Services Agreement and supporting terms.',

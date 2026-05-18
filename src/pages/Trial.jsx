@@ -137,7 +137,7 @@ export default function Trial() {
             </div>
             <div style={{ width: 40, height: 1, background: GOLD, opacity: 0.3, margin: '0 auto 20px' }} />
             <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.8, maxWidth: 420, margin: '0 auto' }}>
-              Answer 5 professional CX questions — one from each competency domain. No account required. See your score instantly.
+              Answer 5 professional CX questions, one from each competency domain. No account required. See your score instantly.
             </div>
           </div>
 
@@ -332,7 +332,7 @@ export default function Trial() {
               Get Your Full Assessment
             </div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 20 }}>
-              The full 40-question Remote CX Readiness Assessment covers all 5 domains in depth. Pass and receive your blockchain-verified credential — verifiable by any employer worldwide.
+              The full 40-question Remote CX Readiness Assessment covers all 5 domains in depth. Pass and receive your blockchain-verified credential. Any employer worldwide can verify it.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               {[

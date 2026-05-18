@@ -18,7 +18,7 @@
   "dashboard": {
     "myCredentials": "Mes Certifications",
     "yourCertificate": "Votre Certificat",
-    "startAssessment": "Démarrer l'Évaluation — CRSA",
+    "startAssessment": "Démarrer l'Évaluation (CRSA)",
     "newAssessment": "Nouvelle Évaluation",
     "copyLink": "Copier le Lien de Vérification",
     "copied": "✓ Copié !",
@@ -71,7 +71,7 @@
       "title": "Rapport Post-Appel",
       "passed": "✓ Réussi",
       "failed": "✗ Non Réussi",
-      "issueCredential": "✓ Émettre Ma Certification — CRSA",
+      "issueCredential": "✓ Émettre Ma Certification (CRSA)",
       "issuing": "Émission en cours...",
       "viewDashboard": "Voir le Tableau de Bord"
     }

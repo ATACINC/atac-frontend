@@ -123,7 +123,7 @@ export default function AdminDashboard() {
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
 
-  const fmt = (dt) => dt ? new Date(dt).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+  const fmt = (dt) => dt ? new Date(dt).toLocaleDateString('en-CA', { year: 'numeric', month: 'short', day: 'numeric' }) : '-';
 
   /* ── ACCESS DENIED ── */
   if (accessDenied) return (
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
                 { num: summary?.candidates?.total  || candidates.length || 0, lbl: 'Total Candidates',   color: GOLD  },
 { num: summary?.credentials?.total || credentials.length || 0, lbl: 'Credentials Issued', color: TEAL2 },
 { num: summary?.employers?.total   || employers.length || 0,   lbl: 'BPO Clients',       color: GOLD  },
-{ num: summary?.candidates?.total > 0 ? `${Math.round((summary.candidates.passed / summary.candidates.total) * 100)}%` : '—', lbl: 'Pass Rate', color: TEAL2 },
+{ num: summary?.candidates?.total > 0 ? `${Math.round((summary.candidates.passed / summary.candidates.total) * 100)}%` : '-', lbl: 'Pass Rate', color: TEAL2 },
               ].map((k, i) => (
                 <div key={i} style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '20px 22px', animationDelay: `${i * 60}ms` }} className="vault-up">
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 38, fontWeight: 300, color: k.color, lineHeight: 1 }}>{k.num}</div>
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
                         <TD>
                           {c.score != null
                             ? <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 15, color: c.score >= 70 ? TEAL2 : RED }}>{c.score}%</span>
-                            : <span style={{ color: MUTED }}>—</span>}
+                            : <span style={{ color: MUTED }}>-</span>}
                         </TD>
                         <TD><StatusBadge status={c.status || (c.assessmentCompleted ? 'completed' : 'pending')} /></TD>
                         <TD style={{ color: MUTED, fontSize: 11 }}>{fmt(c.createdAt)}</TD>
@@ -258,7 +258,7 @@ export default function AdminDashboard() {
                     {credentials.slice(0, 6).map(cr => (
                       <tr key={cr.id} className="row-h">
                         <TD style={{ fontFamily: 'monospace', fontSize: 11 }}>{cr.credentialId}</TD>
-                        <TD style={{ fontSize: 11, color: MUTED }}>{cr.candidateName || cr.name || '—'}</TD>
+                        <TD style={{ fontSize: 11, color: MUTED }}>{cr.candidateName || cr.name || '-'}</TD>
                         <TD>
                           <span style={{ fontSize: 10, color: cr.onChain ? TEAL2 : MUTED }}>
                             {cr.onChain ? '⬡ On-chain' : '○ Pending'}
@@ -305,11 +305,11 @@ export default function AdminDashboard() {
                         <div style={{ fontSize: 13 }}>{c.name}</div>
                         <div style={{ fontSize: 10, color: MUTED }}>{c.email}</div>
                       </TD>
-                      <TD style={{ fontSize: 11, color: MUTED }}>{c.program || '—'}</TD>
+                      <TD style={{ fontSize: 11, color: MUTED }}>{c.program || '-'}</TD>
                       <TD>
                         {c.score != null
                           ? <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 16, color: c.score >= 70 ? TEAL2 : RED }}>{c.score}%</span>
-                          : <span style={{ color: MUTED }}>—</span>}
+                          : <span style={{ color: MUTED }}>-</span>}
                       </TD>
                       <TD><StatusBadge status={c.status || (c.assessmentCompleted ? 'completed' : 'pending')} /></TD>
                       <TD>
@@ -318,7 +318,7 @@ export default function AdminDashboard() {
                         </span>
                       </TD>
                       <TD style={{ fontSize: 10, color: MUTED, fontFamily: 'monospace' }}>
-                        {c.walletAddress ? `${c.walletAddress.substring(0,6)}…${c.walletAddress.slice(-4)}` : '—'}
+                        {c.walletAddress ? `${c.walletAddress.substring(0,6)}…${c.walletAddress.slice(-4)}` : '-'}
                       </TD>
                       <TD style={{ fontSize: 11, color: MUTED }}>{fmt(c.createdAt)}</TD>
                     </tr>
@@ -356,16 +356,16 @@ export default function AdminDashboard() {
                   ) : credentials.map(cr => (
                     <tr key={cr.id} className="row-h">
                       <TD style={{ fontFamily: 'monospace', fontSize: 11, color: GOLD }}>{cr.credential_id}</TD>
-<TD style={{ fontSize: 12, color: MUTED }}>{cr.token_id || '—'}</TD>
+<TD style={{ fontSize: 12, color: MUTED }}>{cr.token_id || '-'}</TD>
 <TD>
-  <div style={{ fontSize: 12 }}>{cr.candidate_name || '—'}</div>
-  <div style={{ fontSize: 10, color: MUTED }}>{cr.candidate_email || '—'}</div>
+  <div style={{ fontSize: 12 }}>{cr.candidate_name || '-'}</div>
+  <div style={{ fontSize: 10, color: MUTED }}>{cr.candidate_email || '-'}</div>
 </TD>
-<TD style={{ fontSize: 11, color: MUTED }}>{cr.program || '—'}</TD>
+<TD style={{ fontSize: 11, color: MUTED }}>{cr.program || '-'}</TD>
 <TD>
   {cr.score != null
     ? <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 15, color: cr.score >= 70 ? TEAL2 : RED }}>{cr.score}%</span>
-    : <span style={{ color: MUTED }}>—</span>}
+    : <span style={{ color: MUTED }}>-</span>}
 </TD>
 <TD>
   <span style={{ fontSize: 10, color: cr.tx_hash ? TEAL2 : AMBER }}>
@@ -373,7 +373,7 @@ export default function AdminDashboard() {
   </span>
 </TD>
 <TD style={{ fontSize: 10, fontFamily: 'monospace', color: MUTED }}>
-  {cr.tx_hash ? `${cr.tx_hash.substring(0, 10)}…` : '—'}
+  {cr.tx_hash ? `${cr.tx_hash.substring(0, 10)}…` : '-'}
 </TD>
 <TD style={{ fontSize: 11, color: MUTED }}>{fmt(cr.issued_at)}</TD>
 <TD style={{ fontSize: 11, color: MUTED }}>{fmt(cr.expires_at)}</TD>
@@ -410,10 +410,10 @@ export default function AdminDashboard() {
                   ) : employers.map(emp => (
                     <tr key={emp.id} className="row-h">
                       <TD>
-                        <div style={{ fontSize: 13 }}>{emp.companyName || '—'}</div>
+                        <div style={{ fontSize: 13 }}>{emp.companyName || '-'}</div>
                       </TD>
                       <TD>
-                        <div style={{ fontSize: 12 }}>{emp.contactName || '—'}</div>
+                        <div style={{ fontSize: 12 }}>{emp.contactName || '-'}</div>
                         <div style={{ fontSize: 10, color: MUTED }}>{emp.email}</div>
                       </TD>
                       <TD>
@@ -421,11 +421,11 @@ export default function AdminDashboard() {
                           {emp.planType || 'Team'}
                         </span>
                       </TD>
-                      <TD style={{ fontFamily: VAULT_DISPLAY, fontSize: 16, color: GOLD }}>{emp.seatsPurchased || '—'}</TD>
+                      <TD style={{ fontFamily: VAULT_DISPLAY, fontSize: 16, color: GOLD }}>{emp.seatsPurchased || '-'}</TD>
                       <TD style={{ fontFamily: VAULT_DISPLAY, fontSize: 16, color: emp.seatsUsed > 0 ? TEAL2 : MUTED }}>
                         {emp.seatsUsed || 0}
                       </TD>
-                      <TD style={{ fontSize: 10, fontFamily: 'monospace', color: MUTED }}>{emp.stripeCustomerId ? `${emp.stripeCustomerId.substring(0,14)}…` : '—'}</TD>
+                      <TD style={{ fontSize: 10, fontFamily: 'monospace', color: MUTED }}>{emp.stripeCustomerId ? `${emp.stripeCustomerId.substring(0,14)}…` : '-'}</TD>
                       <TD style={{ fontSize: 11, color: MUTED }}>{fmt(emp.createdAt)}</TD>
                     </tr>
                   ))}

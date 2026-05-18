@@ -18,7 +18,7 @@
   "dashboard": {
     "myCredentials": "My Credentials",
     "yourCertificate": "Your Certificate",
-    "startAssessment": "Start Assessment — CRSA",
+    "startAssessment": "Start Assessment (CRSA)",
     "newAssessment": "Start New Assessment",
     "copyLink": "Copy Verification Link",
     "copied": "✓ Copied!",
@@ -71,7 +71,7 @@
       "title": "Post-Call Report",
       "passed": "✓ Passed",
       "failed": "✗ Not Passed",
-      "issueCredential": "✓ Issue My Credential — CRSA",
+      "issueCredential": "✓ Issue My Credential (CRSA)",
       "issuing": "Issuing...",
       "viewDashboard": "View Dashboard"
     }

@@ -22,8 +22,8 @@ const FONT_B  = '"Syne", "DM Sans", sans-serif';
 
 const programLabels = {
   CRSA: 'Certified Remote Service Agent (CRSA)',
-  'CRSA-M': 'Certified Remote Service Agent — Multilingual (CRSA-M)',
-  'CRSA-EM': 'Certified Remote Service Agent — Elite Multilingual (CRSA-EM)',
+  'CRSA-M': 'Certified Remote Service Agent, Multilingual (CRSA-M)',
+  'CRSA-EM': 'Certified Remote Service Agent, Elite Multilingual (CRSA-EM)',
   CCSS: 'Certified Customer Service Supervisor (CCSS)',
   CCSM: 'Certified Customer Service Manager (CCSM)',
 };

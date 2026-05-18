@@ -1024,7 +1024,7 @@ export default function Assessment() {
               <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Taking Longer Than Usual
               </div>
-              The blockchain is experiencing high traffic. You can safely close this page — we'll email your credential as soon as it's ready.
+              The blockchain is experiencing high traffic. You can safely close this page. We'll email your credential as soon as it's ready.
             </div>
           )}
 

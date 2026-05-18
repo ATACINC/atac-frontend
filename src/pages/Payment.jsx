@@ -69,7 +69,7 @@ const TIERS = [
       'ATS webhook integration',
       'Minimum 10 seats',
     ],
-    cta: '$49/seat — Min 10 seats',
+    cta: '$49/seat (Min 10 seats)',
   },
 ];
 
@@ -303,7 +303,7 @@ export default function Payment() {
       }
 
       setResendCooldown(60);
-      setResendStatus('New code sent — check your inbox.');
+      setResendStatus('New code sent. Check your inbox.');
       setVerifyError('');
     } catch (err) {
       setResendStatus('Network error. Please try again.');
@@ -340,7 +340,7 @@ export default function Payment() {
       {/* -- Cancelled banner -- */}
       {cancelled && !needsVerification && (
         <div style={{ background: 'rgba(196,138,42,0.08)', border: `1px solid rgba(196,138,42,0.25)`, borderRadius: 3, padding: '12px 24px', margin: '0 auto 24px', maxWidth: 600, textAlign: 'center', fontSize: 13, color: AMBER }}>
-          Payment cancelled — no charge was made. Choose a tier below to continue.
+          Payment cancelled. No charge was made. Choose a tier below to continue.
         </div>
       )}
 

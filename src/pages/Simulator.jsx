@@ -248,7 +248,7 @@ export default function Simulator() {
 
           {result?.simPassed ? (
             <button onClick={issueCredential} disabled={loading} style={{ width: '100%', background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '14px', fontSize: 11, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: VAULT_BODY, opacity: loading ? 0.7 : 1 }}>
-              {loading ? 'Issuing…' : '✓ Issue My Credential — CRSA'}
+              {loading ? 'Issuing…' : '✓ Issue My Credential (CRSA)'}
             </button>
           ) : (
             <button onClick={() => navigate('/dashboard')} style={{ width: '100%', background: 'transparent', color: WHITE, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '13px', fontSize: 11, cursor: 'pointer', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: VAULT_BODY }}>

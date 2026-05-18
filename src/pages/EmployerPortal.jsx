@@ -302,7 +302,7 @@ export default function EmployerPortal() {
             }}>
               <div>
                 <div style={{ fontSize: 13, color: verifyResult.valid ? TEAL2 : RED, marginBottom: 3, fontFamily: VAULT_DISPLAY, fontWeight: 500 }}>
-                  {verifyResult.valid ? '✓  Credential Verified — Valid' : '✗  Credential Invalid or Not Found'}
+                  {verifyResult.valid ? '✓  Credential Verified. Status: Valid' : '✗  Credential Invalid or Not Found'}
                 </div>
                 {verifyResult.valid && (
                   <div style={{ fontSize: 11, color: MUTED }}>
@@ -403,7 +403,7 @@ export default function EmployerPortal() {
                         }}>
                           {c.score}%
                         </span>
-                      ) : <span style={{ color: MUTED, fontSize: 12 }}>—</span>}
+                      ) : <span style={{ color: MUTED, fontSize: 12 }}>-</span>}
                     </td>
                     {/* Status */}
                     <td style={{ padding: '12px 16px' }}>
@@ -434,7 +434,7 @@ export default function EmployerPortal() {
                             );
                           })}
                         </div>
-                      ) : <span style={{ color: MUTED, fontSize: 12 }}>—</span>}
+                      ) : <span style={{ color: MUTED, fontSize: 12 }}>-</span>}
                     </td>
                     {/* Credential */}
                     <td style={{ padding: '12px 16px' }}>
