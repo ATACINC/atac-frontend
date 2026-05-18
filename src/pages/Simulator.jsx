@@ -1,3 +1,15 @@
+/**
+ * DEPRECATED in M2.
+ *
+ * This is the legacy text-based ATAC Call Readiness Simulator (multiple-choice
+ * exchanges over /api/simulator/*). It is no longer routed: as of M2 the
+ * /simulator route resolves to src/pages/simulator/SimulatorEntry.jsx, which
+ * runs the live-call WebSocket flow against /api/sim-live/*.
+ *
+ * TODO M2.1: Delete this file once the backend /api/simulator/* routes are
+ * removed. Kept on disk in M2 as a 5-second rollback safety net.
+ */
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';

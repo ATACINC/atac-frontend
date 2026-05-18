@@ -1,9 +1,9 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AdminDashboard from './pages/AdminDashboard';
 import Login      from './pages/Login';
 import SignupPage from './pages/SignupPage';
 import Assessment from './pages/Assessment';
-import Simulator  from './pages/Simulator';
 import Dashboard  from './pages/Dashboard';
 import Payment    from './pages/Payment';
 import EmployerPortal from './pages/EmployerPortal';
@@ -11,6 +11,19 @@ import Trial from './pages/Trial';
 import Verify from './pages/Verify';
 import VerifyLanding from './pages/VerifyLanding';
 import { ToastProvider } from './components/ToastProvider';
+
+// ── M2 Simulator (ATAC Call Readiness Simulator) ────────────────────────
+// The /simulator/* route tree lazy-loads its own chunk so the @elevenlabs/client
+// SDK (and supporting code) is only downloaded when a user actually enters the
+// simulator flow. First-load bundle for everyone else stays unaffected.
+//
+// The old text-based Simulator.jsx is no longer routed. It remains on disk
+// pending M2.1 cleanup; see TODO comment in that file.
+const SimulatorEntry          = lazy(() => import('./pages/simulator/SimulatorEntry'));
+const SimulatorBriefing       = lazy(() => import('./pages/simulator/Briefing'));
+const SimulatorCall           = lazy(() => import('./pages/simulator/Call'));
+const SimulatorResults        = lazy(() => import('./pages/simulator/Results'));
+import SimulatorLoadingScreen from './pages/simulator/SimulatorLoadingScreen';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
@@ -26,7 +39,22 @@ export default function App() {
           <Route path="/signup"     element={<SignupPage />} />
           <Route path="/payment"    element={<PrivateRoute><Payment /></PrivateRoute>} />
           <Route path="/assessment" element={<PrivateRoute><Assessment /></PrivateRoute>} />
-          <Route path="/simulator"  element={<PrivateRoute><Simulator /></PrivateRoute>} />
+          {/* /simulator/* - lazy-loaded sub-tree, single Suspense boundary */}
+          <Route
+            path="/simulator/*"
+            element={
+              <PrivateRoute>
+                <Suspense fallback={<SimulatorLoadingScreen />}>
+                  <Routes>
+                    <Route index                 element={<SimulatorEntry />} />
+                    <Route path="briefing/:sessionId" element={<SimulatorBriefing />} />
+                    <Route path="call/:sessionId"     element={<SimulatorCall />} />
+                    <Route path="results/:sessionId"  element={<SimulatorResults />} />
+                  </Routes>
+                </Suspense>
+              </PrivateRoute>
+            }
+          />
           <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/employer" element={<PrivateRoute><EmployerPortal /></PrivateRoute>} />
           <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />

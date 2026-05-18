@@ -459,6 +459,60 @@ export default function Dashboard() {
                   ))}
                 </div>
 
+                {/*
+                  M2: Pioneer simulator supplementary-attempt card.
+                  Renders only when the candidate holds at least one credential
+                  whose simulator_verified flag is explicitly false (the
+                  grandfathered Pioneer state). Defensive snake/camel read:
+                  the backend may emit either casing on the credential row.
+                  Undefined / missing field does NOT qualify, by design.
+                */}
+                {(() => {
+                  const pioneerCred = credentials.find(
+                    (c) => c.simulator_verified === false || c.simulatorVerified === false
+                  );
+                  if (!pioneerCred) return null;
+                  return (
+                    <div
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(201,168,76,0.08), rgba(26,143,105,0.06))',
+                        border: `1px solid ${BORDER}`,
+                        borderRadius: 4,
+                        padding: '26px 30px',
+                      }}
+                    >
+                      <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 10 }}>
+                        Pioneer testers, validate your credential
+                      </div>
+                      <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 24, color: WHITE, fontWeight: 400, lineHeight: 1.2, marginBottom: 10 }}>
+                        Validate your credential with the Call Readiness Simulator
+                      </div>
+                      <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.7, margin: '0 0 18px' }}>
+                        You earned your credential under our original criteria. Want to take it further with our live-call simulator?
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/simulator?credential_id=${encodeURIComponent(pioneerCred.credentialId)}&choose=true`)}
+                        style={{
+                          background: GOLD,
+                          color: BG,
+                          border: 'none',
+                          borderRadius: 2,
+                          padding: '12px 22px',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          letterSpacing: '0.18em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                          fontFamily: VAULT_BODY,
+                        }}
+                      >
+                        Take the simulator
+                      </button>
+                    </div>
+                  );
+                })()}
+
                 <div style={{ background: 'linear-gradient(135deg, rgba(26,143,105,0.10), rgba(201,168,76,0.06))', border: '1px solid rgba(26,143,105,0.28)', borderRadius: 4, padding: '28px 34px', display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 180px', gap: 24, alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: TEAL2, marginBottom: 10 }}>ISORA Community</div>
