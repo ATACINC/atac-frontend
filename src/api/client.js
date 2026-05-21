@@ -23,6 +23,23 @@ API.interceptors.response.use(
   }
 );
 
+// TEMPORARY DIAGNOSTIC - log every request that goes through this
+// axios instance with caller stack. Complements the assignSimulator()
+// wrapper log so we can see calls that bypass that wrapper.
+API.interceptors.request.use((config) => {
+  if (config.url && config.url.includes('/sim-live/assign')) {
+    console.log('[AXIOS REQUEST /assign]', {
+      method: config.method,
+      url: config.url,
+      data: config.data,
+      dataKeys: config.data ? Object.keys(config.data) : [],
+      stack: new Error().stack,
+      timestamp: new Date().toISOString(),
+    });
+  }
+  return config;
+});
+
 export default API;
 
 // ── Simulator (M2 sim-live) helpers ──────────────────────────────────────
