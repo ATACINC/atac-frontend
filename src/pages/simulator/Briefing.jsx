@@ -19,8 +19,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 const BG    = '#080B12';
 const BG1   = '#0C1018';
 const GOLD  = '#C9A84C';
+const TEAL  = '#1A8F69';
 const TEAL2 = '#22A67E';
 const RED   = '#C45C5C';
+const RED2  = '#C84747';
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.45)';
 const BORDER  = 'rgba(201,168,76,0.15)';
@@ -35,6 +37,17 @@ const MIC_GRANTED   = 'granted';
 const MIC_DENIED    = 'denied';
 const MIC_NO_DEVICE = 'no_device';
 const MIC_ERROR     = 'error';
+
+// Static scoring rubric content (scenario-agnostic). Scenario-specific
+// content (persona bio, opening line, success criteria) lives in a
+// separate content-authoring pass.
+const SCORING_DIMENSIONS = [
+  { name: 'Greeting',   description: 'Warm, professional opening that sets the tone' },
+  { name: 'Empathy',    description: "Acknowledging the customer's situation and emotions" },
+  { name: 'Resolution', description: 'Identifying the issue and moving toward a clear outcome' },
+  { name: 'Tone',       description: 'Calm, confident delivery throughout the call' },
+  { name: 'Close',      description: 'Confirming next steps and ending the call cleanly' },
+];
 
 export default function Briefing() {
   const navigate = useNavigate();
@@ -153,13 +166,62 @@ export default function Briefing() {
             </p>
           )}
 
+          {/* Scenario metadata row: industry / difficulty / expected duration. */}
+          {(session.industry || session.difficulty || session.expectedDurationMin || session.expectedDurationMax) && (
+            <div className="sim-meta-row">
+              {session.industry && (
+                <div className="sim-meta-item">
+                  <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                    Industry
+                  </div>
+                  <div style={{ fontSize: 14, color: WHITE, fontFamily: VAULT_BODY }}>
+                    {session.industry}
+                  </div>
+                </div>
+              )}
+              {session.difficulty && (
+                <div className="sim-meta-item">
+                  <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                    Difficulty
+                  </div>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      border: `1px solid ${difficultyColor(session.difficulty)}`,
+                      color: difficultyColor(session.difficulty),
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      fontFamily: VAULT_BODY,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {session.difficulty}
+                  </span>
+                </div>
+              )}
+              {(session.expectedDurationMin || session.expectedDurationMax) && (
+                <div className="sim-meta-item">
+                  <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                    Expected Duration
+                  </div>
+                  <div style={{ fontSize: 14, color: WHITE, fontFamily: VAULT_BODY }}>
+                    {formatDuration(session.expectedDurationMin, session.expectedDurationMax)}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div
             style={{
               background: 'rgba(196,92,92,0.06)',
               border: '1px solid rgba(196,92,92,0.2)',
               borderRadius: 3,
               padding: '14px 18px',
-              marginBottom: 24,
+              marginBottom: 18,
               fontSize: 13,
               color: WHITE,
               lineHeight: 1.65,
@@ -169,6 +231,65 @@ export default function Briefing() {
               Your objective
             </div>
             {objective}
+          </div>
+
+          {/* Static scoring rubric panel (scenario-agnostic). */}
+          <div
+            style={{
+              background: 'rgba(238,233,223,0.02)',
+              border: `1px solid ${BORDER2}`,
+              borderRadius: 3,
+              padding: '16px 20px',
+              marginBottom: 24,
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: VAULT_DISPLAY,
+                fontSize: 18,
+                fontWeight: 400,
+                color: WHITE,
+                margin: '0 0 12px',
+                lineHeight: 1.2,
+              }}
+            >
+              How You&apos;ll Be Scored
+            </h2>
+            {SCORING_DIMENSIONS.map((d, i) => (
+              <div
+                key={d.name}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: 14,
+                  padding: '8px 0',
+                  borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: VAULT_DISPLAY,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: GOLD,
+                    minWidth: 92,
+                  }}
+                >
+                  {d.name}
+                </div>
+                <div
+                  style={{
+                    fontFamily: VAULT_BODY,
+                    fontSize: 12,
+                    color: WHITE,
+                    lineHeight: 1.55,
+                    flex: 1,
+                  }}
+                >
+                  {d.description}
+                </div>
+              </div>
+            ))}
           </div>
 
           <div style={{ marginBottom: 22 }}>
@@ -251,8 +372,61 @@ export default function Briefing() {
           </div>
         </div>
       </div>
+      <style>{`
+        .sim-meta-row {
+          display: flex;
+          align-items: stretch;
+          border-top: 1px solid ${BORDER2};
+          border-bottom: 1px solid ${BORDER2};
+          padding: 16px 0;
+          margin-bottom: 22px;
+        }
+        .sim-meta-item {
+          flex: 1 1 0;
+          padding: 0 18px;
+        }
+        .sim-meta-item:first-child {
+          padding-left: 0;
+        }
+        .sim-meta-item:last-child {
+          padding-right: 0;
+        }
+        .sim-meta-item + .sim-meta-item {
+          border-left: 1px solid ${BORDER2};
+        }
+        @media (max-width: 600px) {
+          .sim-meta-row {
+            flex-direction: column;
+            gap: 14px;
+            padding: 14px 0;
+          }
+          .sim-meta-item {
+            padding: 0;
+          }
+          .sim-meta-item + .sim-meta-item {
+            border-left: none;
+            border-top: 1px solid ${BORDER2};
+            padding-top: 14px;
+          }
+        }
+      `}</style>
     </div>
   );
+}
+
+function difficultyColor(difficulty) {
+  const d = String(difficulty || '').toUpperCase();
+  if (d === 'EASY' || d === 'EASY-MEDIUM') return TEAL;
+  if (d === 'MEDIUM') return GOLD;
+  if (d === 'HARD' || d === 'HARD-PLUS') return RED2;
+  return MUTED;
+}
+
+function formatDuration(min, max) {
+  if (min && max) return `${min} to ${max} minutes`;
+  if (min) return `${min} minutes`;
+  if (max) return `${max} minutes`;
+  return '';
 }
 
 // ---------- Shared button styles (kept inline for component portability)

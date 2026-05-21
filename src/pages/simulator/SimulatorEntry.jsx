@@ -61,9 +61,12 @@ export function stashSimulatorSession(assignResponseData, credentialId) {
     scenarioName:        d.scenario_name ?? d.scenarioName ?? null,
     scenarioId:          d.scenario_id ?? d.scenarioId ?? null,
     scenarioCode:        d.scenario_code ?? d.scenarioCode ?? null,
+    industry:            d.industry ?? null,
+    difficulty:          d.difficulty ?? null,
+    expectedDurationMin: d.expected_duration_min ?? d.expectedDurationMin ?? null,
+    expectedDurationMax: d.expected_duration_max ?? d.expectedDurationMax ?? null,
     personaName:         d.persona_name ?? d.personaName ?? null,
     personaContext:      d.persona_context ?? d.personaContext ?? null,
-    industry:            d.industry ?? null,
     credentialId:        credentialId || null,
     createdAt:           Date.now(),
   };
