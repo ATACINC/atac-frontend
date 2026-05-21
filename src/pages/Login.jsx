@@ -653,6 +653,18 @@ export default function Login({ defaultAction }) {
                 {loading ? 'Signing in…' : 'Sign In'}
               </button>
 
+              <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: '14px 0 0' }}>
+                Forgot your password? Email{' '}
+                <a
+                  href="mailto:tugs@atacglobalcx.com?subject=Password%20reset%20request%3A%20ATAC%20Global%20CX"
+                  className="atac-link"
+                  style={{ textDecoration: 'none' }}
+                >
+                  tugs@atacglobalcx.com
+                </a>
+                {' '}for help.
+              </p>
+
               <Divider />
 
               <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: 0 }}>
