@@ -40,6 +40,16 @@ export function assignSimulator(scenarioCode = null, credentialId = null) {
   const body = {};
   if (scenarioCode)  body.scenario_code = scenarioCode;
   if (credentialId)  body.credential_id = credentialId;
+
+  // TEMPORARY DIAGNOSTIC - log every call with caller stack
+  console.log('[ASSIGN-SIM CALL]', {
+    scenarioCode,
+    credentialId,
+    bodyKeys: Object.keys(body),
+    stack: new Error().stack,
+    timestamp: new Date().toISOString(),
+  });
+
   return API.post('/api/sim-live/assign', body);
 }
 
