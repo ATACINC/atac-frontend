@@ -97,7 +97,7 @@ export default function Assessment() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Phase: 'loading' | 'locked' | 'selfie' | 'intro' | 'active' | 'transitioning-to-simulator' | 'processing' | 'result'
+  // Phase: 'loading' | 'locked' | 'selfie' | 'intro' | 'active' | 'processing' | 'result'
   const [phase, setPhase]           = useState('loading');
   const [questions, setQuestions]   = useState([]);
   const [current, setCurrent]       = useState(0);
@@ -380,22 +380,12 @@ export default function Assessment() {
           .catch(() => { /* silent */ });
       }
 
-      // M2: simulator-required new candidates skip the in-page credential
-      // processing flow and route to the ATAC Call Readiness Simulator
-      // after a brief transition screen. The 4-second delay also gives
-      // the lazy-loaded /simulator chunk time to begin downloading in the
-      // background before the candidate arrives there.
-      // Defensive: backend may emit camelCase or snake_case for this field.
-      const simulatorRequired = res.data.simulatorRequired ?? res.data.simulator_required;
-      if (res.data.passed && simulatorRequired) {
-        setPhase('transitioning-to-simulator');
-        setTimeout(() => navigate('/simulator?auto=true'), 4000);
-        return;
-      }
-
-      // Grandfathered (simulator_required=false on backend assessment row):
-      // preserve the existing in-page processing then result flow. Candidates
-      // see their dimension scores in-page exactly as before this commit.
+      // All passed candidates render the in-page results screen so they
+      // see their score, percentage, and domain breakdown. For
+      // simulator-required candidates the results screen surfaces a
+      // "Take the Simulator" CTA that they click to advance; the prior
+      // auto-redirect with a 4-second splash was removed because it hid
+      // the score from candidates.
       if (res.data.passed && res.data.credentialStatus === 'pending') {
         setProcessingStatus('pending');
         setProcessingStage('starting');
@@ -877,53 +867,6 @@ export default function Assessment() {
     </div>
   );
 
-  /* TRANSITIONING TO SIMULATOR - M2 routing after pass + simulatorRequired */
-  if (phase === 'transitioning-to-simulator') return (
-    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div
-        style={{
-          maxWidth: 520,
-          textAlign: 'center',
-          padding: '36px 32px',
-        }}
-      >
-        <div
-          aria-hidden="true"
-          style={{
-            width: 14,
-            height: 14,
-            borderRadius: '50%',
-            background: GOLD,
-            margin: '0 auto 24px',
-            animation: 'vault-pulse 1.2s ease-in-out infinite',
-          }}
-        />
-        <h1
-          style={{
-            fontFamily: VAULT_FONT_DISPLAY,
-            fontSize: 38,
-            fontWeight: 400,
-            color: WHITE,
-            margin: '0 0 14px',
-            lineHeight: 1.15,
-          }}
-        >
-          You passed.
-        </h1>
-        <p
-          style={{
-            fontSize: 15,
-            color: MUTED,
-            lineHeight: 1.7,
-            margin: 0,
-          }}
-        >
-          Now for the live call. The ATAC Call Readiness Simulator will assign you a scenario in a moment.
-        </p>
-      </div>
-    </div>
-  );
-
   /* PROCESSING — new async credential flow */
   if (phase === 'processing') {
     const elapsed = processingStartedAt ? Math.floor((Date.now() - processingStartedAt) / 1000) : 0;
@@ -1051,6 +994,8 @@ export default function Assessment() {
   /* RESULT */
   if (phase === 'result' && result) {
     const passed = !!result.passed;
+    const simulatorRequired = !!(result.simulatorRequired ?? result.simulator_required);
+    const showSimulatorCta = passed && simulatorRequired;
     const scoreValue = result.percentage ?? result.percentageScore ?? result.score ?? 0;
     const scorePct = Math.max(0, Math.min(100, Math.round(scoreValue)));
     const cred = result.credentialId;
@@ -1083,18 +1028,33 @@ export default function Assessment() {
                   Assessment Complete
                 </div>
                 <h1 style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 76, fontWeight: 300, lineHeight: 0.96, margin: 0, color: WHITE, maxWidth: 680 }}>
-                  {passed ? 'Credential Ready' : 'Readiness Snapshot'}
+                  {passed
+                    ? (showSimulatorCta ? "You're halfway there." : 'Credential Ready')
+                    : 'Readiness Snapshot'}
                 </h1>
                 <div style={{ width: 64, height: 1, background: statusColor, margin: '30px 0', opacity: 0.75 }} />
                 <p style={{ fontSize: 18, color: 'rgba(238,233,223,0.76)', lineHeight: 1.75, maxWidth: 680, margin: 0 }}>
                   {passed
-                    ? 'You passed the Remote CX Readiness Assessment. Your result now becomes a clear, employer-facing credential moment with proof, performance, and next steps in one place.'
+                    ? (showSimulatorCta
+                        ? 'You passed the assessment. To earn your blockchain-verified credential, complete the ATAC Call Readiness Simulator.'
+                        : 'You passed the Remote CX Readiness Assessment. Your result now becomes a clear, employer-facing credential moment with proof, performance, and next steps in one place.')
                     : 'This result is a readiness signal, not a dead end. The page now gives candidates a clear view of where they stand and what to focus on before the next attempt or course step.'}
                 </p>
               </div>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 34 }}>
-                <button onClick={() => navigate('/dashboard')} style={{ ...btnGold, minWidth: 220, padding: '16px 24px' }}>
+                {showSimulatorCta && (
+                  <button
+                    onClick={() => navigate('/simulator?auto=true')}
+                    style={{ ...btnGold, minWidth: 240, padding: '16px 24px' }}
+                  >
+                    Take the Simulator →
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  style={{ ...(showSimulatorCta ? btnOutline : btnGold), minWidth: 220, padding: '16px 24px' }}
+                >
                   View Dashboard
                 </button>
                 {passed && cred && (
