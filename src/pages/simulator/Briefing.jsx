@@ -42,11 +42,11 @@ const MIC_ERROR     = 'error';
 // content (persona bio, opening line, success criteria) lives in a
 // separate content-authoring pass.
 const SCORING_DIMENSIONS = [
-  { name: 'Greeting',   description: 'Warm, professional opening that sets the tone' },
-  { name: 'Empathy',    description: "Acknowledging the customer's situation and emotions" },
-  { name: 'Resolution', description: 'Identifying the issue and moving toward a clear outcome' },
-  { name: 'Tone',       description: 'Calm, confident delivery throughout the call' },
-  { name: 'Close',      description: 'Confirming next steps and ending the call cleanly' },
+  { name: 'Greeting',   weight: 10, description: 'Warm, professional opening that sets the tone' },
+  { name: 'Empathy',    weight: 25, description: "Acknowledging the customer's situation and emotions" },
+  { name: 'Resolution', weight: 30, description: 'Identifying the issue and moving toward a clear outcome' },
+  { name: 'Tone',       weight: 20, description: 'Calm, confident delivery throughout the call' },
+  { name: 'Close',      weight: 15, description: 'Confirming next steps and ending the call cleanly' },
 ];
 
 export default function Briefing() {
@@ -141,7 +141,6 @@ export default function Briefing() {
   const personaName    = session.personaName || 'your customer';
   const industry       = session.industry || '';
   const scenarioCode   = session.scenarioCode || '';
-  const personaContext = session.personaContext || '';
   const objective      = 'Listen carefully and handle the call professionally.';
 
   return (
@@ -159,12 +158,6 @@ export default function Briefing() {
           <h1 style={{ fontFamily: VAULT_DISPLAY, fontSize: 34, fontWeight: 400, color: WHITE, margin: '0 0 16px', lineHeight: 1.15 }}>
             You are about to speak with {personaName}.
           </h1>
-
-          {personaContext && (
-            <p style={{ fontSize: 14, color: WHITE, lineHeight: 1.7, margin: '0 0 18px' }}>
-              {personaContext}
-            </p>
-          )}
 
           {/* Scenario metadata row: industry / difficulty / expected duration. */}
           {(session.industry || session.difficulty || session.expectedDurationMin || session.expectedDurationMax) && (
@@ -215,6 +208,71 @@ export default function Briefing() {
             </div>
           )}
 
+          {/* Your Role - left-accent gold border. */}
+          {session.agentRole && (
+            <div
+              style={{
+                borderLeft: `3px solid ${GOLD}`,
+                padding: '4px 0 4px 14px',
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                Your Role
+              </div>
+              <div style={{ fontSize: 14, color: WHITE, fontFamily: VAULT_BODY, lineHeight: 1.5 }}>
+                {session.agentRole}
+              </div>
+            </div>
+          )}
+
+          {/* About Your Customer - left-accent teal border. */}
+          {(session.personaBio || session.scenarioContext) && (
+            <div
+              style={{
+                borderLeft: `3px solid ${TEAL}`,
+                padding: '4px 0 4px 14px',
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                About Your Customer
+              </div>
+              <div style={{ fontSize: 14, color: WHITE, fontFamily: VAULT_BODY, lineHeight: 1.5 }}>
+                {[session.personaBio, session.scenarioContext].filter(Boolean).join(' ')}
+              </div>
+            </div>
+          )}
+
+          {/* Recommended Opening - high-priority gold callout. */}
+          {session.recommendedOpening && (
+            <div
+              style={{
+                background: 'rgba(201,168,76,0.08)',
+                border: `1px solid ${GOLD}`,
+                borderRadius: 4,
+                padding: '16px 18px',
+                marginBottom: 18,
+              }}
+            >
+              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, fontWeight: 700 }}>
+                Recommended Opening
+              </div>
+              <div
+                style={{
+                  fontFamily: VAULT_DISPLAY,
+                  fontStyle: 'italic',
+                  fontSize: 16,
+                  color: WHITE,
+                  lineHeight: 1.4,
+                }}
+              >
+                {session.recommendedOpening}
+              </div>
+            </div>
+          )}
+
+          {/* Your Objective - existing red panel. */}
           <div
             style={{
               background: 'rgba(196,92,92,0.06)',
@@ -233,7 +291,25 @@ export default function Briefing() {
             {objective}
           </div>
 
-          {/* Static scoring rubric panel (scenario-agnostic). */}
+          {/* What Good Looks Like (success criteria) - left-accent muted border. */}
+          {session.successCriteria && (
+            <div
+              style={{
+                borderLeft: `2px solid ${MUTED}`,
+                padding: '4px 0 4px 14px',
+                marginBottom: 22,
+              }}
+            >
+              <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6, fontFamily: VAULT_BODY }}>
+                What Good Looks Like
+              </div>
+              <div style={{ fontSize: 13, color: WHITE, fontFamily: VAULT_BODY, lineHeight: 1.5 }}>
+                {session.successCriteria}
+              </div>
+            </div>
+          )}
+
+          {/* How You'll Be Scored - now with weights and threshold summary. */}
           <div
             style={{
               background: 'rgba(238,233,223,0.02)',
@@ -261,7 +337,7 @@ export default function Briefing() {
                 style={{
                   display: 'flex',
                   alignItems: 'baseline',
-                  gap: 14,
+                  gap: 12,
                   padding: '8px 0',
                   borderTop: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)',
                 }}
@@ -277,6 +353,23 @@ export default function Briefing() {
                 >
                   {d.name}
                 </div>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    minWidth: 36,
+                    textAlign: 'center',
+                    fontSize: 10,
+                    color: MUTED,
+                    fontFamily: VAULT_BODY,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    border: `1px solid ${BORDER2}`,
+                    borderRadius: 999,
+                    padding: '1px 6px',
+                  }}
+                >
+                  {d.weight}%
+                </span>
                 <div
                   style={{
                     fontFamily: VAULT_BODY,
@@ -290,6 +383,20 @@ export default function Briefing() {
                 </div>
               </div>
             ))}
+            <div
+              style={{
+                marginTop: 10,
+                paddingTop: 10,
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                fontFamily: VAULT_BODY,
+                fontStyle: 'italic',
+                fontSize: 12,
+                color: MUTED,
+                lineHeight: 1.5,
+              }}
+            >
+              Pass with an overall score of {session?.passThreshold ?? 70} or higher. Resolution and Empathy weigh the most.
+            </div>
           </div>
 
           <div style={{ marginBottom: 22 }}>

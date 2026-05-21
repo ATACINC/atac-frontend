@@ -212,12 +212,19 @@ export default function Results() {
   }
 
   // ---------- Scored ----------
-  const passed       = !!(statusData.pass_fail ?? statusData.passFail ?? statusData.passed);
-  const dimensions   = statusData.dimensions || statusData.scores || {};
-  const overall      = statusData.overall_score ?? statusData.overallScore ?? statusData.score ?? null;
-  const feedbackMap  = statusData.feedback || statusData.dimension_feedback || {};
-  const credentialId = statusData.credential_id || statusData.credentialId || statusData.credential?.credential_id || null;
-  const isPioneer    = isPioneerFlowRef.current;
+  // Backend /status shape (post 9e9f0f2): { score_overall, pass_fail,
+  // pass_threshold, scoring_weights, scores_breakdown, credential_id }.
+  // Older snake/camel fallbacks retained for safety.
+  const passed        = statusData.pass_fail ?? false;
+  const dimensions    = statusData.scores_breakdown || statusData.dimensions || statusData.scores || {};
+  const overall       = statusData.score_overall ?? statusData.overall_score ?? statusData.overallScore ?? statusData.score ?? null;
+  const feedbackMap   = statusData.feedback || statusData.dimension_feedback || {};
+  const credentialId  = statusData.credential_id || statusData.credentialId || statusData.credential?.credential_id || null;
+  const passThreshold = statusData.pass_threshold ?? 70;
+  const weights       = statusData.scoring_weights ?? null;
+  const isPioneer     = isPioneerFlowRef.current;
+  const overallNum    = overall != null ? Math.round(overall) : null;
+  const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
 
   return (
     <div style={containerStyle}>
@@ -228,14 +235,14 @@ export default function Results() {
           {passed ? 'You passed.' : 'Not this time.'}
         </h1>
 
-        {/* Overall score circle */}
+        {/* Overall score circle - shows number prominently with / threshold below. */}
         <div
           style={{
-            width: 110,
-            height: 110,
+            width: 130,
+            height: 130,
             borderRadius: '50%',
             border: `2px solid ${passed ? TEAL2 : RED}`,
-            margin: '14px auto 22px',
+            margin: '14px auto 16px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -243,16 +250,16 @@ export default function Results() {
             background: passed ? 'rgba(34,166,126,0.06)' : 'rgba(196,92,92,0.06)',
           }}
         >
-          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 36, color: passed ? TEAL2 : RED, fontWeight: 300, lineHeight: 1 }}>
-            {overall != null ? Math.round(overall) : '--'}
+          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, color: passed ? TEAL2 : RED, fontWeight: 600, lineHeight: 1 }}>
+            {overallNum != null ? overallNum : '--'}
           </div>
-          <div style={{ fontSize: 9, color: MUTED, marginTop: 4, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-            Overall
+          <div style={{ fontFamily: VAULT_BODY, fontSize: 14, color: MUTED, marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
+            / {passThreshold}
           </div>
         </div>
 
-        {/* Pass / fail badge */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        {/* Pass / fail pill - includes the numeric score alongside the verdict. */}
+        <div style={{ textAlign: 'center', marginBottom: 10 }}>
           <span
             style={{
               display: 'inline-block',
@@ -261,15 +268,31 @@ export default function Results() {
               fontSize: 10,
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
-              background: passed ? 'rgba(34,166,126,0.08)' : 'rgba(196,92,92,0.08)',
-              border: `1px solid ${passed ? TEAL2 : RED}`,
-              color: passed ? TEAL2 : RED,
+              background: overallNum == null
+                ? 'rgba(238,233,223,0.05)'
+                : passed ? 'rgba(34,166,126,0.08)' : 'rgba(196,92,92,0.08)',
+              border: `1px solid ${overallNum == null ? MUTED : passed ? TEAL2 : RED}`,
+              color: overallNum == null ? MUTED : passed ? TEAL2 : RED,
               fontWeight: 700,
             }}
           >
-            {passed ? '✓ Passed' : '✗ Not Passed'}
+            {overallNum == null
+              ? 'Score Unavailable'
+              : passed
+                ? `Passed · ${overallNum} / ${passThreshold}`
+                : `Not Passed · ${overallNum} / ${passThreshold}`}
           </span>
         </div>
+
+        {/* Threshold-delta descriptor - hidden when score is unavailable. */}
+        {overallNum != null && (
+          <div style={{ textAlign: 'center', marginBottom: 28, fontFamily: VAULT_BODY, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>
+            {passed
+              ? `You scored ${deltaPts} ${pluralize(deltaPts, 'point')} above the threshold.`
+              : `You were ${deltaPts} ${pluralize(deltaPts, 'point')} short of passing.`}
+          </div>
+        )}
+        {overallNum == null && <div style={{ marginBottom: 18 }} />}
 
         {/* Dimension breakdown */}
         <div style={{ marginBottom: 28 }}>
@@ -277,10 +300,11 @@ export default function Results() {
             Performance Breakdown
           </div>
           {DIMENSION_KEYS.map((k) => {
-            const score = dimensions[k] ?? null;
-            const fb    = feedbackMap[k] || '';
+            const score  = dimensions[k] ?? null;
+            const fb     = feedbackMap[k] || '';
+            const weight = weights && typeof weights[k] === 'number' ? Math.round(weights[k] * 100) : null;
             return (
-              <DimensionRow key={k} label={DIMENSION_LABEL[k]} score={score} feedback={fb} />
+              <DimensionRow key={k} label={DIMENSION_LABEL[k]} score={score} feedback={fb} weight={weight} />
             );
           })}
         </div>
@@ -320,7 +344,7 @@ export default function Results() {
   );
 }
 
-function DimensionRow({ label, score, feedback }) {
+function DimensionRow({ label, score, feedback, weight }) {
   const pct = typeof score === 'number'
     ? Math.max(0, Math.min(100, score))
     : 0;
@@ -328,7 +352,14 @@ function DimensionRow({ label, score, feedback }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <div style={{ fontSize: 12, color: WHITE, width: 110, flexShrink: 0, fontWeight: 600 }}>{label}</div>
+        <div style={{ width: 110, flexShrink: 0, display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 12, color: WHITE, fontWeight: 600 }}>{label}</span>
+          {typeof weight === 'number' && (
+            <span style={{ fontSize: 10, color: MUTED, fontVariantNumeric: 'tabular-nums' }}>
+              {weight}%
+            </span>
+          )}
+        </div>
         <div style={{ flex: 1, height: 4, background: BORDER2, borderRadius: 2 }}>
           <div
             style={{
@@ -377,8 +408,8 @@ function OutcomeBlock({ passed, isPioneer, credentialId }) {
         </div>
         <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.6 }}>
           {credentialId
-            ? <>Your blockchain-verified credential <code style={{ color: GOLD, fontFamily: 'Consolas, Menlo, monospace', fontSize: 13 }}>{credentialId}</code> has been issued.</>
-            : 'Your blockchain-verified credential has been issued.'}
+            ? <>Congratulations. Your blockchain-verified credential <code style={{ color: GOLD, fontFamily: 'Consolas, Menlo, monospace', fontSize: 13 }}>{credentialId}</code> has been issued.</>
+            : 'Congratulations. Your blockchain-verified credential has been issued.'}
         </div>
       </div>
     );
@@ -398,8 +429,8 @@ function OutcomeBlock({ passed, isPioneer, credentialId }) {
         </div>
         <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.6 }}>
           {credentialId
-            ? <>Your credential <code style={{ color: GOLD, fontFamily: 'Consolas, Menlo, monospace', fontSize: 13 }}>{credentialId}</code> is now simulator-verified.</>
-            : 'Your credential is now simulator-verified.'}
+            ? <>Congratulations. Your credential <code style={{ color: GOLD, fontFamily: 'Consolas, Menlo, monospace', fontSize: 13 }}>{credentialId}</code> is now simulator-verified.</>
+            : 'Congratulations. Your credential is now simulator-verified.'}
         </div>
       </div>
     );
@@ -444,6 +475,10 @@ function humanStatus(s) {
   if (s === 'completed')   return 'Call completed';
   if (s === 'scoring')     return 'Scoring';
   return s || 'Pending';
+}
+
+function pluralize(count, word) {
+  return count === 1 ? word : `${word}s`;
 }
 
 // ---------- Shared styles ----------
