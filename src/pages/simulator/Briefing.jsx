@@ -50,17 +50,26 @@ export default function Briefing() {
     try {
       const raw = sessionStorage.getItem('atac_sim_session');
       if (!raw) {
-        navigate('/simulator', { replace: true });
+        // Session state lost or corrupted. Send user to dashboard rather than
+        // attempting auto-reassign, which would issue a different scenario than
+        // the one they originally started.
+        navigate('/dashboard', { replace: true });
         return;
       }
       const parsed = JSON.parse(raw);
       if (!parsed.sessionId || parsed.sessionId !== routeSessionId) {
-        navigate('/simulator', { replace: true });
+        // Session state lost or corrupted. Send user to dashboard rather than
+        // attempting auto-reassign, which would issue a different scenario than
+        // the one they originally started.
+        navigate('/dashboard', { replace: true });
         return;
       }
       setSession(parsed);
     } catch (_) {
-      navigate('/simulator', { replace: true });
+      // Session state lost or corrupted. Send user to dashboard rather than
+      // attempting auto-reassign, which would issue a different scenario than
+      // the one they originally started.
+      navigate('/dashboard', { replace: true });
     }
   }, [routeSessionId, navigate]);
 

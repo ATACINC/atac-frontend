@@ -389,7 +389,7 @@ export default function Assessment() {
       const simulatorRequired = res.data.simulatorRequired ?? res.data.simulator_required;
       if (res.data.passed && simulatorRequired) {
         setPhase('transitioning-to-simulator');
-        setTimeout(() => navigate('/simulator'), 4000);
+        setTimeout(() => navigate('/simulator?auto=true'), 4000);
         return;
       }
 

@@ -64,6 +64,11 @@ export default function SimulatorEntry() {
   // 'choose' URL param is informational; presence of credential_id is the
   // canonical Pioneer signal (a Pioneer flow always passes both).
   const isPioneerFlow = !!credentialId;
+  // Explicit auto-assign gate. Only the assessment-pass redirect appends
+  // ?auto=true. Bare /simulator visits (back button, manual nav, remount
+  // during lazy chunk load) must NOT trigger an auto-assign with null args.
+  const autoFlag = searchParams.get('auto') === 'true';
+  const isAutoFlow = autoFlag && !isPioneerFlow;
 
   const [error, setError] = useState(null);
   const [autoAssigning, setAutoAssigning] = useState(false);
@@ -91,11 +96,18 @@ export default function SimulatorEntry() {
       }
     }
 
-    // No resumable session. For new candidates, auto-assign immediately.
-    // For Pioneers, do nothing here; ScenarioPicker handles its own assign
-    // on user selection.
-    if (!isPioneerFlow) {
+    // No resumable session. For new candidates with an explicit auto=true
+    // signal (only the assessment-pass redirect sets this), auto-assign
+    // immediately. For Pioneers, do nothing here; ScenarioPicker handles
+    // its own assign on user selection. For everyone else who arrived at
+    // bare /simulator without a valid entry signal, bounce to dashboard.
+    if (isAutoFlow) {
       autoAssign();
+    } else if (!isPioneerFlow) {
+      // No credential_id and no auto=true. User arrived at /simulator
+      // without a valid entry signal. Send them back to dashboard.
+      setError('Simulator must be started from your dashboard. Redirecting...');
+      setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

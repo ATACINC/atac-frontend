@@ -707,7 +707,7 @@ export default function Dashboard() {
             )}
 
             {result.passed && credentials.length === 0 && (
-              <button className="btn-gold-h" style={{ ...btnGold, marginTop: 16, marginBottom: 0 }} onClick={() => navigate('/simulator')}>
+              <button className="btn-gold-h" style={{ ...btnGold, marginTop: 16, marginBottom: 0 }} onClick={() => navigate('/simulator?auto=true')}>
                 Proceed to Call Readiness Simulator™ →
               </button>
             )}
