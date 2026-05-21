@@ -74,8 +74,8 @@ export default function ScenarioPicker({ credentialId, onError }) {
     setSubmittingCode(scenarioCode);
     try {
       const res = await assignSimulator(scenarioCode, credentialId);
-      stashSimulatorSession(res.data, credentialId);
-      navigate(`/simulator/briefing/${res.data.sessionId}`, { replace: true });
+      const stashed = stashSimulatorSession(res.data, credentialId);
+      navigate(`/simulator/briefing/${stashed.sessionId}`, { replace: true });
     } catch (err) {
       setSubmittingCode(null);
       const msg = err?.response?.data?.error || err?.message || 'Unknown error';

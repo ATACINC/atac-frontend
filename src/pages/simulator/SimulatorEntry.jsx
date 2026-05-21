@@ -46,15 +46,31 @@ const SESSION_MAX_AGE_MIN = 5;
 // Stash an /assign response payload + metadata into sessionStorage so
 // downstream routes (Briefing, Call, Results) can read it without
 // re-calling /assign on page transitions.
+//
+// Normalizes the backend snake_case payload to canonical camelCase so
+// every reader can use a single field-name convention. Returns the
+// normalized blob so callers can use blob.sessionId for navigation
+// instead of reading the raw axios res.data (which is still snake_case).
 export function stashSimulatorSession(assignResponseData, credentialId) {
+  const d = assignResponseData || {};
   const blob = {
-    ...assignResponseData,
-    credentialId: credentialId || null,
-    createdAt: Date.now(),
+    sessionId:           d.session_id ?? d.sessionId ?? null,
+    signedUrl:           d.signed_url ?? d.signedUrl ?? null,
+    signedUrlExpiresAt:  d.signed_url_expires_at ?? d.signedUrlExpiresAt ?? null,
+    agentId:             d.agent_id ?? d.agentId ?? null,
+    scenarioName:        d.scenario_name ?? d.scenarioName ?? null,
+    scenarioId:          d.scenario_id ?? d.scenarioId ?? null,
+    scenarioCode:        d.scenario_code ?? d.scenarioCode ?? null,
+    personaName:         d.persona_name ?? d.personaName ?? null,
+    personaContext:      d.persona_context ?? d.personaContext ?? null,
+    industry:            d.industry ?? null,
+    credentialId:        credentialId || null,
+    createdAt:           Date.now(),
   };
   try {
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(blob));
   } catch (_) { /* quota / private-mode tolerant */ }
+  return blob;
 }
 
 export default function SimulatorEntry() {
@@ -75,21 +91,25 @@ export default function SimulatorEntry() {
 
   // Concurrent-assignment protection runs once on mount.
   useEffect(() => {
-    // First: check for a resumable session.
+    // Validate any existing sessionStorage payload is parseable; drop if not.
     const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (existing) {
       try {
-        const parsed = JSON.parse(existing);
-        const ageMinutes = (Date.now() - (parsed.createdAt || 0)) / 60000;
-        const resumable =
-          ageMinutes < SESSION_MAX_AGE_MIN &&
-          parsed.sessionId &&
-          parsed.status !== 'completed' &&
-          parsed.status !== 'scored';
-        if (resumable) {
-          navigate(`/simulator/briefing/${parsed.sessionId}`, { replace: true });
-          return;
-        }
+        JSON.parse(existing);
+        // TODO: resumable status tracking - writer does not currently set
+        // a status field. Disabled until status updates are wired during
+        // the call lifecycle. For now, always fall through to fresh assign
+        // or picker.
+        // const ageMinutes = (Date.now() - (parsed.createdAt || 0)) / 60000;
+        // const resumable =
+        //   ageMinutes < SESSION_MAX_AGE_MIN &&
+        //   parsed.sessionId &&
+        //   parsed.status !== 'completed' &&
+        //   parsed.status !== 'scored';
+        // if (resumable) {
+        //   navigate(`/simulator/briefing/${parsed.sessionId}`, { replace: true });
+        //   return;
+        // }
       } catch (_) {
         // Malformed sessionStorage. Drop and fall through to fresh assign.
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
@@ -117,8 +137,8 @@ export default function SimulatorEntry() {
     setError(null);
     try {
       const res = await assignSimulator(null, null);
-      stashSimulatorSession(res.data, null);
-      navigate(`/simulator/briefing/${res.data.sessionId}`, { replace: true });
+      const stashed = stashSimulatorSession(res.data, null);
+      navigate(`/simulator/briefing/${stashed.sessionId}`, { replace: true });
     } catch (err) {
       setAutoAssigning(false);
       const msg = err?.response?.data?.error || err?.message || 'Unknown error';

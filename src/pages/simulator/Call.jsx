@@ -97,7 +97,7 @@ export default function Call() {
   useEffect(() => {
     if (!session) return;
 
-    const signedUrl = session.signedUrl || session.signed_url || null;
+    const signedUrl = session.signedUrl || null;
     if (!signedUrl) {
       setErrorText('This session is missing a signed connection URL. Please return to the dashboard and try again.');
       setConnectionStatus('error');
@@ -234,8 +234,7 @@ export default function Call() {
   };
 
   // ---------- Render ----------
-  const scenario = session?.scenario || {};
-  const personaName = scenario.persona_name || scenario.personaName || session?.persona_name || 'your customer';
+  const personaName = session?.personaName || 'your customer';
 
   const statusLabel =
     connectionStatus === 'connecting' ? 'Connecting' :

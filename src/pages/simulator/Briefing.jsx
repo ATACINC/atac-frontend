@@ -123,13 +123,13 @@ export default function Briefing() {
     );
   }
 
-  // Scenario context falls back gracefully if backend response shape varies.
-  const scenario = session.scenario || {};
-  const personaName    = scenario.persona_name || scenario.personaName || session.persona_name || 'your customer';
-  const industry       = scenario.industry || session.industry || '';
-  const scenarioCode   = scenario.scenario_code || scenario.scenarioCode || session.scenario_code || '';
-  const personaContext = scenario.persona_context || scenario.personaContext || scenario.description || session.persona_context || '';
-  const objective      = scenario.objective || session.objective || 'Listen carefully and handle the call professionally.';
+  // Scenario context is read from the canonical camelCase fields the
+  // writer normalizes (see stashSimulatorSession in SimulatorEntry.jsx).
+  const personaName    = session.personaName || 'your customer';
+  const industry       = session.industry || '';
+  const scenarioCode   = session.scenarioCode || '';
+  const personaContext = session.personaContext || '';
+  const objective      = 'Listen carefully and handle the call professionally.';
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY, padding: '48px 24px 60px' }}>
