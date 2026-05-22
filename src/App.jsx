@@ -11,6 +11,7 @@ import Trial from './pages/Trial';
 import Verify from './pages/Verify';
 import VerifyLanding from './pages/VerifyLanding';
 import { ToastProvider } from './components/ToastProvider';
+import TitleSetter from './components/TitleSetter';
 
 // ── M2 Simulator (ATAC Call Readiness Simulator) ────────────────────────
 // The /simulator/* route tree lazy-loads its own chunk so the @elevenlabs/client
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
+        <TitleSetter />
         <Routes>
           <Route path="/login"      element={<Login />} />
           <Route path="/signup"     element={<SignupPage />} />
