@@ -29,7 +29,6 @@ const ROUTE_TITLES = [
   { match: (p) => p === '/assessment', title: `Readiness Assessment · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/dashboard',  title: `Dashboard · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/employer',   title: `Employer portal · ${BRAND_SUFFIX}` },
-  { match: (p) => p === '/admin',      title: `Admin · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/try',        title: `Try the platform · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/verify',     title: `Verify a credential · ${BRAND_SUFFIX}` },
   {

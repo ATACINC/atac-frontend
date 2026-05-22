@@ -234,6 +234,9 @@ export default function Login({ defaultAction }) {
   const switchTab = (t) => {
     setTab(t);
     setError('');
+    // Sync URL so TitleSetter can title the page correctly.
+    // replace: true keeps tab toggles out of the browser history stack.
+    navigate(t === 'register' ? '/login?action=register' : '/login', { replace: true });
   };
 
   /* ── Login handler ─────────────────────────────────────────────── */

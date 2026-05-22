@@ -1,6 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AdminDashboard from './pages/AdminDashboard';
 import Login      from './pages/Login';
 import SignupPage from './pages/SignupPage';
 import Assessment from './pages/Assessment';
@@ -31,6 +30,16 @@ function PrivateRoute({ children }) {
   return token ? children : <Navigate to="/login" replace />;
 }
 
+// Hard redirect to an external URL. <Navigate> only handles internal
+// routes, so this small component fires window.location.replace on
+// mount. Used for /admin which lives in a separate Vercel project.
+function ExternalRedirect({ to }) {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
+}
+
 export default function App() {
   return (
     <ToastProvider>
@@ -59,7 +68,7 @@ export default function App() {
           />
           <Route path="/dashboard"  element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/employer" element={<PrivateRoute><EmployerPortal /></PrivateRoute>} />
-          <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+          <Route path="/admin" element={<ExternalRedirect to="https://admin.atacglobalcx.com" />} />
           <Route path="/"           element={<Navigate to="/dashboard" replace />} />
           <Route path="/try" element={<Trial />} />
           <Route path="/verify" element={<VerifyLanding />} />
