@@ -748,14 +748,25 @@ export default function Assessment() {
             <button
               onClick={() => goTo(Math.max(0, current - 1))}
               disabled={current === 0}
-              style={{ ...btnOutline, opacity: current === 0 ? 0.3 : 1 }}>
+              style={{
+                ...btnOutline,
+                color: MUTED,
+                border: `1px solid ${MUTED}`,
+                opacity: current === 0 ? 0.3 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (current !== 0) e.currentTarget.style.color = WHITE;
+              }}
+              onMouseLeave={(e) => {
+                if (current !== 0) e.currentTarget.style.color = MUTED;
+              }}>
               ← Previous
             </button>
             <div style={{ fontSize: 11, color: MUTED, alignSelf: 'center' }}>
               {answered} of 40 answered
             </div>
             {current < 39
-              ? <button onClick={() => goTo(current + 1)} style={btnOutline}>Next →</button>
+              ? <button onClick={() => goTo(current + 1)} style={btnGold}>Next →</button>
               : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
                   {submitting ? 'Submitting…' : 'Submit Assessment'}
                 </button>
