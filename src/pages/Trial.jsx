@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
+import CharterCounter from '../components/CharterCounter';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -151,7 +152,7 @@ export default function Trial() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 36 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10, marginBottom: 24 }}>
             {[
               { val: '5',    lbl: 'Questions'  },
               { val: '~3',   lbl: 'Minutes'    },
@@ -163,6 +164,8 @@ export default function Trial() {
               </div>
             ))}
           </div>
+
+          <CharterCounter variant="full" />
 
           <button
             onClick={loadQuestions}

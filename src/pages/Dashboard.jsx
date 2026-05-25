@@ -6,6 +6,8 @@ import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { useToast } from '../hooks/useToast';
 import { usePhotoVerification } from '../hooks/usePhotoVerification';
+import CharterCounter from '../components/CharterCounter';
+import CharterCohortBlock from '../components/CharterCohortBlock';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -353,6 +355,9 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Charter Cohort counter, universal across all dashboard render branches */}
+        <CharterCounter variant="compact" />
+
         {hasCred && latestCred && (
           <div className="vault-up">
             <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.05fr) minmax(460px,0.95fr)', gap: 30, alignItems: 'stretch', marginBottom: 30 }}>
@@ -566,6 +571,8 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
+
+                <CharterCohortBlock credentialId={latestCred?.credentialId} />
 
                 {!candidateWallet ? (
                   <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 4, padding: '22px 24px' }}>

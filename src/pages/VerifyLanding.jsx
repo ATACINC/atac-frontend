@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { isValidEmail } from '../utils/validation';
+import CharterCounter from '../components/CharterCounter';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 
@@ -326,6 +327,8 @@ export default function VerifyLanding() {
               {loading ? 'Verifying...' : 'Verify Credential'}
             </button>
           </form>
+
+          <CharterCounter variant="full" />
 
           <div id="employer-verification" style={{ display: 'grid', gap: 18 }}>
             <InfoCard title="For Employers" body="Use ATAC verification as independent proof that a candidate completed the readiness assessment and holds a current credential." />
