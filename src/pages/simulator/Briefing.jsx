@@ -13,6 +13,31 @@
  * /simulator so the entry component can re-assign or resume cleanly.
  */
 
+// Launch-day Phase 1 UX hardening.
+//
+// Today's launch revealed silent audio-capture failures: candidates
+// (Kimberly Woodlock, Sashakay Bramwell) saw "Not this time. 0/70"
+// scores with empty transcripts, indicating their mic never reached
+// the scoring service. This file gates the call entry behind a
+// mandatory mic test plus a 3-item readiness checklist so the failure
+// surfaces BEFORE the call starts rather than after it.
+//
+// Companion change in Call.jsx: in-call mic activity indicator and
+// 15-second silence detection banner.
+//
+// Smoke test plan (manual, fresh incognito):
+//   1. Open /simulator/briefing/[sessionId] with mic permission ungranted
+//   2. Verify BEGIN CALL is disabled (gold dim with not-allowed cursor)
+//   3. Click "Check Microphone Access" -> deny permission ->
+//      verify the bulleted troubleshooting list renders
+//   4. Reload, click "Check Microphone Access" -> allow permission ->
+//      verify the green "Microphone Ready" line shows
+//   5. Verify BEGIN CALL is still disabled because the two manual
+//      checklist boxes are unchecked
+//   6. Tick "Quiet environment" and "I know my opening line"
+//   7. Verify BEGIN CALL enables (gold solid, pointer cursor)
+//   8. Click BEGIN CALL -> verify navigation to /simulator/call/[id]
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -56,6 +81,11 @@ export default function Briefing() {
   const [session, setSession] = useState(null);
   const [micState, setMicState] = useState(MIC_UNCHECKED);
   const [micErrorText, setMicErrorText] = useState('');
+  // Pre-flight checklist (launch-day fix Phase 1, Change 2). All three
+  // items plus a successful mic check must resolve before Begin Call
+  // enables. The mic-tested item auto-checks when micState === MIC_GRANTED.
+  const [quietRoomChecked, setQuietRoomChecked] = useState(false);
+  const [openingLineChecked, setOpeningLineChecked] = useState(false);
 
   // Load stashed session on mount. If missing or mismatched, bounce back
   // to /simulator so the entry can either resume or assign fresh.
@@ -123,8 +153,12 @@ export default function Briefing() {
     }
   };
 
+  // Derived gate: all three checklist items plus mic must pass.
+  const canBeginCall =
+    micState === MIC_GRANTED && quietRoomChecked && openingLineChecked;
+
   const beginCall = () => {
-    if (micState !== MIC_GRANTED) return;
+    if (!canBeginCall) return;
     navigate(`/simulator/call/${routeSessionId}`);
   };
 
@@ -244,19 +278,22 @@ export default function Briefing() {
             </div>
           )}
 
-          {/* Recommended Opening - high-priority gold callout. */}
+          {/* You Speak First - high-priority gold callout. Launch-day Change 2:
+              heading reworded from "Recommended Opening" so candidates understand
+              they must initiate the call. Customer is silent until they hear a
+              greeting. */}
           {session.recommendedOpening && (
             <div
               style={{
                 background: 'rgba(201,168,76,0.08)',
                 border: `1px solid ${GOLD}`,
                 borderRadius: 4,
-                padding: '16px 18px',
+                padding: '18px 20px',
                 marginBottom: 18,
               }}
             >
-              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, fontWeight: 700 }}>
-                Recommended Opening
+              <div style={{ fontSize: 14, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10, fontWeight: 700 }}>
+                You Speak First. Open With:
               </div>
               <div
                 style={{
@@ -265,9 +302,20 @@ export default function Briefing() {
                   fontSize: 16,
                   color: WHITE,
                   lineHeight: 1.4,
+                  marginBottom: 10,
                 }}
               >
                 {session.recommendedOpening}
+              </div>
+              <div
+                style={{
+                  fontFamily: VAULT_BODY,
+                  fontSize: 12,
+                  color: MUTED,
+                  lineHeight: 1.55,
+                }}
+              >
+                The customer is waiting for you to greet them. Start speaking as soon as the call begins.
               </div>
             </div>
           )}
@@ -408,7 +456,8 @@ export default function Briefing() {
               <button
                 type="button"
                 onClick={checkMic}
-                style={outlinedBtn(false)}
+                className="sim-mic-pulse"
+                style={{ ...outlinedBtn(false), borderColor: GOLD, color: WHITE }}
               >
                 Check Microphone Access
               </button>
@@ -420,7 +469,7 @@ export default function Briefing() {
 
             {micState === MIC_GRANTED && (
               <div style={{ fontSize: 13, color: TEAL2, fontWeight: 600 }}>
-                ✓ Microphone ready
+                ✓ Microphone Ready
               </div>
             )}
 
@@ -429,17 +478,28 @@ export default function Briefing() {
                 <div
                   role="alert"
                   style={{
-                    padding: '10px 12px',
+                    padding: '14px 16px',
                     background: 'rgba(196,92,92,0.08)',
                     border: '1px solid rgba(196,92,92,0.32)',
                     borderRadius: 3,
-                    color: RED,
+                    color: WHITE,
                     fontSize: 13,
                     lineHeight: 1.55,
                     marginBottom: 12,
                   }}
                 >
-                  {micErrorText}
+                  <div style={{ color: RED, fontWeight: 600, marginBottom: 8 }}>
+                    {micErrorText}
+                  </div>
+                  <div style={{ color: WHITE, marginBottom: 6 }}>
+                    We could not access your microphone. Please:
+                  </div>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: 20, color: MUTED, lineHeight: 1.6 }}>
+                    <li>Check that your browser has microphone permission for this site (click the lock icon in the address bar)</li>
+                    <li>Try using Chrome or Edge on a desktop or laptop</li>
+                    <li>Make sure no other application is using your microphone</li>
+                    <li>Plug in a headset if your built-in mic is not working</li>
+                  </ul>
                 </div>
                 {micState !== MIC_NO_DEVICE && (
                   <button type="button" onClick={checkMic} style={outlinedBtn(false)}>
@@ -448,14 +508,71 @@ export default function Briefing() {
                 )}
               </>
             )}
+
+            {/* Launch-day Change 1: explicit "required" note so candidates
+                understand the mic check is not optional. */}
+            <div
+              style={{
+                marginTop: 12,
+                fontSize: 11,
+                color: MUTED,
+                letterSpacing: '0.04em',
+                lineHeight: 1.5,
+                fontStyle: 'italic',
+              }}
+            >
+              Required. We cannot score your call without working audio.
+            </div>
+          </div>
+
+          {/* Launch-day Change 2: pre-flight checklist. All three items
+              plus the mic check must resolve before Begin Call enables.
+              Mic-tested auto-checks from micState. */}
+          <div
+            style={{
+              background: 'rgba(238,233,223,0.02)',
+              border: `1px solid ${BORDER2}`,
+              borderRadius: 3,
+              padding: '16px 20px',
+              marginBottom: 22,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                color: MUTED,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+                marginBottom: 12,
+                fontFamily: VAULT_BODY,
+              }}
+            >
+              Before You Begin
+            </div>
+            <ChecklistItem
+              checked={micState === MIC_GRANTED}
+              label="Microphone tested"
+              auto
+            />
+            <ChecklistItem
+              checked={quietRoomChecked}
+              onToggle={() => setQuietRoomChecked((v) => !v)}
+              label="Quiet environment"
+            />
+            <ChecklistItem
+              checked={openingLineChecked}
+              onToggle={() => setOpeningLineChecked((v) => !v)}
+              label="I know my opening line"
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button
               type="button"
               onClick={beginCall}
-              disabled={micState !== MIC_GRANTED}
-              style={primaryBtn(micState !== MIC_GRANTED)}
+              disabled={!canBeginCall}
+              style={primaryBtn(!canBeginCall)}
             >
               Begin Call
             </button>
@@ -516,7 +633,82 @@ export default function Briefing() {
             padding-top: 14px;
           }
         }
+        /* Launch-day Change 1: visual nudge on the mic check button so
+           candidates notice it before BEGIN CALL. Removes itself once
+           the mic check passes. */
+        @keyframes sim-mic-pulse {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(201,168,76,0.25);
+            border-color: rgba(201,168,76,0.45);
+          }
+          50% {
+            box-shadow: 0 0 0 6px rgba(201,168,76,0);
+            border-color: ${GOLD};
+          }
+        }
+        .sim-mic-pulse {
+          animation: sim-mic-pulse 1.8s ease-in-out infinite;
+        }
       `}</style>
+    </div>
+  );
+}
+
+function ChecklistItem({ checked, label, onToggle, auto }) {
+  const interactive = !auto;
+  const baseStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 0',
+    fontFamily: VAULT_BODY,
+    fontSize: 13,
+    color: WHITE,
+    background: 'transparent',
+    border: 'none',
+    width: '100%',
+    textAlign: 'left',
+    cursor: interactive ? 'pointer' : 'default',
+  };
+  const box = (
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 18,
+        height: 18,
+        borderRadius: 3,
+        border: `1px solid ${checked ? TEAL2 : MUTED}`,
+        background: checked ? 'rgba(34,166,126,0.15)' : 'transparent',
+        color: TEAL2,
+        fontSize: 12,
+        fontWeight: 700,
+        flexShrink: 0,
+        transition: 'border-color 0.15s, background 0.15s',
+      }}
+    >
+      {checked ? '✓' : ''}
+    </span>
+  );
+  if (interactive) {
+    return (
+      <button type="button" onClick={onToggle} style={baseStyle} aria-pressed={checked}>
+        {box}
+        <span>{label}</span>
+      </button>
+    );
+  }
+  return (
+    <div style={baseStyle} aria-label={`${label} (auto-checked when mic test passes)`}>
+      {box}
+      <span style={{ color: checked ? WHITE : MUTED }}>{label}</span>
+      {!checked && (
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: MUTED, fontStyle: 'italic' }}>
+          waiting for mic check
+        </span>
+      )}
     </div>
   );
 }

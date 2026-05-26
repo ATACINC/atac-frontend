@@ -59,11 +59,29 @@ export default function Call() {
   const [durationSec, setDurationSec] = useState(0);
   const [errorText, setErrorText] = useState('');
 
+  // Launch-day Phase 1 Change 3 + 4: mic activity meter + silence banner.
+  // The candidate's mic is captured by the ElevenLabs SDK; we open a
+  // parallel getUserMedia stream specifically for the analyser so we
+  // never interfere with the SDK's own pipeline. Modern browsers share
+  // the same underlying hardware track between concurrent consumers.
+  const [micLevel, setMicLevel] = useState(0);        // 0..100 scaled
+  const [micActive, setMicActive] = useState(false);  // above silence threshold right now
+  const [showSilenceBanner, setShowSilenceBanner] = useState(false);
+
   const conversationRef = useRef(null);
   const timerRef = useRef(null);
   const startedAtRef = useRef(null);
   const navigatedAwayRef = useRef(false);
   const transcriptEndRef = useRef(null);
+
+  // Mic-monitoring refs (no re-renders per frame)
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const rafIdRef = useRef(null);
+  const silenceStartRef = useRef(null);              // ms timestamp first frame below threshold
+  const silenceClearTimeoutRef = useRef(null);
+  const lastUiUpdateRef = useRef(0);                 // throttle setState to ~10Hz
 
   // ---------- Load session from sessionStorage ----------
   useEffect(() => {
@@ -192,6 +210,132 @@ export default function Call() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // ---------- Mic activity meter + silence detection ----------
+  // Runs only while the call is live. Opens a separate getUserMedia
+  // track so the ElevenLabs SDK's own capture is untouched. Updates
+  // UI state at ~10Hz (throttled) and tracks silence duration in refs
+  // to avoid per-frame re-renders.
+  useEffect(() => {
+    if (connectionStatus !== 'live') return undefined;
+
+    const SILENCE_THRESHOLD = 18;           // 0..255 byte freq avg, ~ -40 dB
+    const SILENCE_TRIGGER_MS = 15_000;      // 15s of continuous quiet before banner
+    const SILENCE_CLEAR_DELAY_MS = 3_000;   // banner fades 3s after voice returns
+    const UI_UPDATE_INTERVAL_MS = 100;      // throttle setState to 10Hz
+
+    let cancelled = false;
+
+    (async () => {
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        // Mic capture failed at the OS level. Surface as warning but do
+        // not break the call (ElevenLabs SDK has its own stream and may
+        // still be working). Log for debugging.
+        console.warn('[Call] mic monitor getUserMedia failed', err?.name || err?.message);
+        return;
+      }
+      if (cancelled) {
+        stream.getTracks().forEach((t) => { try { t.stop(); } catch (_) { /* */ } });
+        return;
+      }
+      micStreamRef.current = stream;
+
+      const AudioCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtor) {
+        console.warn('[Call] Web Audio API unavailable; mic meter disabled');
+        return;
+      }
+      const ctx = new AudioCtor();
+      audioContextRef.current = ctx;
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      const bins = new Uint8Array(analyser.frequencyBinCount);
+
+      const tick = () => {
+        if (cancelled) return;
+        analyser.getByteFrequencyData(bins);
+
+        // Average across all bins as a coarse loudness proxy.
+        let sum = 0;
+        for (let i = 0; i < bins.length; i++) sum += bins[i];
+        const avg = sum / bins.length;
+
+        // Silence tracking
+        const now = Date.now();
+        if (avg < SILENCE_THRESHOLD) {
+          if (silenceStartRef.current == null) {
+            silenceStartRef.current = now;
+          } else if (now - silenceStartRef.current >= SILENCE_TRIGGER_MS) {
+            setShowSilenceBanner(true);
+          }
+        } else {
+          silenceStartRef.current = null;
+          // Schedule banner dismissal 3s after voice resumes.
+          setShowSilenceBanner((current) => {
+            if (current) {
+              if (silenceClearTimeoutRef.current) {
+                clearTimeout(silenceClearTimeoutRef.current);
+              }
+              silenceClearTimeoutRef.current = setTimeout(() => {
+                setShowSilenceBanner(false);
+                silenceClearTimeoutRef.current = null;
+              }, SILENCE_CLEAR_DELAY_MS);
+            }
+            return current;
+          });
+        }
+
+        // Throttled UI updates (10Hz, not 60Hz)
+        if (now - lastUiUpdateRef.current >= UI_UPDATE_INTERVAL_MS) {
+          lastUiUpdateRef.current = now;
+          // Scale 0..255 -> 0..100 (roughly clamped at 80 since real
+          // speech rarely fills the upper bins).
+          const scaled = Math.min(100, Math.round((avg / 80) * 100));
+          setMicLevel(scaled);
+          setMicActive(avg >= SILENCE_THRESHOLD);
+        }
+
+        rafIdRef.current = requestAnimationFrame(tick);
+      };
+
+      rafIdRef.current = requestAnimationFrame(tick);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (silenceClearTimeoutRef.current) {
+        clearTimeout(silenceClearTimeoutRef.current);
+        silenceClearTimeoutRef.current = null;
+      }
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => {
+          try { t.stop(); } catch (_) { /* ignore */ }
+        });
+        micStreamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        try { audioContextRef.current.close(); } catch (_) { /* ignore */ }
+        audioContextRef.current = null;
+      }
+      analyserRef.current = null;
+      silenceStartRef.current = null;
+      setShowSilenceBanner(false);
+      setMicLevel(0);
+      setMicActive(false);
+    };
+  }, [connectionStatus]);
+
   // ---------- Duration timer (runs while connection is live) ----------
   useEffect(() => {
     if (connectionStatus !== 'live') return undefined;
@@ -287,8 +431,33 @@ export default function Call() {
               {formatDuration(durationSec)}
             </span>
           )}
+          {connectionStatus === 'live' && (
+            <MicIndicator level={micLevel} active={micActive} />
+          )}
         </div>
       </div>
+
+      {showSilenceBanner && (
+        <div
+          role="alert"
+          style={{
+            background: 'rgba(196,138,42,0.14)',
+            borderBottom: '1px solid rgba(196,138,42,0.5)',
+            color: '#F0C975',
+            padding: '12px 28px',
+            fontSize: 13,
+            lineHeight: 1.5,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <AlertTriangleSvg />
+          <span>
+            We are not hearing you. Check your microphone, your call may not score correctly. You can end the call and retry.
+          </span>
+        </div>
+      )}
 
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 48px' }}>
         {/* Mode indicator */}
@@ -444,5 +613,96 @@ function formatDuration(totalSec) {
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// ─── Mic indicator + inline SVG icons (Phase 1 launch-day fix) ─────
+// Inline SVG keeps us off lucide-react (not in package.json deps; the
+// brief said it was, but a fresh check showed otherwise). Four icons
+// needed: Mic, MicOff, AlertTriangle, Check are easily small enough
+// to inline without bloat.
+
+function MicIndicator({ level, active }) {
+  const color = active ? TEAL2 : MUTED;
+  // Volume meter: 12 vertical bars whose lit count is proportional
+  // to the level.
+  const TOTAL_BARS = 12;
+  const litCount = Math.max(0, Math.min(TOTAL_BARS, Math.round((level / 100) * TOTAL_BARS)));
+  return (
+    <span
+      role="status"
+      aria-label={active ? 'Microphone active' : 'Microphone silent'}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        marginLeft: 12,
+        paddingLeft: 12,
+        borderLeft: `1px solid ${BORDER2}`,
+      }}
+    >
+      {active ? <MicSvg color={color} /> : <MicOffSvg color={color} />}
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'flex-end',
+          gap: 2,
+          height: 14,
+        }}
+      >
+        {Array.from({ length: TOTAL_BARS }).map((_, i) => {
+          const lit = i < litCount;
+          const minH = 3;
+          const maxH = 14;
+          const targetH = minH + ((i + 1) / TOTAL_BARS) * (maxH - minH);
+          return (
+            <span
+              key={i}
+              style={{
+                width: 2,
+                height: lit ? targetH : minH,
+                background: lit ? color : 'rgba(238,233,223,0.18)',
+                borderRadius: 1,
+                transition: 'height 0.08s linear, background 0.12s',
+              }}
+            />
+          );
+        })}
+      </span>
+    </span>
+  );
+}
+
+function MicSvg({ color }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  );
+}
+
+function MicOffSvg({ color }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="2" y1="2" x2="22" y2="22" />
+      <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2" />
+      <path d="M5 10v2a7 7 0 0 0 12 5" />
+      <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33" />
+      <path d="M9 9v3a3 3 0 0 0 5.12 2.12" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  );
+}
+
+function AlertTriangleSvg() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0C975" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
 }
 
