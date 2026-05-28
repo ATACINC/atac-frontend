@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { usePhotoVerification } from '../hooks/usePhotoVerification';
 import CharterCounter from '../components/CharterCounter';
 import CharterCohortBlock from '../components/CharterCohortBlock';
+import CandidateStateRenderer from '../utils/CandidateStateRenderer';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -73,6 +74,11 @@ export default function Dashboard() {
   const [walletSaved,       setWalletSaved]       = useState(false);
   const [walletError,       setWalletError]       = useState('');
   const [candidateWallet,   setCandidateWallet]   = useState(candidate.wallet_address || '');
+  // Phase 5: resolved candidate state from GET /api/candidate/me/state
+  // (backend commit 77e01f8). Drives the CandidateStateRenderer hero
+  // block. Null while loading; on 4xx/5xx we fall back to the
+  // pre-Phase-5 default rendering (no hero).
+  const [flowState,         setFlowState]         = useState(null);
 
   useEffect(() => {
     injectKF();
@@ -96,7 +102,7 @@ export default function Dashboard() {
           console.error('JWT refresh failed (continuing with stale token):', err);
         }
       }
-      if (candidate.id) { loadCredentials(); checkPaymentStatus(); }
+      if (candidate.id) { loadCredentials(); checkPaymentStatus(); loadFlowState(); }
       else { setLoading(false); }
     };
     init();
@@ -118,6 +124,19 @@ export default function Dashboard() {
       setCredentials(res.data.credentials || []);
     } catch (err) { console.error('Load credentials error', err); }
     finally { setLoading(false); }
+  };
+
+  // Phase 5: pull the resolved candidate state. Failure is silent so the
+  // dashboard keeps rendering pre-Phase-5 (no hero) if the endpoint is
+  // unavailable or returns 5xx.
+  const loadFlowState = async () => {
+    try {
+      const res = await API.get('/api/candidate/me/state');
+      setFlowState(res.data || null);
+    } catch (err) {
+      console.error('Load candidate state error', err);
+      setFlowState(null);
+    }
   };
 
   /* ----------------------------------------------------------------- */
@@ -357,6 +376,19 @@ export default function Dashboard() {
 
         {/* Charter Cohort counter, universal across all dashboard render branches */}
         <CharterCounter variant="compact" />
+
+        {/* Phase 5: candidate state-machine hero block. Returns null for
+            view_credential / start_assessment / register (Dashboard's
+            existing render handles those) and when the Pioneer card at
+            line 500 is already covering pioneer_revalidate. */}
+        <CandidateStateRenderer
+          flowState={flowState}
+          navigate={navigate}
+          pioneerCardActive={credentials.some(
+            (c) => c.simulator_verified === false || c.simulatorVerified === false
+          )}
+          onOpenPhotoVerification={() => { photoVerification.ensure().catch(() => {}); }}
+        />
 
         {hasCred && latestCred && (
           <div className="vault-up">
@@ -734,6 +766,12 @@ export default function Dashboard() {
               {loading ? (
                 <div style={{ color: MUTED, fontSize: 13 }}>Loading…</div>
               ) : credentials.length === 0 ? (
+                // Phase 5: render the original empty state only when the
+                // candidate state resolver says the next step is to start
+                // (or before the state has loaded so the page is not
+                // blank). For other states the CandidateStateRenderer
+                // hero above already covers the CTA.
+                (!flowState || flowState.nextStep === 'start_assessment') ? (
                 <div style={{ textAlign: 'center', padding: '42px 0' }}>
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, marginBottom: 8 }}>No credentials issued yet.</div>
                   <div style={{ fontSize: 14, color: MUTED, marginBottom: 24 }}>Your certificate appears here after you pass the assessment.</div>
@@ -764,6 +802,7 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
+                ) : null
               ) : (
                 credentials.map((cred, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '14px 16px', marginBottom: 8 }}>
