@@ -1148,16 +1148,34 @@ export default function Assessment() {
             )}
 
             <div style={{ display: 'grid', gap: 18 }}>
-              <div style={{ background: statusBg, border: `1px solid ${statusBorder}`, borderRadius: 4, padding: '26px 28px' }}>
-                <div style={{ fontSize: 11, color: statusColor, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>
-                  {passed ? 'Credential Status' : 'Recommended Focus'}
+              <div style={{
+                background: showSimulatorCta ? 'rgba(196,138,42,0.09)' : statusBg,
+                border: `1px solid ${showSimulatorCta ? 'rgba(196,138,42,0.28)' : statusBorder}`,
+                borderRadius: 4,
+                padding: '26px 28px',
+              }}>
+                <div style={{
+                  fontSize: 11,
+                  color: showSimulatorCta ? AMBER : statusColor,
+                  letterSpacing: '0.18em',
+                  textTransform: 'uppercase',
+                  marginBottom: 10,
+                }}>
+                  {passed
+                    ? (showSimulatorCta ? 'Simulator Required' : 'Credential Status')
+                    : 'Recommended Focus'}
                 </div>
                 <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, lineHeight: 1.15 }}>
-                  {passed ? (cred ? 'Blockchain Credential Issued' : 'Credential Being Minted') : (focusDomain ? focusDomain.label : 'Build readiness first')}
+                  {passed
+                    ? (showSimulatorCta
+                        ? 'Assessment complete. Simulator required.'
+                        : (cred ? 'Blockchain Credential Issued' : 'Credential Being Minted'))
+                    : (focusDomain ? focusDomain.label : 'Build readiness first')}
                 </div>
                 <div style={{ color: 'rgba(238,233,223,0.70)', fontSize: 14, lineHeight: 1.65, marginTop: 12 }}>
-                  {passed && cred && `Credential ID: ${cred}`}
-                  {credentialDelayed && 'Your credential is being finalized. We will send the credential ID and verification details by email.'}
+                  {passed && showSimulatorCta && 'Complete the ATAC Call Readiness Simulator to earn your credential. Your credential ID will be generated after you pass the simulator.'}
+                  {passed && !showSimulatorCta && cred && `Credential ID: ${cred}`}
+                  {passed && !showSimulatorCta && credentialDelayed && 'Your credential is being finalized. We will send the credential ID and verification details by email.'}
                   {!passed && 'Start with the lowest-scoring area, then use the course path to build confidence before reassessment.'}
                 </div>
               </div>
@@ -1166,8 +1184,20 @@ export default function Assessment() {
                 <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 16 }}>Result Summary</div>
                 {[
                   { label: 'Strongest Area', value: topDomain?.label || 'Not available', color: topDomain?.color || GOLD },
-                  { label: passed ? 'Credential Path' : 'Primary Opportunity', value: passed ? 'Unlocked' : (focusDomain?.label || 'Review course foundations'), color: passed ? TEAL2 : RED },
-                  { label: 'Next Step', value: passed ? 'Claim and share credential' : 'Review dashboard guidance', color: GOLD },
+                  {
+                    label: passed ? 'Credential Path' : 'Primary Opportunity',
+                    value: passed
+                      ? (showSimulatorCta ? 'Pending simulator' : 'Unlocked')
+                      : (focusDomain?.label || 'Review course foundations'),
+                    color: passed ? (showSimulatorCta ? AMBER : TEAL2) : RED,
+                  },
+                  {
+                    label: 'Next Step',
+                    value: passed
+                      ? (showSimulatorCta ? 'Take the simulator' : 'Claim and share credential')
+                      : 'Review dashboard guidance',
+                    color: GOLD,
+                  },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', padding: '13px 0', borderBottom: `1px solid ${BORDER2}` }}>
                     <span style={{ color: MUTED, fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase' }}>{item.label}</span>
