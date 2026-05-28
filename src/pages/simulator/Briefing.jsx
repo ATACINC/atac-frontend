@@ -74,6 +74,49 @@ const SCORING_DIMENSIONS = [
   { name: 'Close',      weight: 15, description: 'Confirming next steps and ending the call cleanly' },
 ];
 
+// Five Concrete Moves coaching content. Resolution is the systematic
+// weak dimension across failing simulator attempts: transcripts show
+// warm, clear service but candidates miss the five specific moves the
+// Resolution rubric rewards. This panel surfaces those moves and a
+// scenario-tailored worked example so candidates see the bar before
+// they take their first attempt. We are NOT lowering the rubric; we
+// are coaching candidates to hit the existing bar.
+const FIVE_MOVES = [
+  {
+    label: 'The specific reason',
+    desc: 'Name the real cause using a proper term, not a vague summary.',
+  },
+  {
+    label: 'A reference number',
+    desc: 'Give a case or confirmation ID the customer can keep.',
+  },
+  {
+    label: 'A concrete figure',
+    desc: 'State an actual dollar amount and timeline, never "we will bill you later".',
+  },
+  {
+    label: 'A verification or escalation path',
+    desc: 'Tell them how to dispute, confirm, or follow up.',
+  },
+  {
+    label: 'A specific follow-up commitment',
+    desc: 'When and how you will be in touch, and what they get in writing.',
+  },
+];
+
+// Scenario-tailored worked example for the "What this sounds like"
+// callout. Keyed by scenario_code. The framework is constant; the
+// example changes so candidates can see the five moves applied to
+// their specific scenario.
+const RESOLUTION_WORKED_EXAMPLES = {
+  'SC-001': 'I have credited the duplicate $54.99 charge back to your account. Your confirmation number is TEL-2026-77412. The credit will post within 2 business days. If it does not appear by Thursday, call back with that number and any agent can see exactly what I did. I am also sending a written summary to your email on file today.',
+  'SC-002': 'This $847 applies to your annual deductible, which is why your plan did not cover it. Your reference number is EOB-2026-04891. If you would like to dispute it, I can email you a claims-review form and you have 30 days to file. I can also set up a payment plan of $84.70 per month over 10 months starting July 1. I will send a written summary to your email today so you have everything in one place.',
+  'SC-003': 'I have processed your cancellation effective today. Your confirmation number is SAAS-2026-33015. You will not be billed again, and your access continues through the end of your current paid period on June 30. You will receive a cancellation confirmation email within the hour. If you ever want to reactivate, that same number lets any agent restore your account settings.',
+  'SC-004': 'I am sending maintenance to your room within 15 minutes, and your case number is HTL-2026-88204. If they cannot fix it quickly, I have a comparable room on the same floor ready to move you into tonight at no charge. I am also applying a one-night rate adjustment to your folio for the disruption. I will call your room in 20 minutes to confirm everything is resolved before you sleep.',
+};
+
+const RESOLUTION_FALLBACK_EXAMPLE = 'Name the specific reason, give a reference number, state the exact amount and timeline, offer a way to verify or dispute, and commit to a specific follow-up.';
+
 export default function Briefing() {
   const navigate = useNavigate();
   const { sessionId: routeSessionId } = useParams();
@@ -349,6 +392,113 @@ export default function Briefing() {
                 </div>
               </div>
             )}
+
+            {/* Five Moves to Nail Resolution - coaching panel (left-column).
+                Resolution is the systematic weak dimension across simulator
+                attempts. The framework is constant; the worked example below
+                is scenario-tailored via RESOLUTION_WORKED_EXAMPLES lookup. */}
+            <div style={{ marginTop: 26 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: GOLD,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  marginBottom: 12,
+                  fontFamily: VAULT_BODY,
+                  fontWeight: 700,
+                }}
+              >
+                Five Moves to Nail Resolution
+              </div>
+              <p
+                style={{
+                  fontSize: 15,
+                  color: MUTED,
+                  lineHeight: 1.6,
+                  margin: '0 0 18px',
+                  fontFamily: VAULT_BODY,
+                }}
+              >
+                Warm and clear is the hard part, and you have it. To score well on Resolution, make sure you land all five of these before the call ends.
+              </p>
+              <ol
+                style={{
+                  margin: '0 0 22px',
+                  padding: 0,
+                  listStyle: 'none',
+                }}
+              >
+                {FIVE_MOVES.map((m, i) => (
+                  <li
+                    key={m.label}
+                    style={{
+                      display: 'flex',
+                      gap: 12,
+                      marginBottom: 12,
+                      fontFamily: VAULT_BODY,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        flexShrink: 0,
+                        minWidth: 22,
+                        fontSize: 13,
+                        color: GOLD,
+                        fontWeight: 700,
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
+                      {i + 1}.
+                    </span>
+                    <span>
+                      <span style={{ fontSize: 14, color: WHITE, fontWeight: 600 }}>
+                        {m.label}.
+                      </span>{' '}
+                      <span style={{ fontSize: 14, color: MUTED }}>{m.desc}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+
+              {/* Scenario-tailored worked example callout (teal-tinted,
+                  matches Quick Reminders styling from the right column). */}
+              <div
+                style={{
+                  background: 'rgba(26,143,105,0.06)',
+                  border: '1px solid rgba(26,143,105,0.3)',
+                  borderRadius: 8,
+                  padding: 20,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: TEAL2,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                    marginBottom: 10,
+                    fontFamily: VAULT_BODY,
+                  }}
+                >
+                  What This Sounds Like for {session.personaName || 'Your Customer'}
+                </div>
+                <div
+                  style={{
+                    fontFamily: VAULT_DISPLAY,
+                    fontStyle: 'italic',
+                    fontSize: 17,
+                    color: WHITE,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {RESOLUTION_WORKED_EXAMPLES[session.scenarioCode] || RESOLUTION_FALLBACK_EXAMPLE}
+                </div>
+              </div>
+            </div>
 
           </div>
 
