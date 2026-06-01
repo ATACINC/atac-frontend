@@ -46,6 +46,18 @@ function normalizeResult(result) {
   const verificationTierAtIssue = ['headshot', 'verified'].includes(rawTier) ? rawTier : 'none';
   const headshotUrl = ipfsUriToGatewayUrl(rawHeadshot);
 
+  // Phase 4 score triplet. Backend returns result.scores as an object
+  // when the credential was minted through the simulator path, else null.
+  // Pre-Phase-4 credentials keep the legacy `score` field above as the
+  // sole assessment percentage and the breakdown UI stays hidden.
+  const rawScores = result?.scores;
+  const scores = rawScores && rawScores.combined != null ? {
+    assessment:       rawScores.assessment != null ? Number(rawScores.assessment) : null,
+    simulator:        rawScores.simulator  != null ? Number(rawScores.simulator)  : null,
+    combined:         Number(rawScores.combined),
+    weightingVersion: rawScores.weightingVersion || rawScores.weighting_version || null,
+  } : null;
+
   return {
     credentialId,
     candidateName,
@@ -62,6 +74,7 @@ function normalizeResult(result) {
     txHash: result?.txHash || result?.tx_hash,
     verificationTierAtIssue,
     headshotUrl,
+    scores,
   };
 }
 
@@ -182,6 +195,20 @@ export default function Verify() {
   const expiryDate = formatDate(credential.expiresAt);
   const scoreText = credential.score || credential.score === 0 ? `${credential.score}%` : 'Verified';
 
+  // Phase 4 breakdown. When the backend returns a `scores` object, the
+  // hero strip swaps the single Score cell for the Combined headline and
+  // a three-cell breakdown panel renders below. Pre-Phase-4 credentials
+  // (scores=null) keep the existing single-Score behavior verbatim.
+  const hasScores = !!credential.scores;
+  const fmtCombined = (v) => (Number.isInteger(v) ? `${v}` : v.toFixed(1));
+  const assessmentText = hasScores && credential.scores.assessment != null
+    ? `${credential.scores.assessment}%`
+    : null;
+  const callReadinessText = hasScores && credential.scores.simulator != null
+    ? `${credential.scores.simulator}`
+    : null;
+  const combinedText = hasScores ? fmtCombined(credential.scores.combined) : null;
+
   return (
     <div style={s.page}>
       <VerifyHeader styles={s} />
@@ -241,7 +268,9 @@ export default function Verify() {
 
             <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 12 }}>
               <Metric label="Status" value={credential.valid ? 'Valid' : 'Review'} color={credential.valid ? TEAL : RED} />
-              <Metric label="Score" value={scoreText} color={TEAL} />
+              {hasScores
+                ? <Metric label="Combined Score" value={combinedText} color={GOLD} />
+                : <Metric label="Score" value={scoreText} color={TEAL} />}
               <Metric label="Issued" value={issueDate.replace(',', '')} />
               <Metric label="Expires" value={expiryDate.replace(',', '')} />
             </div>
@@ -258,6 +287,19 @@ export default function Verify() {
           </aside>
         </section>
 
+        {hasScores && (
+          <section className="vault-up" style={{ marginTop: 30 }}>
+            <div style={{ ...s.panel, padding: '34px 38px' }}>
+              <div style={{ ...s.kicker, marginBottom: 24 }}>Score Breakdown</div>
+              <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+                <Metric label="Assessment" value={assessmentText || 'Verified'} color={TEAL} />
+                <Metric label="Call Readiness" value={callReadinessText || 'Verified'} color={TEAL} />
+                <Metric label="Combined" value={combinedText} color={GOLD} />
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="verify-grid vault-up" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 430px', gap: 30, marginTop: 30 }}>
           <div style={{ ...s.panel, padding: '34px 38px' }}>
             <div style={{ ...s.kicker, marginBottom: 24 }}>Verification Record</div>
@@ -266,7 +308,15 @@ export default function Verify() {
             <RecordRow label="Credential ID" value={credential.credentialId} color={GOLD} mono />
             <RecordRow label="Issue Date" value={issueDate} />
             <RecordRow label="Expiry Date" value={expiryDate} />
-            <RecordRow label="Assessment Score" value={scoreText} color={TEAL} />
+            {hasScores ? (
+              <>
+                <RecordRow label="Assessment Score" value={assessmentText || scoreText} color={TEAL} />
+                <RecordRow label="Call Readiness Score" value={callReadinessText || 'Verified'} color={TEAL} />
+                <RecordRow label="Combined Score" value={combinedText} color={GOLD} />
+              </>
+            ) : (
+              <RecordRow label="Assessment Score" value={scoreText} color={TEAL} />
+            )}
             <RecordRow label="Blockchain Standard" value="ERC-721 verified credential" />
             {credential.tokenId && <RecordRow label="Token ID" value={credential.tokenId} mono />}
           </div>
