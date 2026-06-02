@@ -29,6 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import { isValidEmail } from '../utils/validation';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
+import COUNTRIES from '../data/countries';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
@@ -217,6 +218,7 @@ export default function Login({ defaultAction }) {
   // Register state
   const [firstName, setFirstName]         = useState('');
   const [lastName,  setLastName]          = useState('');
+  const [country,   setCountry]           = useState('');
   const [regEmail,  setRegEmail]          = useState('');
   const [regPassword, setRegPassword]     = useState('');
   const [regConfirm, setRegConfirm]       = useState('');
@@ -311,6 +313,7 @@ export default function Login({ defaultAction }) {
       setError('You must accept the Terms of Certification to continue.');
       return;
     }
+    if (!country) { setError('Please select your country'); return; }
 
     setLoading(true);
     const termsAcceptedAt = new Date().toISOString();
@@ -323,6 +326,7 @@ export default function Login({ defaultAction }) {
         body: JSON.stringify({
           firstName: firstName.trim(),
           lastName:  lastName.trim(),
+          countryCode: country,
           email:     regEmail.trim().toLowerCase(),
           password:  regPassword,
           termsAccepted: true,
@@ -704,6 +708,29 @@ export default function Login({ defaultAction }) {
                   />
                 </Field>
               </div>
+
+              <Field label="Country">
+                <select
+                  className="atac-input"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  required
+                  style={{
+                    appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                    paddingRight: 44, cursor: 'pointer',
+                    backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23C9A84C' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E\")",
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 16px center',
+                  }}
+                >
+                  <option value="" disabled>Select your country</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code} style={{ background: '#0C1018', color: '#EEE9DF' }}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
 
               <Field label="Email Address">
                 <input
