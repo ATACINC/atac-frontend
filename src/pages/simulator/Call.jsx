@@ -31,6 +31,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Conversation } from '@elevenlabs/client';
 import { patchConversation } from '../../api/client';
+import i18n from '../../i18n';
 
 const BG    = '#080B12';
 const BG1   = '#0C1018';
@@ -125,8 +126,16 @@ export default function Call() {
     let cancelled = false;
 
     (async () => {
+      // Map the candidate's UI language to the ElevenLabs conversation override.
+      // Read once at session start (not at render time). For English, omit the
+      // overrides key entirely — the SDK errors if you override a field that
+      // doesn't need overriding. Non-English: pass { agent: { language: lang } }.
+      // Agents that have not been configured for ES/FR will throw at startSession;
+      // the catch below surfaces a clear user-facing message.
+      const lang = (i18n.language || 'en').split('-')[0].toLowerCase();
+
       try {
-        const conv = await Conversation.startSession({
+        const startOpts = {
           signedUrl,
 
           onConnect: (payload) => {
@@ -182,7 +191,13 @@ export default function Call() {
             // Give the user a moment to read the error before advancing.
             setTimeout(handleAdvanceToResults, 2500);
           },
-        });
+        };
+
+        if (lang !== 'en') {
+          startOpts.overrides = { agent: { language: lang } };
+        }
+
+        const conv = await Conversation.startSession(startOpts);
 
         if (cancelled) {
           // Component unmounted before startSession resolved. Tear down.
@@ -193,7 +208,18 @@ export default function Call() {
         conversationRef.current = conv;
       } catch (err) {
         if (cancelled) return;
-        setErrorText(err?.message || 'We could not start the call.');
+        // Override / agent-language failures land here when the candidate's
+        // selected language isn't yet enabled for this scenario's agent.
+        // Detect by the SDK error message and surface a clear, candidate-
+        // friendly line instead of the raw SDK string.
+        const msg = (err && err.message) ? String(err.message) : '';
+        const isLanguageFailure =
+          lang !== 'en' && /override|language|agent/i.test(msg);
+        if (isLanguageFailure) {
+          setErrorText('This scenario is not yet available in your selected language.');
+        } else {
+          setErrorText(msg || 'We could not start the call.');
+        }
         setConnectionStatus('error');
       }
     })();
