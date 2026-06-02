@@ -9,6 +9,7 @@ import { usePhotoVerification } from '../hooks/usePhotoVerification';
 import CharterCounter from '../components/CharterCounter';
 import CharterCohortBlock from '../components/CharterCohortBlock';
 import CandidateStateRenderer from '../utils/CandidateStateRenderer';
+import RegistryConsentCard from '../components/RegistryConsentCard';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -623,6 +624,8 @@ export default function Dashboard() {
                     <div style={{ fontSize: 13, color: MUTED, wordBreak: 'break-all', fontFamily: 'monospace' }}>{candidateWallet}</div>
                   </div>
                 )}
+
+                <RegistryConsentCard />
               </div>
             </section>
 
