@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import API from '../api/client';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
@@ -80,6 +80,8 @@ function normalizeResult(result) {
 
 export default function Verify() {
   const { credentialId } = useParams();
+  const [sp] = useSearchParams();
+  const t = sp.get('t');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -104,12 +106,12 @@ export default function Verify() {
     `;
     document.head.appendChild(style);
 
-    API.get(`/api/credentials/verify/${credentialId}`)
+    API.get(`/api/credentials/verify/${credentialId}${t ? `?t=${encodeURIComponent(t)}` : ''}`)
       .then(r => { setResult(r.data); setLoading(false); })
       .catch(() => { setError('Credential not found or invalid.'); setLoading(false); });
 
     return () => style.remove();
-  }, [credentialId]);
+  }, [credentialId, t]);
 
   const s = {
     page: {

@@ -202,8 +202,9 @@ export default function Dashboard() {
     }
   };
 
-  const copyLink = (credId) => {
-    navigator.clipboard.writeText(`https://app.atacglobalcx.com/verify/${credId}`);
+  const copyLink = (credId, token) => {
+    const suffix = token ? `?t=${encodeURIComponent(token)}` : '';
+    navigator.clipboard.writeText(`https://app.atacglobalcx.com/verify/${credId}${suffix}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -423,7 +424,7 @@ export default function Dashboard() {
                     <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', minWidth: 210, padding: '15px 24px', marginBottom: 0, fontSize: 12 }} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
                       {downloading ? 'Opening certificate...' : 'Download PDF Certificate'}
                     </button>
-                    <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 210, padding: '14px 24px', marginBottom: 0, color: WHITE, fontSize: 12 }} onClick={() => copyLink(latestCred.credentialId)}>
+                    <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 210, padding: '14px 24px', marginBottom: 0, color: WHITE, fontSize: 12 }} onClick={() => copyLink(latestCred.credentialId, latestCred.verificationToken)}>
                       {copied ? 'Copied' : 'Copy Verification Link'}
                     </button>
                   </div>
@@ -635,7 +636,7 @@ export default function Dashboard() {
                   <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Public Certificate Preview</div>
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>How your credential appears when shared</div>
                 </div>
-                <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 190, marginBottom: 0, padding: '12px 18px', color: WHITE }} onClick={() => copyLink(latestCred.credentialId)}>
+                <button className="btn-out-h" style={{ ...btnOut, width: 'auto', minWidth: 190, marginBottom: 0, padding: '12px 18px', color: WHITE }} onClick={() => copyLink(latestCred.credentialId, latestCred.verificationToken)}>
                   {copied ? 'Copied' : 'Copy Public Link'}
                 </button>
               </div>
@@ -963,7 +964,7 @@ export default function Dashboard() {
                 <button className="btn-gold-h" style={btnGold} onClick={() => downloadCertificate(latestCred.credentialId)} disabled={downloading}>
                   {downloading ? 'Opening certificate...' : '↓ Download PDF Certificate'}
                 </button>
-                <button className="btn-gold-h" style={btnGold} onClick={() => copyLink(latestCred.credentialId)}>
+                <button className="btn-gold-h" style={btnGold} onClick={() => copyLink(latestCred.credentialId, latestCred.verificationToken)}>
                   {copied ? '✓ Copied!' : 'Copy Verification Link'}
                 </button>
                 <button className="btn-gold-h" style={btnTeal} onClick={() => {
