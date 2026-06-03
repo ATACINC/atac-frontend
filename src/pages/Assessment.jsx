@@ -228,7 +228,17 @@ export default function Assessment() {
       if (intendedTier) localStorage.removeItem('atac_intended_tier');
 
       await loadQuestionsAndProceedToIntro();
-    } catch {
+    } catch (err) {
+      // Backend returns 409 AWAITING_SIMULATOR when this candidate already
+      // passed the assessment and the next step is the simulator. Route
+      // them straight to it instead of bouncing through /login.
+      if (err?.response?.status === 409 && err?.response?.data?.code === 'AWAITING_SIMULATOR') {
+        const msg = err.response.data.message
+          || 'Your assessment is complete. Continue with the ATAC Call Readiness Simulator to earn your credential.';
+        showToast(msg, { type: 'info' });
+        navigate('/simulator?auto=true');
+        return;
+      }
       navigate('/login');
     }
   };
@@ -248,6 +258,15 @@ export default function Assessment() {
     try {
       await loadQuestionsAndProceedToIntro();
     } catch (err) {
+      // Backend returns 409 AWAITING_SIMULATOR when this candidate already
+      // passed and the next step is the simulator. Skip the dashboard hop.
+      if (err?.response?.status === 409 && err?.response?.data?.code === 'AWAITING_SIMULATOR') {
+        const msg = err.response.data.message
+          || 'Your assessment is complete. Continue with the ATAC Call Readiness Simulator to earn your credential.';
+        showToast(msg, { type: 'info' });
+        navigate('/simulator?auto=true');
+        return;
+      }
       // Surface fetch failure but keep the user on the assessment route;
       // a retry button is not yet wired here so the candidate would need
       // to refresh. Acceptable for a rare post-selfie failure path.
