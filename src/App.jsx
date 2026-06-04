@@ -24,6 +24,7 @@ const SimulatorBriefing       = lazy(() => import('./pages/simulator/Briefing'))
 const SimulatorCall           = lazy(() => import('./pages/simulator/Call'));
 const SimulatorResults        = lazy(() => import('./pages/simulator/Results'));
 import SimulatorLoadingScreen from './pages/simulator/SimulatorLoadingScreen';
+import SimulatorErrorBoundary from './components/SimulatorErrorBoundary';
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
@@ -55,14 +56,16 @@ export default function App() {
             path="/simulator/*"
             element={
               <PrivateRoute>
-                <Suspense fallback={<SimulatorLoadingScreen />}>
-                  <Routes>
-                    <Route index                 element={<SimulatorEntry />} />
-                    <Route path="briefing/:sessionId" element={<SimulatorBriefing />} />
-                    <Route path="call/:sessionId"     element={<SimulatorCall />} />
-                    <Route path="results/:sessionId"  element={<SimulatorResults />} />
-                  </Routes>
-                </Suspense>
+                <SimulatorErrorBoundary>
+                  <Suspense fallback={<SimulatorLoadingScreen />}>
+                    <Routes>
+                      <Route index                 element={<SimulatorEntry />} />
+                      <Route path="briefing/:sessionId" element={<SimulatorBriefing />} />
+                      <Route path="call/:sessionId"     element={<SimulatorCall />} />
+                      <Route path="results/:sessionId"  element={<SimulatorResults />} />
+                    </Routes>
+                  </Suspense>
+                </SimulatorErrorBoundary>
               </PrivateRoute>
             }
           />
