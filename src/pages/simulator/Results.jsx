@@ -33,6 +33,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import API, { getSimulatorStatus } from '../../api/client';
+import FeedbackPanel from '../../components/FeedbackPanel';
 
 const BG    = '#080B12';
 const BG1   = '#0C1018';
@@ -226,6 +227,19 @@ export default function Results() {
   const overallNum    = overall != null ? Math.round(overall) : null;
   const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
 
+  // Assessment id for the post-simulator FeedbackPanel. Source is the
+  // localStorage blob Assessment.jsx wrote after the candidate passed
+  // Part 1. The sim-live status response does NOT carry assessment_id
+  // and adding it would require a backend join, so we read the value
+  // the assessment flow already persists. FeedbackPanel guards on
+  // !assessmentId and silently hides when this is null (Pioneer
+  // re-validation flows where atac_result is stale or absent).
+  let feedbackAssessmentId = null;
+  try {
+    const stored = JSON.parse(localStorage.getItem('atac_result') || 'null');
+    feedbackAssessmentId = stored?.assessmentId || null;
+  } catch (_) { /* malformed; leave null */ }
+
   // Passed celebration is a full-screen layout, distinct from the
   // standard scored render below. Early-return keeps the failed-state
   // rendering (and OutcomeBlock + DimensionRow sub-components) untouched.
@@ -241,6 +255,7 @@ export default function Results() {
         isPioneer={isPioneer}
         sessionId={routeSessionId}
         navigate={navigate}
+        feedbackAssessmentId={feedbackAssessmentId}
       />
     );
   }
@@ -334,6 +349,12 @@ export default function Results() {
           isPioneer={isPioneer}
           credentialId={credentialId}
         />
+
+        {/* Post-simulator assessment feedback (gated by FeedbackPanel's
+            own assessmentId guard). Only renders when the candidate has
+            an assessment in localStorage from the same flow; Pioneer
+            re-validation paths silently hide it. */}
+        <FeedbackPanel assessmentId={feedbackAssessmentId} source="pioneer" />
 
         {/* Actions */}
         <div style={{ marginTop: 26, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -613,6 +634,7 @@ function PassedCelebration({
   isPioneer,
   sessionId,
   navigate,
+  feedbackAssessmentId,
 }) {
   const [copiedId, setCopiedId] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -890,6 +912,16 @@ function PassedCelebration({
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Post-simulator assessment feedback. Same component instance
+            that used to live on the Part 1 results page; moved here so
+            it collects feedback only after the candidate has gone
+            through the full first-time flow. FeedbackPanel guards on
+            !assessmentId and silently hides for Pioneer re-validation
+            paths where atac_result is stale or absent. */}
+        <section className="sim-passed-section">
+          <FeedbackPanel assessmentId={feedbackAssessmentId} source="pioneer" />
         </section>
 
         {/* === Section 6: Return to Dashboard === */}

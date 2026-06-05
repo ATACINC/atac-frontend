@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { useToast } from '../hooks/useToast';
-import FeedbackPanel from '../components/FeedbackPanel';
 import SelfieCapture from '../components/SelfieCapture';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
@@ -1228,7 +1227,6 @@ export default function Assessment() {
             </div>
           </section>
 
-          <FeedbackPanel assessmentId={result.assessmentId} source="pioneer" />
         </div>
       </div>
     );
