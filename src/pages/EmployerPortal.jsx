@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { isValidEmail } from '../utils/validation';
 import { useToast } from '../hooks/useToast';
+import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -191,7 +192,7 @@ export default function EmployerPortal() {
       {/* ── Topbar ── */}
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <img src="/logo.png" alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain' }} />
+          <img src={brandLogo} alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain' }} />
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 1 }}>Employer & BPO Portal</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>

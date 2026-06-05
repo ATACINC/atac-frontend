@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConsent } from '../hooks/useConsent';
+import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -315,7 +316,7 @@ export default function Payment() {
 
       {/* -- Topbar -- */}
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
         <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
           Blockchain-Verified CX Certification
         </div>

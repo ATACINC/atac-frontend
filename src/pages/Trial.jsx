@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import CharterCounter from '../components/CharterCounter';
+import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -121,7 +122,7 @@ export default function Trial() {
 
       {/* Topbar */}
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
         <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '6px 14px', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em' }}>
           Sign In
         </button>
@@ -189,7 +190,7 @@ export default function Trial() {
 
       {/* Topbar */}
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Progress dots */}
           <div style={{ display: 'flex', gap: 6 }}>
@@ -285,7 +286,7 @@ export default function Trial() {
 
       {/* Topbar */}
       <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px' }}>
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
       </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
