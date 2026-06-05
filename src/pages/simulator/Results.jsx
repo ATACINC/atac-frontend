@@ -227,18 +227,56 @@ export default function Results() {
   const overallNum    = overall != null ? Math.round(overall) : null;
   const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
 
-  // Assessment id for the post-simulator FeedbackPanel. Source is the
-  // localStorage blob Assessment.jsx wrote after the candidate passed
-  // Part 1. The sim-live status response does NOT carry assessment_id
-  // and adding it would require a backend join, so we read the value
-  // the assessment flow already persists. FeedbackPanel guards on
-  // !assessmentId and silently hides when this is null (Pioneer
-  // re-validation flows where atac_result is stale or absent).
-  let feedbackAssessmentId = null;
-  try {
-    const stored = JSON.parse(localStorage.getItem('atac_result') || 'null');
-    feedbackAssessmentId = stored?.assessmentId || null;
-  } catch (_) { /* malformed; leave null */ }
+  // Assessment id for the post-simulator FeedbackPanel. Sourced from
+  // the candidate state resolver (auth-gated, owner-only, populated
+  // across the two-step flow) so feedback still works when the
+  // candidate returns later or signs in from a different device and
+  // localStorage.atac_result is absent. localStorage stays as a
+  // fallback only if the /me/state call fails or returns no id, so a
+  // transient resolver error never eats the feedback when the local
+  // blob happens to hold it. FeedbackPanel guards on !assessmentId
+  // and silently hides when both sources are null (Pioneer
+  // re-validation flows where neither has it).
+  const [feedbackAssessmentId, setFeedbackAssessmentId] = useState(null);
+  const feedbackFetchedRef = useRef(false);
+
+  useEffect(() => {
+    // Fire once when the simulator status first reaches scored.
+    // Non-scored states (in_progress, scoring, etc.) skip entirely so
+    // /me/state is not called during the scoring interim.
+    if (statusData?.status !== 'scored') return undefined;
+    if (feedbackFetchedRef.current) return undefined;
+    feedbackFetchedRef.current = true;
+
+    let cancelled = false;
+    const localFallback = (() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('atac_result') || 'null');
+        return stored?.assessmentId || null;
+      } catch (_) { return null; }
+    })();
+
+    API.get('/api/candidate/me/state')
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data || {};
+        const id =
+          data?.context?.latestAssessment?.id ||
+          data?.context?.passedAwaitingSimAssessment?.id ||
+          localFallback ||
+          null;
+        setFeedbackAssessmentId(id);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Resolver call failed. Fall back to localStorage so a
+        // transient error never loses feedback when atac_result
+        // happens to hold the assessmentId.
+        setFeedbackAssessmentId(localFallback);
+      });
+
+    return () => { cancelled = true; };
+  }, [statusData?.status]);
 
   // Passed celebration is a full-screen layout, distinct from the
   // standard scored render below. Early-return keeps the failed-state
