@@ -197,19 +197,24 @@ export default function Verify() {
   const expiryDate = formatDate(credential.expiresAt);
   const scoreText = credential.score || credential.score === 0 ? `${credential.score}%` : 'Verified';
 
-  // Phase 4 breakdown. When the backend returns a `scores` object, the
-  // hero strip swaps the single Score cell for the Combined headline and
-  // a three-cell breakdown panel renders below. Pre-Phase-4 credentials
-  // (scores=null) keep the existing single-Score behavior verbatim.
+  // Score display matches the PDF and dashboard embed: Overall (combined)
+  // is the hero, Assessment + Simulator are the breakdown. When the
+  // backend returns no `scores` object, or when simulator is null inside
+  // a scores object (grandfathered / pre-simulator credentials), the hero
+  // falls back to the assessment percentage and the breakdown panel
+  // does not render. Combined display matches the PDF format: one decimal
+  // when not whole, percent suffix. Values come from the API response,
+  // never reconstructed client-side.
   const hasScores = !!credential.scores;
-  const fmtCombined = (v) => (Number.isInteger(v) ? `${v}` : v.toFixed(1));
+  const hasSimulatorScore = hasScores && credential.scores.simulator != null;
+  const fmtCombined = (v) => (Number.isInteger(v) ? `${v}%` : `${v.toFixed(1)}%`);
   const assessmentText = hasScores && credential.scores.assessment != null
     ? `${credential.scores.assessment}%`
     : null;
-  const callReadinessText = hasScores && credential.scores.simulator != null
+  const simulatorText = hasSimulatorScore
     ? `${credential.scores.simulator}`
     : null;
-  const combinedText = hasScores ? fmtCombined(credential.scores.combined) : null;
+  const combinedText = hasSimulatorScore ? fmtCombined(credential.scores.combined) : null;
 
   return (
     <div style={s.page}>
@@ -270,9 +275,9 @@ export default function Verify() {
 
             <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 12 }}>
               <Metric label="Status" value={credential.valid ? 'Valid' : 'Review'} color={credential.valid ? TEAL : RED} />
-              {hasScores
-                ? <Metric label="Combined Score" value={combinedText} color={GOLD} />
-                : <Metric label="Score" value={scoreText} color={TEAL} />}
+              {hasSimulatorScore
+                ? <Metric label="Overall Score" value={combinedText} color={GOLD} />
+                : <Metric label="Overall Score" value={assessmentText || scoreText} color={TEAL} />}
               <Metric label="Issued" value={issueDate.replace(',', '')} />
               <Metric label="Expires" value={expiryDate.replace(',', '')} />
             </div>
@@ -289,14 +294,13 @@ export default function Verify() {
           </aside>
         </section>
 
-        {hasScores && (
+        {hasSimulatorScore && (
           <section className="vault-up" style={{ marginTop: 30 }}>
             <div style={{ ...s.panel, padding: '34px 38px' }}>
               <div style={{ ...s.kicker, marginBottom: 24 }}>Score Breakdown</div>
-              <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
-                <Metric label="Assessment" value={assessmentText || 'Verified'} color={TEAL} />
-                <Metric label="Call Readiness" value={callReadinessText || 'Verified'} color={TEAL} />
-                <Metric label="Combined" value={combinedText} color={GOLD} />
+              <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                <Metric label="Assessment" value={assessmentText} color={TEAL} />
+                <Metric label="Simulator" value={simulatorText} color={TEAL} />
               </div>
             </div>
           </section>
@@ -310,14 +314,13 @@ export default function Verify() {
             <RecordRow label="Credential ID" value={credential.credentialId} color={GOLD} mono />
             <RecordRow label="Issue Date" value={issueDate} />
             <RecordRow label="Expiry Date" value={expiryDate} />
-            {hasScores ? (
+            {hasSimulatorScore ? (
               <>
-                <RecordRow label="Assessment Score" value={assessmentText || scoreText} color={TEAL} />
-                <RecordRow label="Call Readiness Score" value={callReadinessText || 'Verified'} color={TEAL} />
-                <RecordRow label="Combined Score" value={combinedText} color={GOLD} />
+                <RecordRow label="Assessment Score" value={assessmentText} color={TEAL} />
+                <RecordRow label="Simulator Score" value={simulatorText} color={TEAL} />
               </>
             ) : (
-              <RecordRow label="Assessment Score" value={scoreText} color={TEAL} />
+              <RecordRow label="Assessment Score" value={assessmentText || scoreText} color={TEAL} />
             )}
             <RecordRow label="Blockchain Standard" value="ERC-721 verified credential" />
             {credential.tokenId && <RecordRow label="Token ID" value={credential.tokenId} mono />}
