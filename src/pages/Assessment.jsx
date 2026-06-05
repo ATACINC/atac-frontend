@@ -4,6 +4,7 @@ import API from '../api/client';
 import { useToast } from '../hooks/useToast';
 import FeedbackPanel from '../components/FeedbackPanel';
 import SelfieCapture from '../components/SelfieCapture';
+import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
@@ -511,7 +512,7 @@ export default function Assessment() {
   if (phase === 'locked') return (
     <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', maxWidth: 420, padding: 40 }} className="vault-up">
-        <img src="/logo.png" alt="ATAC Global CX" style={{ height: 280, objectFit: 'contain', marginBottom: 28 }} />
+        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 280, objectFit: 'contain', marginBottom: 28 }} />
         <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, lineHeight: 1.2, marginBottom: 16 }}>Assessment Access Required</div>
         <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 32 }}>
           Complete your purchase to unlock the Remote CX Readiness Assessment and begin your certification journey.
@@ -626,7 +627,7 @@ export default function Assessment() {
 
         {/* Branding */}
         <div style={{ padding: '20px 18px 14px', borderBottom: `1px solid ${BORDER2}` }}>
-          <img src="/logo.png" alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain' }} />
+          <img src={brandLogo} alt="ATAC Global CX" style={{ height: 96, objectFit: 'contain' }} />
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 2 }}>Readiness Assessment</div>
         </div>
 
