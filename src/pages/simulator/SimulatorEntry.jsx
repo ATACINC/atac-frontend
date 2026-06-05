@@ -34,11 +34,38 @@ const BG    = '#080B12';
 const BG1   = '#0C1018';
 const GOLD  = '#C9A84C';
 const RED   = '#C45C5C';
+const AMBER = '#C48A2A';
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.45)';
 const BORDER = 'rgba(201,168,76,0.15)';
+const BORDER2 = 'rgba(238,233,223,0.07)';
 const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+
+// Discriminate the assign error: a 429 with code SIMULATOR_RETAKE_COOLDOWN
+// is a legitimate cooldown state and gets its own UI (matches the dashboard
+// CooldownCard treatment). Everything else falls through to the generic
+// "could not start" card so a 500 or transient network error still surfaces
+// clearly.
+function parseAssignError(err) {
+  const status = err?.response?.status;
+  const data   = err?.response?.data;
+  if (status === 429 && data?.code === 'SIMULATOR_RETAKE_COOLDOWN') {
+    const hoursRemaining = typeof data.hours_remaining === 'number'
+      ? data.hours_remaining
+      : null;
+    return {
+      kind: 'cooldown',
+      hoursRemaining,
+      reason: data.error || data.message || null,
+    };
+  }
+  const msg = data?.error || err?.message || 'Unknown error';
+  return {
+    kind: 'generic',
+    message: `We could not assign your scenario. ${msg}. Please try again from your dashboard.`,
+  };
+}
 
 const SESSION_STORAGE_KEY = 'atac_sim_session';
 const SESSION_MAX_AGE_MIN = 5;
@@ -98,7 +125,9 @@ export default function SimulatorEntry() {
   const autoFlag = searchParams.get('auto') === 'true';
   const isAutoFlow = autoFlag && !isPioneerFlow;
 
-  const [error, setError] = useState(null);
+  // errorState is null | { kind: 'cooldown', hoursRemaining, reason }
+  //                    | { kind: 'generic',  message }
+  const [errorState, setErrorState] = useState(null);
   const [autoAssigning, setAutoAssigning] = useState(false);
 
   // Concurrent-assignment protection runs once on mount.
@@ -138,7 +167,10 @@ export default function SimulatorEntry() {
     } else if (!isPioneerFlow) {
       // No credential_id and no auto=true. User arrived at /simulator
       // without a valid entry signal. Send them back to dashboard.
-      setError('Simulator must be started from your dashboard. Redirecting...');
+      setErrorState({
+        kind: 'generic',
+        message: 'Simulator must be started from your dashboard. Redirecting...',
+      });
       setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,30 +178,120 @@ export default function SimulatorEntry() {
 
   const autoAssign = async () => {
     setAutoAssigning(true);
-    setError(null);
+    setErrorState(null);
     try {
       const res = await assignSimulator(null, null);
       const stashed = stashSimulatorSession(res.data, null);
       navigate(`/simulator/briefing/${stashed.sessionId}`, { replace: true });
     } catch (err) {
       setAutoAssigning(false);
-      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
-      setError(`We could not assign your scenario. ${msg}. Please try again from your dashboard.`);
+      setErrorState(parseAssignError(err));
     }
   };
 
-  // Pioneer flow: render the picker. ScenarioPicker handles assign on click.
-  if (isPioneerFlow && !error) {
+  // Pioneer flow: render the picker. ScenarioPicker forwards the raw
+  // error object so this component can discriminate cooldown vs generic.
+  if (isPioneerFlow && !errorState) {
     return (
       <ScenarioPicker
         credentialId={credentialId}
-        onError={(msg) => setError(msg)}
+        onError={(err) => setErrorState(parseAssignError(err))}
       />
     );
   }
 
-  // Error state for either flow.
-  if (error) {
+  // Cooldown state: the candidate's previous simulator attempt is still
+  // inside the retake window. Matches the dashboard CooldownCard copy
+  // ("Simulator cooldown active") and surfaces the backend's hours_remaining
+  // plus its human-readable reason. Back to Dashboard is the only action;
+  // a retry button here would just re-trigger the same 429.
+  if (errorState && errorState.kind === 'cooldown') {
+    const hours = errorState.hoursRemaining;
+    const hoursLine = typeof hours === 'number' && hours > 0
+      ? `You can try again in ${hours} ${hours === 1 ? 'hour' : 'hours'}.`
+      : null;
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          background: BG,
+          color: WHITE,
+          fontFamily: VAULT_BODY,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 24,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 480,
+            background: BG1,
+            border: `1px solid ${BORDER2}`,
+            borderLeft: `3px solid ${AMBER}`,
+            borderRadius: 4,
+            padding: '28px 32px',
+          }}
+        >
+          <div style={{ fontSize: 11, color: AMBER, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
+            Simulator on cooldown
+          </div>
+          <h2
+            style={{
+              fontFamily: VAULT_DISPLAY,
+              fontSize: 26,
+              fontWeight: 400,
+              color: WHITE,
+              margin: '0 0 12px',
+              lineHeight: 1.2,
+            }}
+          >
+            Simulator cooldown active
+          </h2>
+          {errorState.reason && (
+            <p style={{ fontSize: 14, color: 'rgba(238,233,223,0.76)', lineHeight: 1.7, margin: '0 0 14px' }}>
+              {errorState.reason}
+            </p>
+          )}
+          {hoursLine && (
+            <div
+              style={{
+                fontSize: 13,
+                color: AMBER,
+                letterSpacing: '0.06em',
+                marginBottom: 22,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {hoursLine}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            style={{
+              background: GOLD,
+              color: BG,
+              border: 'none',
+              borderRadius: 2,
+              padding: '12px 22px',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              fontFamily: VAULT_BODY,
+            }}
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Generic error state (500 ASSIGN_FAILED, network failure, unknown).
+  if (errorState && errorState.kind === 'generic') {
     return (
       <div
         style={{
@@ -197,7 +319,7 @@ export default function SimulatorEntry() {
             Could not start simulator
           </div>
           <p style={{ fontSize: 14, color: WHITE, lineHeight: 1.6, margin: '0 0 22px' }}>
-            {error}
+            {errorState.message}
           </p>
           <button
             type="button"

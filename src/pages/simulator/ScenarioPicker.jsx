@@ -135,8 +135,12 @@ export default function ScenarioPicker({ credentialId, onError }) {
       navigate(`/simulator/briefing/${stashed.sessionId}`, { replace: true });
     } catch (err) {
       setSubmittingCode(null);
-      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
-      onError(`We could not assign that scenario. ${msg}. Please try again.`);
+      // Forward the raw axios error so SimulatorEntry can discriminate
+      // between a 429 cooldown (its own card) and a generic failure
+      // (the existing red "could not start" card). Previously we pre
+      // flattened to a string here, which collapsed all error shapes
+      // and made the cooldown indistinguishable from a 500.
+      onError(err);
     }
   };
 
