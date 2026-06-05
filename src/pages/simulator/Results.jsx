@@ -32,7 +32,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getSimulatorStatus } from '../../api/client';
+import API, { getSimulatorStatus } from '../../api/client';
 
 const BG    = '#080B12';
 const BG1   = '#0C1018';
@@ -609,7 +609,7 @@ function PassedCelebration({
   deltaPts,
   dimensions,
   weights,
-  credentialId,
+  credentialId: initialCredentialId,
   isPioneer,
   sessionId,
   navigate,
@@ -617,9 +617,89 @@ function PassedCelebration({
   const [copiedId, setCopiedId] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
-  const verifyUrl = credentialId
-    ? `https://app.atacglobalcx.com/verify/${credentialId}`
-    : '';
+  // Mint-resolution state. Seeded from the prop (truthy for the Pioneer
+  // flow where simulator_sessions.credential_id carries it through the
+  // /sim-live/status response). For new-candidate flow the prop is null
+  // and the latest-credential poll below resolves it. verifyUrl is read
+  // off the API response only -- never constructed client-side -- so the
+  // public verify URL is single-source-of-truth from the backend.
+  const [resolved, setResolved] = useState(() =>
+    initialCredentialId
+      ? { credentialId: initialCredentialId, verifyUrl: `https://app.atacglobalcx.com/verify/${initialCredentialId}` }
+      : { credentialId: null, verifyUrl: null }
+  );
+  const [mintTimedOut, setMintTimedOut] = useState(false);
+  const [refreshNonce, setRefreshNonce] = useState(0);
+
+  // Poll GET /api/credentials/candidate/:candidateId/latest every 3s
+  // until { status: 'minted' } returns, or 90s elapses. Skips entirely
+  // when the credential id is already known (Pioneer seed or earlier
+  // resolve). On timeout, sets mintTimedOut so the UI swaps to the
+  // graceful fallback. Refresh button bumps refreshNonce to re-arm.
+  useEffect(() => {
+    if (resolved.credentialId) return undefined;
+
+    let candidateId = null;
+    try {
+      const cand = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
+      candidateId = cand?.id || null;
+    } catch (_) { /* malformed identity payload; cannot poll */ }
+    if (!candidateId) return undefined;
+
+    let cancelled = false;
+    let intervalId = null;
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 90_000;
+    const INTERVAL_MS = 3_000;
+
+    const stop = () => {
+      if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    };
+
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const res = await API.get(`/api/credentials/candidate/${candidateId}/latest`);
+        if (cancelled) return;
+        const data = res?.data || {};
+        if (data.status === 'minted' && data.credentialId) {
+          // Resolved. Use API verifyUrl as the single source of truth.
+          setResolved({
+            credentialId: data.credentialId,
+            verifyUrl:    data.verifyUrl || null,
+          });
+          stop();
+          return;
+        }
+      } catch (_) {
+        // Soft-fail individual polls; next tick will retry. The 90s
+        // budget below is the only exit on persistent failure.
+      }
+      if (Date.now() - startedAt >= TIMEOUT_MS) {
+        setMintTimedOut(true);
+        stop();
+      }
+    };
+
+    tick();
+    intervalId = setInterval(tick, INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [resolved.credentialId, refreshNonce]);
+
+  const handleRefresh = () => {
+    setMintTimedOut(false);
+    setRefreshNonce((n) => n + 1);
+  };
+
+  // Effective values for the rest of the render. credentialId / verifyUrl
+  // names are preserved so the existing share-action code below picks up
+  // the resolved data unchanged once the poll lands.
+  const credentialId = resolved.credentialId;
+  const verifyUrl = resolved.verifyUrl || '';
   const linkedInProfileUrl = credentialId ? buildLinkedInAddUrl(credentialId, verifyUrl) : '#';
   const linkedInShareUrl = verifyUrl
     ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`
@@ -702,9 +782,26 @@ function PassedCelebration({
             <div className="sim-passed-credential-row">
               <div className="sim-passed-credential-id-block">
                 <div className="sim-passed-field-label">Credential ID</div>
-                <div className="sim-passed-credential-id">
-                  {credentialId || 'Generating...'}
-                </div>
+                {credentialId ? (
+                  <div className="sim-passed-credential-id">
+                    {credentialId}
+                  </div>
+                ) : mintTimedOut ? (
+                  <div className="sim-passed-credential-id-fallback">
+                    Your credential is being finalized. We have emailed your verification link to you, and it will also appear on your dashboard shortly.
+                    <button
+                      type="button"
+                      className="sim-passed-refresh-btn"
+                      onClick={handleRefresh}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                ) : (
+                  <div className="sim-passed-credential-id sim-passed-credential-id-pending">
+                    Generating...
+                  </div>
+                )}
               </div>
               {credentialId && (
                 <button
@@ -727,8 +824,12 @@ function PassedCelebration({
                   rel="noopener"
                   className="sim-passed-verify-link"
                 >
-                  app.atacglobalcx.com/verify/{credentialId}
+                  {verifyUrl.replace(/^https?:\/\//, '')}
                 </a>
+              ) : mintTimedOut ? (
+                <div className="sim-passed-verify-pending">
+                  Your dashboard will show the link as soon as the mint completes.
+                </div>
               ) : (
                 <div className="sim-passed-verify-pending">
                   Will appear here once your credential is minted.
@@ -1106,6 +1207,42 @@ function PassedCelebration({
           font-size: 13px;
           color: ${MUTED};
           font-style: italic;
+        }
+        /* Mint poll: subtle opacity pulse while waiting for the
+           credential ID to resolve. Stops once the ID lands or the
+           90s budget is exhausted. */
+        .sim-passed-credential-id-pending {
+          animation: sim-mint-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes sim-mint-pulse {
+          0%, 100% { opacity: 1; }
+          50%      { opacity: 0.55; }
+        }
+        .sim-passed-credential-id-fallback {
+          font-family: ${VAULT_BODY};
+          font-size: 14px;
+          color: ${WHITE};
+          line-height: 1.6;
+          max-width: 640px;
+        }
+        .sim-passed-refresh-btn {
+          display: inline-block;
+          margin-top: 12px;
+          background: transparent;
+          border: 1px solid ${BORDER};
+          border-radius: 4px;
+          color: ${GOLD};
+          padding: 7px 14px;
+          font-size: 11px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          font-weight: 700;
+          cursor: pointer;
+          font-family: ${VAULT_BODY};
+          transition: background 0.15s, border-color 0.15s;
+        }
+        .sim-passed-refresh-btn:hover {
+          background: rgba(201,168,76,0.08);
         }
 
         /* === Section 4: LinkedIn share =============================== */
