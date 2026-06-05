@@ -75,11 +75,19 @@ export default function Dashboard() {
   const [walletSaved,       setWalletSaved]       = useState(false);
   const [walletError,       setWalletError]       = useState('');
   const [candidateWallet,   setCandidateWallet]   = useState(candidate.wallet_address || '');
-  // Phase 5: resolved candidate state from GET /api/candidate/me/state
-  // (backend commit 77e01f8). Drives the CandidateStateRenderer hero
-  // block. Null while loading; on 4xx/5xx we fall back to the
-  // pre-Phase-5 default rendering (no hero).
+  // Phase 5: resolved candidate state from GET /api/candidate/me/state.
+  // Drives both the CandidateStateRenderer hero block AND the gates on
+  // every legacy Start Assessment surface in this file. The resolver is
+  // the single source of truth for "what should the candidate do next?"
+  // so a paid candidate who already passed (status awaiting_simulator)
+  // never sees a stale Start Assessment CTA.
+  // States: flowStateLoading=true on initial fetch and on a manual
+  // refresh. flowStateError=true after the auto-retry exhausted, used
+  // to render a neutral retry panel instead of silently falling back
+  // to the legacy Start Assessment CTAs.
   const [flowState,         setFlowState]         = useState(null);
+  const [flowStateLoading,  setFlowStateLoading]  = useState(true);
+  const [flowStateError,    setFlowStateError]    = useState(false);
 
   useEffect(() => {
     injectKF();
@@ -127,16 +135,30 @@ export default function Dashboard() {
     finally { setLoading(false); }
   };
 
-  // Phase 5: pull the resolved candidate state. Failure is silent so the
-  // dashboard keeps rendering pre-Phase-5 (no hero) if the endpoint is
-  // unavailable or returns 5xx.
-  const loadFlowState = async () => {
+  // Phase 5: pull the resolved candidate state. One automatic retry on
+  // failure (2s delay) before surfacing the retry panel. Success clears
+  // both loading and error flags; final failure clears loading and sets
+  // error so the UI never silently shows the legacy Start Assessment
+  // CTAs while the resolver is unavailable.
+  const loadFlowState = async (attempt = 0) => {
+    if (attempt === 0) {
+      setFlowStateLoading(true);
+      setFlowStateError(false);
+    }
     try {
       const res = await API.get('/api/candidate/me/state');
       setFlowState(res.data || null);
+      setFlowStateLoading(false);
+      setFlowStateError(false);
     } catch (err) {
       console.error('Load candidate state error', err);
+      if (attempt === 0) {
+        setTimeout(() => loadFlowState(1), 2000);
+        return;
+      }
       setFlowState(null);
+      setFlowStateLoading(false);
+      setFlowStateError(true);
     }
   };
 
@@ -287,6 +309,16 @@ export default function Dashboard() {
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
 
+  // Phase 5 gate helpers. isFlowReady is true once /me/state has resolved
+  // (success). isStartAssessmentStep is the single source of truth for
+  // every legacy Start Assessment surface below: each one renders ONLY
+  // when the resolver says the next step is to start the assessment.
+  // While loading or after the retry exhausted, both flags are false and
+  // the legacy CTAs stay hidden so the candidate never sees a stale
+  // Start Assessment button competing with the Phase 5 hero.
+  const isFlowReady = !!flowState && !!flowState.nextStep;
+  const isStartAssessmentStep = isFlowReady && flowState.nextStep === 'start_assessment';
+
   const latestCred = credentials[0];
   const dims       = result?.dimensions || {};
   const hasCred    = credentials.length > 0;
@@ -342,8 +374,35 @@ export default function Dashboard() {
 
       <div style={{ maxWidth: 1540, margin: '0 auto', padding: '52px 48px' }}>
 
-        {/* -- Payment success banner -- */}
-        {paymentSuccess && (
+        {/* -- Flow state loading / retry panel (replaces the silent
+             null-state trap; while /me/state is in flight or after the
+             retry exhausted, render a neutral panel instead of falling
+             back to legacy Start Assessment surfaces) -- */}
+        {flowStateLoading && !hasCred && (
+          <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '22px 26px', marginBottom: 24, color: MUTED, fontSize: 13, letterSpacing: '0.06em' }}>
+            Loading your dashboard...
+          </div>
+        )}
+        {flowStateError && !hasCred && (
+          <div className="vault-up" role="alert" style={{ background: 'rgba(196,138,42,0.07)', border: '1px solid rgba(196,138,42,0.28)', borderRadius: 4, padding: '22px 26px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 240 }}>
+              <div style={{ fontSize: 12, color: AMBER, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 6, fontWeight: 700 }}>Dashboard unavailable</div>
+              <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.55 }}>We could not load your next step. Refresh to try again.</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => loadFlowState(0)}
+              style={{ background: 'transparent', color: AMBER, border: `1px solid ${AMBER}`, borderRadius: 2, padding: '10px 20px', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', cursor: 'pointer', fontFamily: VAULT_BODY }}
+            >
+              Refresh
+            </button>
+          </div>
+        )}
+
+        {/* -- Payment success banner (gated on the resolver agreeing the
+             next step is the assessment; prevents the banner re-firing
+             for a candidate whose nextStep is take_simulator) -- */}
+        {paymentSuccess && isStartAssessmentStep && (
           <div className="vault-up" style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.25)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
               <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: TEAL2, marginBottom: 6 }}>Payment Confirmed — You're Ready to Begin</div>
@@ -363,8 +422,10 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* -- Assessment ready banner (paid, not started) -- */}
-        {!paymentSuccess && paymentVerified && !result && credentials.length === 0 && (
+        {/* -- Assessment ready banner (paid, not started). Gated on the
+             resolver so a candidate who has already passed (next step is
+             take_simulator) never sees this stale banner. -- */}
+        {!paymentSuccess && isStartAssessmentStep && (
           <div className="vault-up" style={{ background: 'rgba(91,168,212,0.07)', border: '1px solid rgba(91,168,212,0.22)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
               <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: '#5BA8D4', marginBottom: 6 }}>Your Assessment Is Ready</div>
@@ -682,7 +743,7 @@ export default function Dashboard() {
           </div>
         </div>}
 
-        {!result && credentials.length === 0 && paymentVerified && (
+        {isStartAssessmentStep && (
           <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 34px', marginBottom: 28, display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 30, alignItems: 'stretch' }}>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 22 }}>
               <div>
@@ -770,12 +831,13 @@ export default function Dashboard() {
               {loading ? (
                 <div style={{ color: MUTED, fontSize: 13 }}>Loading…</div>
               ) : credentials.length === 0 ? (
-                // Phase 5: render the original empty state only when the
-                // candidate state resolver says the next step is to start
-                // (or before the state has loaded so the page is not
-                // blank). For other states the CandidateStateRenderer
-                // hero above already covers the CTA.
-                (!flowState || flowState.nextStep === 'start_assessment') ? (
+                // Phase 5: render the original empty state ONLY when the
+                // resolver explicitly says start_assessment. While loading
+                // or after the retry exhausted, hide the legacy CTA so
+                // the candidate never sees a stale Start Assessment
+                // button. The retry panel at the top handles the failure
+                // state separately.
+                isStartAssessmentStep ? (
                 <div style={{ textAlign: 'center', padding: '42px 0' }}>
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: WHITE, fontWeight: 300, marginBottom: 8 }}>No credentials issued yet.</div>
                   <div style={{ fontSize: 14, color: MUTED, marginBottom: 24 }}>Your certificate appears here after you pass the assessment.</div>
@@ -882,8 +944,10 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Start assessment (paid, no result) */}
-            {!result && credentials.length === 0 && paymentVerified && (
+            {/* Start assessment (resolver-gated). Hidden for take_simulator
+                and every other non-start_assessment state so it stops
+                competing with the Phase 5 hero. */}
+            {isStartAssessmentStep && (
               <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '30px 36px', marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 14 }}>Ready to Begin</div>
                 <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, marginBottom: 22 }}>

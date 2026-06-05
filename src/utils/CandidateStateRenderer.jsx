@@ -33,6 +33,29 @@ const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
 const SUPPORT_EMAIL = 'credentials@atacglobalcx.com';
 
+// Backend may return action.url as an absolute origin URL (for example
+// 'https://app.atacglobalcx.com/simulator?auto=true'). React Router treats
+// an absolute string as a relative path and stitches it onto the current
+// location, producing /dashboard/https://... and a 404. Normalize through
+// the URL parser: same-origin targets feed only the path + search into
+// navigate(); cross-origin targets get a full-page assign so SPA routing
+// never sees them. Malformed values fall back to the original behavior.
+function navigateNormalized(navigate, rawUrl) {
+  if (!rawUrl) return;
+  let parsed;
+  try {
+    parsed = new URL(rawUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+  } catch (_) {
+    navigate(rawUrl);
+    return;
+  }
+  if (typeof window !== 'undefined' && parsed.origin !== window.location.origin) {
+    window.location.assign(parsed.href);
+    return;
+  }
+  navigate(parsed.pathname + parsed.search + parsed.hash);
+}
+
 export default function CandidateStateRenderer({
   flowState,
   navigate,
@@ -81,7 +104,7 @@ export default function CandidateStateRenderer({
 
   const handleClick = () => {
     if (cfg.handler === 'navigate') {
-      if (ctaTarget) navigate(ctaTarget);
+      if (ctaTarget) navigateNormalized(navigate, ctaTarget);
       return;
     }
     if (cfg.handler === 'mailto') {
