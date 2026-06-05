@@ -562,6 +562,15 @@ export default function Dashboard() {
                       </button>
                     </div>
                   ))}
+
+                  {/* Public Registry consent toggle. Relocated here from
+                      the bottom of the right-hand column so the privacy
+                      control sits next to the credential it governs.
+                      Component is self-contained; relocation does not
+                      affect its read/write API wiring. */}
+                  <div style={{ marginTop: 20 }}>
+                    <RegistryConsentCard />
+                  </div>
                 </div>
 
                 {/*
@@ -691,8 +700,6 @@ export default function Dashboard() {
                     <div style={{ fontSize: 13, color: MUTED, wordBreak: 'break-all', fontFamily: 'monospace' }}>{candidateWallet}</div>
                   </div>
                 )}
-
-                <RegistryConsentCard />
               </div>
             </section>
 
