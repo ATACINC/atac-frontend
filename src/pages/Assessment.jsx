@@ -1100,8 +1100,8 @@ export default function Assessment() {
             <aside style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '34px 34px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'center', marginBottom: 34 }}>
                 <div>
-                  <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>Final Score</div>
-                  <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>{passed ? 'Assessment Passed' : 'Assessment Not Passed'}</div>
+                  <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>Assessment Score</div>
+                  <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, color: WHITE, fontWeight: 300 }}>{passed ? 'Part 1 of 2: Assessment Passed' : 'Assessment Not Passed'}</div>
                 </div>
                 <div style={{ width: 88, height: 88, borderRadius: '50%', border: `1px solid ${statusBorder}`, background: statusBg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: statusColor, fontWeight: 700, letterSpacing: '0.14em' }}>
                   {passed ? 'PASS' : 'REVIEW'}
