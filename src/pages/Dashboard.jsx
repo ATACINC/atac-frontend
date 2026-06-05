@@ -262,7 +262,7 @@ export default function Dashboard() {
 
   const saveWallet = async () => {
     if (!/^0x[0-9a-fA-F]{40}$/.test(walletInput)) {
-      setWalletError('Invalid address — must start with 0x and be 42 characters');
+      setWalletError('Invalid address. Must start with 0x and be 42 characters.');
       return;
     }
     setWalletSaving(true);
@@ -294,7 +294,7 @@ export default function Dashboard() {
       program === 'CCSS' ? 'Certified Customer Service Supervisor (CCSS)' :
       program === 'CCSM' ? 'Certified Customer Service Manager (CCSM)' :
       program;
-    return `Proud to have earned my ${programLabel} from @ATACGlobalCX — blockchain-verified, globally recognized.\n\nVerify my credential: app.atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
+    return `Proud to have earned my ${programLabel} from @ATACGlobalCX, blockchain-verified, globally recognized.\n\nVerify my credential: app.atacglobalcx.com/verify/${credId}\n\n#CXCertified #RemoteWork #BlockchainCredential #CustomerExperience #ATACGlobalCX`;
   };
 
   const copyLinkedInCaption = (cred) => {
@@ -303,7 +303,7 @@ export default function Dashboard() {
       setLinkedInCopied(true);
       setTimeout(() => setLinkedInCopied(false), 3000);
     }).catch(() => {
-      showToast('Could not copy — please select the caption text and copy manually.', true);
+      showToast('Could not copy. Please select the caption text and copy manually.', true);
     });
   };
 
@@ -318,6 +318,11 @@ export default function Dashboard() {
   // Start Assessment button competing with the Phase 5 hero.
   const isFlowReady = !!flowState && !!flowState.nextStep;
   const isStartAssessmentStep = isFlowReady && flowState.nextStep === 'start_assessment';
+  // Awaiting-simulator: candidate has passed the assessment but not yet
+  // completed the simulator. Used to swap state-correct copy on the
+  // Welcome subtitle and the empty-certificate panel so the page does
+  // not tell a passed candidate to "complete your assessment".
+  const isAwaitingSimulator = isFlowReady && flowState.nextStep === 'take_simulator';
 
   const latestCred = credentials[0];
   const dims       = result?.dimensions || {};
@@ -405,7 +410,7 @@ export default function Dashboard() {
         {paymentSuccess && isStartAssessmentStep && (
           <div className="vault-up" style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.25)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
-              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: TEAL2, marginBottom: 6 }}>Payment Confirmed — You're Ready to Begin</div>
+              <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: TEAL2, marginBottom: 6 }}>Payment Confirmed: You're Ready to Begin</div>
               <div style={{ fontSize: 14, color: MUTED }}>Your assessment session is ready. Click to start your 40-question timed assessment.</div>
             </div>
             <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
@@ -739,7 +744,9 @@ export default function Dashboard() {
             {`Welcome, ${firstName}.`}
           </div>
           <div style={{ fontSize: 15, color: MUTED, marginTop: 8 }}>
-            Complete your assessment to earn your blockchain-verified credential.
+            {isAwaitingSimulator
+              ? 'You passed the assessment. Complete the ATAC Call Readiness Simulator to earn your credential.'
+              : 'Complete your assessment to earn your blockchain-verified credential.'}
           </div>
         </div>}
 
@@ -900,7 +907,7 @@ export default function Dashboard() {
                     You're invited to join the network.
                   </div>
                   <div style={{ fontSize: 12, color: MUTED, lineHeight: 1.7 }}>
-                    Connect with certified CX professionals globally. Access job leads, peer support, and resources inside ISORA — the community built for remote CX excellence.
+                    Connect with certified CX professionals globally. Access job leads, peer support, and resources inside ISORA, the community built for remote CX excellence.
                   </div>
                 </div>
 
@@ -1056,7 +1063,7 @@ export default function Dashboard() {
                       { n: '01', t: 'Download your certificate', d: 'Click "Download PDF Certificate" above to save your file.' },
                       { n: '02', t: 'Go to LinkedIn → Create a Post', d: 'Click "Start a post", then upload your certificate as the image.' },
                       { n: '03', t: 'Copy the caption below', d: 'Click Copy, then paste it into your LinkedIn post.' },
-                      { n: '04', t: 'Post it', d: 'Hit Post — your blockchain-verified credential is now live for employers.' },
+                      { n: '04', t: 'Post it', d: 'Hit Post. Your blockchain-verified credential is now live for employers.' },
                     ].map((step, i) => (
                       <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 4px', marginBottom: 2 }}>
                         <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 13, fontWeight: 300, color: 'rgba(10,102,194,0.7)', flexShrink: 0, lineHeight: 1, paddingTop: 2, minWidth: 18 }}>{step.n}</div>
@@ -1137,7 +1144,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div style={{ marginTop: 4, background: 'rgba(26,143,105,0.05)', border: '1px solid rgba(26,143,105,0.18)', borderRadius: 3, padding: '14px 16px' }}>
-                    {walletSaved && <div style={{ fontSize: 12, color: TEAL2, marginBottom: 6 }}>✓ Wallet saved — blockchain minting enabled</div>}
+                    {walletSaved && <div style={{ fontSize: 12, color: TEAL2, marginBottom: 6 }}>✓ Wallet saved. Blockchain minting enabled.</div>}
                     <div style={{ fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Blockchain Wallet</div>
                     <div style={{ fontSize: 11, color: MUTED, wordBreak: 'break-all', fontFamily: 'monospace' }}>{candidateWallet}</div>
                   </div>
@@ -1147,7 +1154,11 @@ export default function Dashboard() {
               <div className="vault-up" style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '32px 36px', minHeight: 230 }}>
                 <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 18 }}>Your Certificate</div>
                 <div style={{ fontSize: 15, color: MUTED, textAlign: 'center', padding: '52px 0', lineHeight: 1.8 }}>
-                  Complete your assessment to earn your<br />blockchain-verified certificate.
+                  {isAwaitingSimulator ? (
+                    <>Complete the ATAC Call Readiness Simulator to earn your<br />blockchain-verified certificate.</>
+                  ) : (
+                    <>Complete your assessment to earn your<br />blockchain-verified certificate.</>
+                  )}
                 </div>
               </div>
             )}

@@ -181,13 +181,21 @@ const HERO_CONFIG = {
     accent: GOLD,
   },
   take_simulator: {
-    // S4 shape (just passed assessment) vs S6 retry (sim failure cooldown ended)
+    // First-time vs repeat is sourced from flowState.reason. Default is
+    // first-time copy. The "again" wording fires ONLY when the resolver
+    // explicitly indicates a prior attempt (cooldown, failure, retry).
+    // First-timers must never see "again".
     heading: (state) => {
       const r = (state.reason || '').toLowerCase();
-      if (r.includes('passed') || r.includes('halfway') || r.includes('ready for')) {
-        return "You're halfway there";
-      }
-      return 'Try the simulator again';
+      const isRetry =
+        r.includes('cooldown') ||
+        r.includes('failed') ||
+        r.includes('try again') ||
+        r.includes('retake') ||
+        r.includes('retry') ||
+        r.includes('attempt again');
+      if (isRetry) return 'Try the simulator again';
+      return "You're halfway there";
     },
     ctaLabel: 'Take the Simulator',
     handler: 'navigate',
