@@ -88,7 +88,11 @@ export default function CandidateStateRenderer({
   }
 
   if (nextStep === 'simulator_cooldown') {
-    return <CooldownCard reason={reason} endsAt={timers?.simulator_cooldown_ends_at} />;
+    // Note: the backend `reason` for this state embeds a raw ISO
+    // timestamp ("Available again at 2026-...Z"), so it is intentionally
+    // NOT passed through. CooldownCard shows approved static copy plus
+    // the human-readable countdown derived from endsAt.
+    return <CooldownCard endsAt={timers?.simulator_cooldown_ends_at} />;
   }
 
   // All other states use the generic hero card.
@@ -305,7 +309,7 @@ function HeroCard({ accent, heading, body, ctaLabel, onClick, ctaDisabled, subte
  * Simulator cooldown card (with live countdown)
  * ============================================================ */
 
-function CooldownCard({ reason, endsAt }) {
+function CooldownCard({ endsAt }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -342,19 +346,17 @@ function CooldownCard({ reason, endsAt }) {
       >
         Simulator cooldown active
       </h2>
-      {reason && (
-        <p
-          style={{
-            fontSize: 14,
-            color: 'rgba(238,233,223,0.76)',
-            lineHeight: 1.7,
-            margin: '0 0 22px',
-            maxWidth: 720,
-          }}
-        >
-          {reason}
-        </p>
-      )}
+      <p
+        style={{
+          fontSize: 14,
+          color: 'rgba(238,233,223,0.76)',
+          lineHeight: 1.7,
+          margin: '0 0 22px',
+          maxWidth: 720,
+        }}
+      >
+        Your retry opens soon. This is a short cooldown after an attempt, not an error - your progress is saved.
+      </p>
       <button
         type="button"
         disabled
