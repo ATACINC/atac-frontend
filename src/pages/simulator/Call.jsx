@@ -83,6 +83,13 @@ export default function Call() {
   const silenceStartRef = useRef(null);              // ms timestamp first frame below threshold
   const silenceClearTimeoutRef = useRef(null);
   const lastUiUpdateRef = useRef(0);                 // throttle setState to ~10Hz
+  // Live mirror of `mode` for the rAF silence loop. tick() closes over a
+  // single render's scope, so reading the `mode` state directly would be
+  // stale. A ref is mutable and always reads the latest value written by
+  // onModeChange, which is how the silence accumulator knows whether the
+  // agent is currently speaking (candidate correctly listening) vs the
+  // candidate's own turn.
+  const modeRef = useRef(MODE_LISTENING);
 
   // ---------- Load session from sessionStorage ----------
   useEffect(() => {
@@ -173,6 +180,10 @@ export default function Call() {
             if (cancelled) return;
             const next = m && (m.mode || m) || MODE_LISTENING;
             if (next === MODE_SPEAKING || next === MODE_LISTENING) {
+              // Write the ref synchronously so the silence-detector rAF
+              // loop reads the live mode (not a stale render closure)
+              // before its next frame.
+              modeRef.current = next;
               setMode(next);
             }
           },
@@ -245,7 +256,8 @@ export default function Call() {
     if (connectionStatus !== 'live') return undefined;
 
     const SILENCE_THRESHOLD = 18;           // 0..255 byte freq avg, ~ -40 dB
-    const SILENCE_TRIGGER_MS = 15_000;      // 15s of continuous quiet before banner
+    const SILENCE_TRIGGER_MS = 25_000;      // 25s of continuous quiet on the
+                                            // candidate's OWN turn before banner
     const SILENCE_CLEAR_DELAY_MS = 3_000;   // banner fades 3s after voice returns
     const UI_UPDATE_INTERVAL_MS = 100;      // throttle setState to 10Hz
 
@@ -293,17 +305,25 @@ export default function Call() {
         for (let i = 0; i < bins.length; i++) sum += bins[i];
         const avg = sum / bins.length;
 
-        // Silence tracking
+        // Silence tracking. Only accumulate quiet while it is the
+        // candidate's OWN turn (mode === MODE_LISTENING). When the agent
+        // is speaking (MODE_SPEAKING), the candidate is correctly silent
+        // and listening, so an agent monologue must never count toward
+        // the banner. Reading modeRef (not the captured `mode` state)
+        // keeps this live inside the rAF loop.
         const now = Date.now();
-        if (avg < SILENCE_THRESHOLD) {
+        const isCandidateTurn = modeRef.current === MODE_LISTENING;
+        if (avg < SILENCE_THRESHOLD && isCandidateTurn) {
           if (silenceStartRef.current == null) {
             silenceStartRef.current = now;
           } else if (now - silenceStartRef.current >= SILENCE_TRIGGER_MS) {
             setShowSilenceBanner(true);
           }
         } else {
+          // Candidate is producing audio, OR the agent is speaking
+          // (candidate correctly listening). Either way stop accumulating
+          // and let any visible banner fade after the clear delay.
           silenceStartRef.current = null;
-          // Schedule banner dismissal 3s after voice resumes.
           setShowSilenceBanner((current) => {
             if (current) {
               if (silenceClearTimeoutRef.current) {
@@ -480,7 +500,7 @@ export default function Call() {
         >
           <AlertTriangleSvg />
           <span>
-            We are not hearing you. Check your microphone, your call may not score correctly. You can end the call and retry.
+            It's your turn to speak. If you've already started, your microphone may be muted - check the mic icon in your browser's address bar. Your recording is still running either way, and this message does not affect your score.
           </span>
         </div>
       )}
