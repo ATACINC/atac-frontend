@@ -75,6 +75,18 @@ function normalizeResult(result) {
     verificationTierAtIssue,
     headshotUrl,
     scores,
+    // Charter Cohort: the verify endpoint returns charter_cohort as a
+    // boolean always, and charter_cohort_position (1..100) ONLY when
+    // the credential is a live charter member. Missing keys (stale
+    // cache or pre-feature deploy) degrade to false / null so the
+    // badge below never renders for non-charter credentials.
+    charterCohort: result?.charter_cohort === true || result?.charterCohort === true,
+    charterCohortPosition:
+      typeof result?.charter_cohort_position === 'number'
+        ? result.charter_cohort_position
+        : typeof result?.charterCohortPosition === 'number'
+          ? result.charterCohortPosition
+          : null,
   };
 }
 
@@ -228,6 +240,32 @@ export default function Verify() {
               <div>
                 <div style={{ fontSize: 12, color: TEAL, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Credential Verified</div>
                 <div style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Blockchain record confirmed by ATAC Global CX.</div>
+                {/* Charter Cohort badge: renders only for live charter
+                    members where the backend supplies both flag and
+                    position. Pre-feature responses or non-charter
+                    credentials yield nothing here, with zero layout
+                    shift. */}
+                {credential.charterCohort && credential.charterCohortPosition != null && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      marginTop: 10,
+                      background: 'rgba(201,168,76,0.10)',
+                      border: `1px solid ${GOLD}`,
+                      borderRadius: 999,
+                      padding: '5px 12px',
+                      fontSize: 11,
+                      color: GOLD,
+                      fontWeight: 800,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      fontFamily: FONT_B,
+                    }}
+                  >
+                    Charter Cohort · Member #{credential.charterCohortPosition} of 100
+                  </div>
+                )}
               </div>
               {/*
                 Verified Identity badge renders only for credentials issued
@@ -322,7 +360,7 @@ export default function Verify() {
             ) : (
               <RecordRow label="Assessment Score" value={assessmentText || scoreText} color={TEAL} />
             )}
-            <RecordRow label="Blockchain Standard" value="ERC-721 verified credential" />
+            <RecordRow label="Blockchain Verification" value="Blockchain-verified credential" />
             {credential.tokenId && <RecordRow label="Token ID" value={credential.tokenId} mono />}
           </div>
 
