@@ -1,19 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { isValidEmail } from '../utils/validation';
 import CharterCounter from '../components/CharterCounter';
+import { useHcaptcha } from '../hooks/useHcaptcha';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 
-// Hardcoded fallback sitekey is intentional — sitekeys are public-by-design
-// and the production fallback ensures the form is captcha-protected even if
-// the Vercel env var is missing. Mirrors the prior production behavior.
-const HCAPTCHA_SITEKEY =
-  import.meta.env.VITE_HCAPTCHA_SITE_KEY ||
-  import.meta.env.VITE_HCAPTCHA_SITEKEY ||
-  '29525f8e-3e9c-41be-a0a0-a50abd621964';
+// hCaptcha sitekey resolution (env vars + hardcoded public fallback) now
+// lives in hooks/useHcaptcha.js, shared with the register form.
 
 const CREDENTIAL_ID_REGEX = /^ATAC-C-\d{4}-\d{5}$/i;
 
@@ -37,11 +33,18 @@ export default function VerifyLanding() {
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [website, setWebsite] = useState(''); // Honeypot — real users leave empty, bots fill it
-  const [captchaToken, setCaptchaToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const captchaRef = useRef(null);
-  const captchaWidgetId = useRef(null);
+  // Shared hCaptcha hook (same widget + reset semantics as before the
+  // extraction). Local names preserved so the rest of the file is
+  // untouched.
+  const {
+    token: captchaToken,
+    reset: resetCaptcha,
+    containerRef: captchaRef,
+  } = useHcaptcha({
+    onVerify: () => setErrors(prev => ({ ...prev, captcha: '' })),
+  });
 
   useEffect(() => {
     const style = document.createElement('style');
@@ -63,58 +66,6 @@ export default function VerifyLanding() {
     document.head.appendChild(style);
     return () => style.remove();
   }, []);
-
-  useEffect(() => {
-    if (!captchaRef.current) return;
-
-    const renderCaptcha = () => {
-      if (!window.hcaptcha || !captchaRef.current || captchaWidgetId.current !== null) return;
-      try {
-        captchaWidgetId.current = window.hcaptcha.render(captchaRef.current, {
-          sitekey: HCAPTCHA_SITEKEY,
-          theme: 'dark',
-          callback: token => {
-            setCaptchaToken(token);
-            setErrors(prev => ({ ...prev, captcha: '' }));
-          },
-          'expired-callback': () => setCaptchaToken(''),
-          'error-callback': () => setCaptchaToken(''),
-        });
-      } catch (err) {
-        console.error('[hCaptcha] render error:', err);
-      }
-    };
-
-    if (window.hcaptcha) {
-      renderCaptcha();
-      return;
-    }
-
-    const existing = document.querySelector('script[src^="https://js.hcaptcha.com/1/api.js"]');
-    if (existing) {
-      const interval = setInterval(() => {
-        if (window.hcaptcha) {
-          clearInterval(interval);
-          renderCaptcha();
-        }
-      }, 100);
-      return () => clearInterval(interval);
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit';
-    script.async = true;
-    script.defer = true;
-    script.onload = renderCaptcha;
-    document.head.appendChild(script);
-  }, []);
-
-  const resetCaptcha = () => {
-    setCaptchaToken('');
-    if (window.hcaptcha && captchaWidgetId.current !== null) {
-      try { window.hcaptcha.reset(captchaWidgetId.current); } catch { /* ignore */ }
-    }
-  };
 
   const validate = () => {
     const e = {};
