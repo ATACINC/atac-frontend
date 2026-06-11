@@ -233,12 +233,28 @@ export default function Login({ defaultAction }) {
     if (defaultAction === 'register') setTab('register');
   }, [defaultAction]);
 
+  // Capture the social attribution ref param on mount, before any tab
+  // toggle can rewrite the URL. A new non-empty ref overwrites (last
+  // campaign clicked wins); an absent ref never clears an existing one
+  // (first touch survives within the funnel). Capped at 64 chars.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const refParam = new URLSearchParams(window.location.search).get('ref');
+    if (refParam) localStorage.setItem('atac_ref', refParam.slice(0, 64));
+  }, []);
+
   const switchTab = (t) => {
     setTab(t);
     setError('');
-    // Sync URL so TitleSetter can title the page correctly.
+    // Sync URL so TitleSetter can title the page correctly. Rebuild from
+    // the current params so attribution (ref) and any other query values
+    // survive the toggle instead of being stripped.
     // replace: true keeps tab toggles out of the browser history stack.
-    navigate(t === 'register' ? '/login?action=register' : '/login', { replace: true });
+    const params = new URLSearchParams(window.location.search);
+    if (t === 'register') params.set('action', 'register');
+    else params.delete('action');
+    const qs = params.toString();
+    navigate(qs ? `/login?${qs}` : '/login', { replace: true });
   };
 
   /* ── Login handler ─────────────────────────────────────────────── */
@@ -332,6 +348,7 @@ export default function Login({ defaultAction }) {
           termsAccepted: true,
           termsAcceptedAt,
           termsVersion: TERMS_VERSION,
+          ref: localStorage.getItem('atac_ref') || null,
         }),
       });
       const data = await res.json();
@@ -346,6 +363,10 @@ export default function Login({ defaultAction }) {
       if (data.candidate) {
         localStorage.setItem('atac_candidate', JSON.stringify(data.candidate));
       }
+
+      // Attribution forwarded; clear it so a later signup on this device
+      // does not inherit a stale ref.
+      localStorage.removeItem('atac_ref');
 
       navigate('/payment');
     } catch (err) {
