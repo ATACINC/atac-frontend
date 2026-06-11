@@ -30,11 +30,13 @@ import { isValidEmail } from '../utils/validation';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import COUNTRIES from '../data/countries';
+import { useHcaptcha } from '../hooks/useHcaptcha';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
 
 const TERMS_VERSION = '1.0';
+const CAPTCHA_ERROR_MSG = 'Please complete the captcha and try again.';
 const TERMS_COPY =
   'I certify that I am the individual named above. I will personally complete all assessments. ' +
   'I understand that credential fraud voids my certification permanently and may result in public ' +
@@ -227,6 +229,45 @@ export default function Login({ defaultAction }) {
   // Shared state
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState('');
+  // 429 TOO_MANY_ATTEMPTS lockout: submits are disabled while true. The
+  // handler sets it and a one-shot timeout clears it when the Retry-After
+  // window elapses.
+  const [retryLocked, setRetryLocked] = useState(false);
+
+  // hCaptcha for the REGISTER view only (enabled gates the widget to the
+  // register tab; the login view never mounts it). The token lives in
+  // hook state only and is never logged or persisted.
+  const {
+    token: captchaToken,
+    reset: resetCaptcha,
+    containerRef: captchaRef,
+  } = useHcaptcha({
+    enabled: tab === 'register',
+    onVerify: () => setError((prev) => (prev === CAPTCHA_ERROR_MSG ? '' : prev)),
+  });
+
+  // Shared handling for the new backend error responses on both submits.
+  // Returns true when the response was consumed (message already shown).
+  // 401 invalid-credentials handling is intentionally untouched and falls
+  // through to the existing generic message.
+  const applyKnownAuthErrors = (res, data, { isRegister }) => {
+    if (res.status === 400 && (data?.code === 'CAPTCHA_REQUIRED' || data?.code === 'CAPTCHA_FAILED')) {
+      setError(CAPTCHA_ERROR_MSG);
+      if (isRegister) resetCaptcha();
+      return true;
+    }
+    if (res.status === 429 && data?.code === 'TOO_MANY_ATTEMPTS') {
+      const raw = parseInt(res.headers.get('Retry-After') || '', 10);
+      const seconds = Number.isFinite(raw) && raw > 0 ? raw : 60;
+      const minutes = Math.max(1, Math.ceil(seconds / 60));
+      setError(`Too many attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`);
+      setRetryLocked(true);
+      setTimeout(() => setRetryLocked(false), seconds * 1000);
+      if (isRegister) resetCaptcha();
+      return true;
+    }
+    return false;
+  };
 
   // Keep tab in sync if defaultAction prop changes
   useEffect(() => {
@@ -284,6 +325,10 @@ export default function Login({ defaultAction }) {
       const data = await res.json();
 
       if (!res.ok) {
+        if (applyKnownAuthErrors(res, data, { isRegister: false })) {
+          setLoading(false);
+          return;
+        }
         setError(data.error || data.message || 'Sign in failed. Check your credentials.');
         setLoading(false);
         return;
@@ -330,6 +375,9 @@ export default function Login({ defaultAction }) {
       return;
     }
     if (!country) { setError('Please select your country'); return; }
+    // Submit is disabled until the captcha is solved; this is the
+    // belt-and-braces guard for keyboard submits.
+    if (!captchaToken) { setError(CAPTCHA_ERROR_MSG); return; }
 
     setLoading(true);
     const termsAcceptedAt = new Date().toISOString();
@@ -349,12 +397,19 @@ export default function Login({ defaultAction }) {
           termsAcceptedAt,
           termsVersion: TERMS_VERSION,
           ref: localStorage.getItem('atac_ref') || null,
+          hcaptchaToken: captchaToken,
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
+        if (applyKnownAuthErrors(res, data, { isRegister: true })) {
+          setLoading(false);
+          return;
+        }
         setError(data.error || data.message || 'Registration failed. Please try again.');
+        // hCaptcha tokens are single-use; require a fresh solve before retry.
+        resetCaptcha();
         setLoading(false);
         return;
       }
@@ -372,6 +427,8 @@ export default function Login({ defaultAction }) {
     } catch (err) {
       console.error('[register] error', err);
       setError('Network error. Please try again.');
+      // Failed submit: require a fresh captcha solve before retry.
+      resetCaptcha();
       setLoading(false);
     }
   };
@@ -675,7 +732,7 @@ export default function Login({ defaultAction }) {
               <button
                 type="submit"
                 className="atac-cta"
-                disabled={loading}
+                disabled={loading || retryLocked}
                 style={{ marginTop: 8 }}
               >
                 {loading ? 'Signing in…' : 'Sign In'}
@@ -817,12 +874,19 @@ export default function Login({ defaultAction }) {
                 </span>
               </label>
 
+              {/* hCaptcha widget: REGISTER view only. The login form never
+                  renders this container, so the hook never mounts a widget
+                  there. */}
+              <div style={{ margin: '4px 0 18px', display: 'flex', justifyContent: 'center' }}>
+                <div ref={captchaRef} />
+              </div>
+
               {error && <ErrorBanner>{error}</ErrorBanner>}
 
               <button
                 type="submit"
                 className="atac-cta"
-                disabled={loading || !termsAccepted}
+                disabled={loading || !termsAccepted || !captchaToken || retryLocked}
               >
                 {loading ? 'Creating account…' : 'Apply for Access'}
               </button>
