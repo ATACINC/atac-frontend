@@ -323,6 +323,10 @@ export default function Dashboard() {
   // Welcome subtitle and the empty-certificate panel so the page does
   // not tell a passed candidate to "complete your assessment".
   const isAwaitingSimulator = isFlowReady && flowState.nextStep === 'take_simulator';
+  // Simulator-cooldown: candidate failed a sim attempt and is inside the
+  // 24h retake window. Used to give the welcome subtitle state-correct
+  // copy instead of the stale "complete your assessment" default.
+  const isSimulatorCooldown = isFlowReady && flowState.nextStep === 'simulator_cooldown';
 
   const latestCred = credentials[0];
   const dims       = result?.dimensions || {};
@@ -751,9 +755,11 @@ export default function Dashboard() {
             {`Welcome, ${firstName}.`}
           </div>
           <div style={{ fontSize: 15, color: MUTED, marginTop: 8 }}>
-            {isAwaitingSimulator
-              ? 'You passed the assessment. Complete the ATAC Call Readiness Simulator to earn your credential.'
-              : 'Complete your assessment to earn your blockchain-verified credential.'}
+            {isSimulatorCooldown
+              ? 'Your last attempt is saved. The simulator reopens automatically when the timer ends.'
+              : isAwaitingSimulator
+                ? 'You passed the assessment. Complete the ATAC Call Readiness Simulator to earn your credential.'
+                : 'Complete your assessment to earn your blockchain-verified credential.'}
           </div>
         </div>}
 

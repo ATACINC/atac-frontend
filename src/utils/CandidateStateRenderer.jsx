@@ -91,8 +91,10 @@ export default function CandidateStateRenderer({
     // Note: the backend `reason` for this state embeds a raw ISO
     // timestamp ("Available again at 2026-...Z"), so it is intentionally
     // NOT passed through. CooldownCard shows approved static copy plus
-    // the human-readable countdown derived from endsAt.
-    return <CooldownCard endsAt={timers?.simulator_cooldown_ends_at} />;
+    // the human-readable countdown derived from endsAt. navigate is
+    // passed so the button can launch the simulator once the timer
+    // reaches zero.
+    return <CooldownCard endsAt={timers?.simulator_cooldown_ends_at} navigate={navigate} />;
   }
 
   // All other states use the generic hero card.
@@ -309,7 +311,7 @@ function HeroCard({ accent, heading, body, ctaLabel, onClick, ctaDisabled, subte
  * Simulator cooldown card (with live countdown)
  * ============================================================ */
 
-function CooldownCard({ endsAt }) {
+function CooldownCard({ endsAt, navigate }) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -319,11 +321,11 @@ function CooldownCard({ endsAt }) {
     return () => clearInterval(interval);
   }, [endsAt]);
 
-  const remaining = formatCooldownRemaining(endsAt, now);
+  const cd = formatCooldownTimer(endsAt, now);
 
   return (
     <div
-      className="vault-up"
+      className="vault-up sim-cd-card"
       style={{
         background: BG1,
         border: `1px solid ${BORDER2}`,
@@ -334,79 +336,116 @@ function CooldownCard({ endsAt }) {
         fontFamily: VAULT_BODY,
       }}
     >
-      <h2
-        style={{
-          fontFamily: VAULT_DISPLAY,
-          fontSize: 28,
-          fontWeight: 400,
-          color: WHITE,
-          margin: '0 0 12px',
-          lineHeight: 1.15,
-        }}
-      >
-        Simulator cooldown active
-      </h2>
-      <p
-        style={{
-          fontSize: 14,
-          color: 'rgba(238,233,223,0.76)',
-          lineHeight: 1.7,
-          margin: '0 0 22px',
-          maxWidth: 720,
-        }}
-      >
-        Your retry opens soon. This is a short cooldown after an attempt, not an error - your progress is saved.
-      </p>
-      <button
-        type="button"
-        disabled
-        aria-disabled="true"
-        style={{
-          background: 'rgba(201,168,76,0.4)',
-          color: BG,
-          border: 'none',
-          borderRadius: 2,
-          padding: '13px 26px',
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          cursor: 'not-allowed',
-          fontFamily: VAULT_BODY,
-          opacity: 0.7,
-        }}
-      >
-        Take the Simulator
-      </button>
-      {remaining && (
-        <div
+      {/* Two-column on desktop (content | timer); stacks on mobile with
+          the timer block first. The media query lives here so the inline
+          style convention is preserved everywhere else. */}
+      <style>{`
+        .sim-cd-card { display: flex; flex-direction: row; align-items: center; gap: 32px; }
+        .sim-cd-left { flex: 1 1 0; min-width: 0; }
+        .sim-cd-right { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        @media (max-width: 768px) {
+          .sim-cd-card { flex-direction: column-reverse; align-items: stretch; gap: 22px; }
+          .sim-cd-right { width: 100%; }
+        }
+      `}</style>
+
+      <div className="sim-cd-left">
+        <h2
           style={{
-            marginTop: 14,
-            fontSize: 13,
-            color: AMBER,
-            letterSpacing: '0.06em',
-            fontFamily: VAULT_BODY,
-            fontVariantNumeric: 'tabular-nums',
+            fontFamily: VAULT_DISPLAY,
+            fontSize: 28,
+            fontWeight: 400,
+            color: WHITE,
+            margin: '0 0 12px',
+            lineHeight: 1.15,
           }}
         >
-          {remaining}
+          Simulator cooldown active
+        </h2>
+        <p
+          style={{
+            fontSize: 14,
+            color: 'rgba(238,233,223,0.76)',
+            lineHeight: 1.7,
+            margin: '0 0 22px',
+            maxWidth: 720,
+          }}
+        >
+          This is a short cooldown after an attempt, not an error - your progress is saved.
+        </p>
+        <button
+          type="button"
+          disabled={!cd.ready}
+          aria-disabled={cd.ready ? undefined : 'true'}
+          onClick={cd.ready ? () => navigate('/simulator?auto=true') : undefined}
+          style={{
+            background: cd.ready ? GOLD : 'rgba(201,168,76,0.4)',
+            color: BG,
+            border: 'none',
+            borderRadius: 2,
+            padding: '13px 26px',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            cursor: cd.ready ? 'pointer' : 'not-allowed',
+            fontFamily: VAULT_BODY,
+            opacity: cd.ready ? 1 : 0.7,
+          }}
+        >
+          Take the Simulator
+        </button>
+      </div>
+
+      <div className="sim-cd-right">
+        <div
+          style={{
+            fontSize: 11,
+            color: MUTED,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
+            marginBottom: 10,
+            textAlign: 'center',
+          }}
+        >
+          Retry Opens In
         </div>
-      )}
+        <div
+          style={{
+            fontFamily: "'Consolas', 'Menlo', monospace",
+            fontSize: 'clamp(3rem, 8vw, 6rem)',
+            fontWeight: 700,
+            color: GOLD,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+            textAlign: 'center',
+          }}
+        >
+          {cd.display}
+        </div>
+      </div>
     </div>
   );
 }
 
-function formatCooldownRemaining(endsAt, nowMs) {
-  if (!endsAt) return null;
+// Returns { ready, display }. While time remains, display is the
+// countdown with zero-padded minutes ("17h 08m" over an hour, "42m"
+// under). At or past the end timestamp, ready=true and display='Ready'.
+function formatCooldownTimer(endsAt, nowMs) {
+  if (!endsAt) return { ready: false, display: '' };
   const end = new Date(endsAt).getTime();
-  if (Number.isNaN(end)) return null;
-  if (end <= nowMs) return 'Available now';
+  if (Number.isNaN(end)) return { ready: false, display: '' };
+  if (end <= nowMs) return { ready: true, display: 'Ready' };
   const totalMs = end - nowMs;
   const hours = Math.floor(totalMs / (60 * 60 * 1000));
   const minutes = Math.floor((totalMs % (60 * 60 * 1000)) / (60 * 1000));
-  if (hours > 0) return `Available in ${hours}h ${minutes}m`;
-  if (minutes > 0) return `Available in ${minutes}m`;
-  return 'Available in under a minute';
+  if (hours > 0) {
+    return { ready: false, display: `${hours}h ${String(minutes).padStart(2, '0')}m` };
+  }
+  if (minutes > 0) return { ready: false, display: `${minutes}m` };
+  // Sub-minute remainder: show 1m rather than 0m while still in cooldown.
+  return { ready: false, display: '1m' };
 }
 
 /* ============================================================
