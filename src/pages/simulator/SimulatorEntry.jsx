@@ -206,10 +206,24 @@ export default function SimulatorEntry() {
   // plus its human-readable reason. Back to Dashboard is the only action;
   // a retry button here would just re-trigger the same 429.
   if (errorState && errorState.kind === 'cooldown') {
+    // hours_remaining arrives as a float (e.g. 23.45). Round (not ceil)
+    // so "about N hours" tracks the dashboard's precise "17h 08m"
+    // countdown rather than rounding up to 18. When the remainder rounds
+    // below an hour, say so plainly; the floor of 1 only guards the
+    // N-hours path.
     const hours = errorState.hoursRemaining;
-    const hoursLine = typeof hours === 'number' && hours > 0
-      ? `You can try again in ${hours} ${hours === 1 ? 'hour' : 'hours'}.`
-      : null;
+    const hasHours = typeof hours === 'number' && hours > 0;
+    const rounded = hasHours ? Math.round(hours) : null;
+    let cooldownLead;
+    if (!hasHours) {
+      cooldownLead = 'Your retry opens shortly.';
+    } else if (rounded < 1) {
+      cooldownLead = 'Your retry opens in less than an hour.';
+    } else {
+      const n = Math.max(1, rounded);
+      cooldownLead = `Your retry opens in about ${n} ${n === 1 ? 'hour' : 'hours'}.`;
+    }
+    const cooldownMessage = `${cooldownLead} This is a short cooldown after an attempt, not an error - your progress is saved.`;
     return (
       <div
         style={{
@@ -248,24 +262,9 @@ export default function SimulatorEntry() {
           >
             Simulator cooldown active
           </h2>
-          {errorState.reason && (
-            <p style={{ fontSize: 14, color: 'rgba(238,233,223,0.76)', lineHeight: 1.7, margin: '0 0 14px' }}>
-              {errorState.reason}
-            </p>
-          )}
-          {hoursLine && (
-            <div
-              style={{
-                fontSize: 13,
-                color: AMBER,
-                letterSpacing: '0.06em',
-                marginBottom: 22,
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {hoursLine}
-            </div>
-          )}
+          <p style={{ fontSize: 14, color: 'rgba(238,233,223,0.76)', lineHeight: 1.7, margin: '0 0 22px' }}>
+            {cooldownMessage}
+          </p>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
