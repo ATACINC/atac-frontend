@@ -38,8 +38,11 @@
 //   7. Verify BEGIN CALL enables (gold solid, pointer cursor)
 //   8. Click BEGIN CALL -> verify navigation to /simulator/call/[id]
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import API from '../../api/client';
+import SelfieCapture from '../../components/SelfieCapture';
+import { uploadSimulatorSelfie } from '../../hooks/usePhotoVerification';
 
 const BG    = '#080B12';
 const BG1   = '#0C1018';
@@ -130,6 +133,30 @@ export default function Briefing() {
   const [quietRoomChecked, setQuietRoomChecked] = useState(false);
   const [openingLineChecked, setOpeningLineChecked] = useState(false);
 
+  // C-2 Checkpoint 2: simulator-start selfie, Verified Identity tier only.
+  // Gating signal: candidate.verification_tier from GET /api/auth/me. Only
+  // candidates who completed the verified path (headshot + biometric
+  // consent + assessment selfie) carry tier 'verified'. Fail-open to
+  // false: if /me cannot be read, the flow is byte-identical to today
+  // (no capture, never blocked). The capture itself is shadow mode.
+  const [isVerifiedTier, setIsVerifiedTier] = useState(false);
+  const [showSimSelfie, setShowSimSelfie] = useState(false);
+  const simSelfieDoneRef = useRef(false);
+
+  useEffect(() => {
+    let active = true;
+    API.get('/api/auth/me')
+      .then((res) => {
+        if (!active) return;
+        const cand = res.data?.candidate || res.data || {};
+        setIsVerifiedTier(cand.verification_tier === 'verified');
+      })
+      .catch(() => {
+        if (active) setIsVerifiedTier(false);
+      });
+    return () => { active = false; };
+  }, []);
+
   // Load stashed session on mount. If missing or mismatched, bounce back
   // to /simulator so the entry can either resume or assign fresh.
   useEffect(() => {
@@ -202,6 +229,23 @@ export default function Briefing() {
 
   const beginCall = () => {
     if (!canBeginCall) return;
+    // C-2: verified-tier candidates capture a selfie before the call.
+    // Every SelfieCapture outcome (success, skipped, failed) proceeds to
+    // the call; this never hard-blocks. Non-verified candidates navigate
+    // directly, byte-identical to the pre-C-2 flow.
+    if (isVerifiedTier && !simSelfieDoneRef.current) {
+      setShowSimSelfie(true);
+      return;
+    }
+    navigate(`/simulator/call/${routeSessionId}`);
+  };
+
+  // Any outcome proceeds: success (uploaded), skipped (declined camera),
+  // failed (upload error, logged inside SelfieCapture). Camera cleanup is
+  // owned by SelfieCapture (stream stopped on every exit path + unmount).
+  const handleSimSelfieComplete = () => {
+    simSelfieDoneRef.current = true;
+    setShowSimSelfie(false);
     navigate(`/simulator/call/${routeSessionId}`);
   };
 
@@ -222,6 +266,16 @@ export default function Briefing() {
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY, padding: '48px 24px 60px' }}>
+      {/* C-2: simulator-start selfie overlay (verified tier only).
+          SelfieCapture renders its own fixed-position dialog and owns
+          camera-stream cleanup on every exit path. */}
+      {showSimSelfie && (
+        <SelfieCapture
+          mode="simulator"
+          uploadFn={uploadSimulatorSelfie}
+          onComplete={handleSimSelfieComplete}
+        />
+      )}
       <div className="sim-briefing-shell">
 
         {/* Top header row (above the two-column grid). At desktop the

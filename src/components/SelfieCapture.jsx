@@ -78,7 +78,18 @@ function mapErrorNameToFailureType(name) {
   return FAILURE_UNKNOWN;
 }
 
-export default function SelfieCapture({ onComplete }) {
+// mode 'assessment' (default): original behavior. Upload via uploadSelfie,
+//   then PATCH tier to 'verified', clear the intent flag, resolve success.
+//   Decline paths downgrade the tier to 'headshot'.
+// mode 'simulator' (C-2 Checkpoint 2): upload via the supplied uploadFn
+//   (uploadSimulatorSelfie), NO tier patch, NO intent-flag handling.
+//   Shadow mode contract: decline and upload failure both resolve via
+//   onComplete so the caller proceeds to the call; nothing hard-blocks.
+export default function SelfieCapture({
+  onComplete,
+  mode = 'assessment',
+  uploadFn = uploadSelfie,
+}) {
   const [step, setStep] = useState(STEP_INTRO);
   const [failureType, setFailureType] = useState(null);
   const [error, setError] = useState(null);
@@ -202,8 +213,25 @@ export default function SelfieCapture({ onComplete }) {
     if (!capturedBlob) return;
     setError(null);
     setStep(STEP_UPLOADING);
+
+    if (mode === 'simulator') {
+      // Shadow mode: the upload is best-effort and must never block the
+      // call. On failure, log and continue; the caller proceeds either way.
+      try {
+        await uploadFn(capturedBlob);
+      } catch (err) {
+        console.warn('[SelfieCapture] simulator selfie upload failed; continuing to call', err?.message || err);
+        stopStream();
+        onComplete({ outcome: 'failed' });
+        return;
+      }
+      stopStream();
+      onComplete({ outcome: 'success' });
+      return;
+    }
+
     try {
-      await uploadSelfie(capturedBlob);
+      await uploadFn(capturedBlob);
     } catch (err) {
       setError('upload');
       return; // stay on STEP_UPLOADING with error visible
@@ -219,7 +247,7 @@ export default function SelfieCapture({ onComplete }) {
     }
     localStorage.removeItem('atac_intended_tier');
     onComplete({ outcome: 'success' });
-  }, [capturedBlob, stopStream, onComplete]);
+  }, [capturedBlob, stopStream, onComplete, mode, uploadFn]);
 
   const retryUpload = useCallback(() => {
     setError(null);
@@ -257,12 +285,24 @@ export default function SelfieCapture({ onComplete }) {
     }
   }, [stopStream, onComplete]);
 
+  // Mode-aware decline. Simulator (shadow mode): no tier change, no
+  // backend write; stop the camera and let the caller proceed to the
+  // call. Assessment: original downgrade-to-headshot behavior.
+  const handleDecline = useCallback(() => {
+    if (mode === 'simulator') {
+      stopStream();
+      onComplete({ outcome: 'skipped' });
+      return;
+    }
+    downgradeToHeadshot();
+  }, [mode, stopStream, onComplete, downgradeToHeadshot]);
+
   // ----- Render ---------------------------------------------------------
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="selfie-title" style={overlayStyle}>
       <div style={cardStyle}>
         {step === STEP_INTRO && (
-          <IntroStep onStart={() => startCamera()} onDowngrade={downgradeToHeadshot} />
+          <IntroStep onStart={() => startCamera()} onDowngrade={handleDecline} mode={mode} />
         )}
         {step === STEP_REQUESTING_CAMERA && <RequestingStep />}
         {step === STEP_LIVE_PREVIEW && (
@@ -271,7 +311,8 @@ export default function SelfieCapture({ onComplete }) {
             onCapture={captureSelfie}
             onSwitchCamera={switchCamera}
             hasMultipleCameras={videoDevices.length > 1}
-            onDowngrade={downgradeToHeadshot}
+            onDowngrade={handleDecline}
+            mode={mode}
           />
         )}
         {step === STEP_CAPTURED_PREVIEW && (
@@ -299,7 +340,8 @@ export default function SelfieCapture({ onComplete }) {
           <FailureStep
             failureType={failureType}
             onRetry={() => startCamera()}
-            onDowngrade={downgradeToHeadshot}
+            onDowngrade={handleDecline}
+            mode={mode}
           />
         )}
         {step === STEP_DOWNGRADING && <DowngradingStep error={error} />}
@@ -311,13 +353,16 @@ export default function SelfieCapture({ onComplete }) {
 // =========================================================================
 // INTRO step
 // =========================================================================
-function IntroStep({ onStart, onDowngrade }) {
+function IntroStep({ onStart, onDowngrade, mode = 'assessment' }) {
+  const isSimulator = mode === 'simulator';
   return (
     <>
       <div style={kickerStyle}>Identity Verification</div>
       <h2 id="selfie-title" style={titleStyle}>Capture Your Selfie</h2>
       <p style={bodyStyle}>
-        We'll use your device camera to capture a single still image. This confirms it's you taking the assessment and ships with your Verified Identity credential.
+        {isSimulator
+          ? "We'll use your device camera to capture a single still image before your call. This confirms it's you taking the ATAC Call Readiness Simulator."
+          : "We'll use your device camera to capture a single still image. This confirms it's you taking the assessment and ships with your Verified Identity credential."}
       </p>
       <p style={{ ...bodyStyle, color: MUTED, fontSize: 12, marginTop: 8 }}>
         The selfie is stored privately. It is never shown on your public verify page.
@@ -327,7 +372,7 @@ function IntroStep({ onStart, onDowngrade }) {
           Start Camera
         </button>
         <button type="button" onClick={onDowngrade} style={outlinedBtnStyle(false)}>
-          Continue with Headshot Instead
+          {isSimulator ? 'Continue Without Photo' : 'Continue with Headshot Instead'}
         </button>
       </div>
     </>
@@ -354,7 +399,7 @@ function RequestingStep() {
 // =========================================================================
 // LIVE_PREVIEW step
 // =========================================================================
-function LivePreviewStep({ videoRef, onCapture, onSwitchCamera, hasMultipleCameras, onDowngrade }) {
+function LivePreviewStep({ videoRef, onCapture, onSwitchCamera, hasMultipleCameras, onDowngrade, mode = 'assessment' }) {
   return (
     <>
       <div style={kickerStyle}>Identity Verification</div>
@@ -384,7 +429,7 @@ function LivePreviewStep({ videoRef, onCapture, onSwitchCamera, hasMultipleCamer
           </button>
         )}
         <button type="button" onClick={onDowngrade} style={linkBtnStyle}>
-          Continue with Headshot Instead
+          {mode === 'simulator' ? 'Continue Without Photo' : 'Continue with Headshot Instead'}
         </button>
       </div>
     </>
@@ -498,13 +543,22 @@ function PromotingTierStep({ previewUrl, error, onRetry }) {
 // =========================================================================
 // FAILURE step (NotAllowed, NotFound, NotReadable, Unsupported, Unknown)
 // =========================================================================
-function FailureStep({ failureType, onRetry, onDowngrade }) {
+function FailureStep({ failureType, onRetry, onDowngrade, mode = 'assessment' }) {
   const cfg = FAILURE_COPY[failureType] || FAILURE_COPY[FAILURE_UNKNOWN];
+  const isSimulator = mode === 'simulator';
+  // Simulator (shadow mode): the photo is optional, so the guidance is
+  // simply that the call proceeds without it. The heading still conveys
+  // the specific camera problem.
+  const body = isSimulator
+    ? (cfg.showRetry
+        ? 'You can try again, or continue to your call without the photo.'
+        : 'You can continue to your call without the photo.')
+    : cfg.body;
   return (
     <>
       <div style={{ ...kickerStyle, color: RED }}>Identity Verification</div>
       <h2 id="selfie-title" style={titleStyle}>{cfg.heading}</h2>
-      <p style={bodyStyle}>{cfg.body}</p>
+      <p style={bodyStyle}>{body}</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
         {cfg.showRetry && (
           <button type="button" onClick={onRetry} style={primaryBtnStyle(false)}>
@@ -516,7 +570,7 @@ function FailureStep({ failureType, onRetry, onDowngrade }) {
           onClick={onDowngrade}
           style={cfg.showRetry ? outlinedBtnStyle(false) : primaryBtnStyle(false)}
         >
-          Continue with Headshot
+          {isSimulator ? 'Continue Without Photo' : 'Continue with Headshot'}
         </button>
       </div>
     </>
