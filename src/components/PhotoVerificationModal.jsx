@@ -766,7 +766,7 @@ function BiometricConsentStep({ checked, onToggle, onDecline, onAccept, submitti
           stored privately and never shown on your public verify page.
         </p>
         <a
-          href="/biometric-consent"
+          href="https://atacglobalcx.com/biometric-consent"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: GOLD, fontSize: 13 }}
