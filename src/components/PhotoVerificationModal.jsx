@@ -39,16 +39,18 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_MIME = ['image/jpeg', 'image/png'];
 
 // ----- Step constants ----------------------------------------------------
-const STEP_TIER_SELECT      = 'TIER_SELECT';
-const STEP_PHOTO_CONSENT    = 'PHOTO_CONSENT';
-const STEP_HEADSHOT_UPLOAD  = 'HEADSHOT_UPLOAD';
-const STEP_HEADSHOT_PREVIEW = 'HEADSHOT_PREVIEW';
-const STEP_HEADSHOT_DONE    = 'HEADSHOT_DONE';
+const STEP_TIER_SELECT       = 'TIER_SELECT';
+const STEP_PHOTO_CONSENT     = 'PHOTO_CONSENT';
+const STEP_HEADSHOT_UPLOAD   = 'HEADSHOT_UPLOAD';
+const STEP_HEADSHOT_PREVIEW  = 'HEADSHOT_PREVIEW';
+const STEP_HEADSHOT_DONE     = 'HEADSHOT_DONE';
+const STEP_BIOMETRIC_CONSENT = 'BIOMETRIC_CONSENT';
 
 export default function PhotoVerificationModal({
   isOpen,
   onResolve,
   postConsent,
+  postBiometricConsent,
   uploadHeadshot,
   patchTier,
 }) {
@@ -58,6 +60,11 @@ export default function PhotoVerificationModal({
   const [consentChecked, setConsentChecked] = useState(false);
   const [consentSubmitting, setConsentSubmitting] = useState(false);
   const [declinedRecently, setDeclinedRecently] = useState(false);
+  // C-2 biometric consent (Verified Identity path only). Deliberately a
+  // SEPARATE checkbox and submission from photo_consent above: biometric
+  // consent is its own ledger document and its own affirmative action.
+  const [biometricChecked, setBiometricChecked] = useState(false);
+  const [biometricSubmitting, setBiometricSubmitting] = useState(false);
 
   const [headshotFile, setHeadshotFile] = useState(null);
   const [headshotPreviewUrl, setHeadshotPreviewUrl] = useState(null);
@@ -85,6 +92,8 @@ export default function PhotoVerificationModal({
       setConsentChecked(false);
       setConsentSubmitting(false);
       setDeclinedRecently(false);
+      setBiometricChecked(false);
+      setBiometricSubmitting(false);
       setHeadshotFile(null);
       setUploadedHeadshotUrl(null);
       setUploading(false);
@@ -118,7 +127,7 @@ export default function PhotoVerificationModal({
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => {
-      if (e.key === 'Escape' && !consentSubmitting && !uploading && !tierPatchSubmitting) {
+      if (e.key === 'Escape' && !consentSubmitting && !uploading && !tierPatchSubmitting && !biometricSubmitting) {
         e.preventDefault();
         cancel();
       }
@@ -126,7 +135,7 @@ export default function PhotoVerificationModal({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, consentSubmitting, uploading, tierPatchSubmitting]);
+  }, [isOpen, consentSubmitting, uploading, tierPatchSubmitting, biometricSubmitting]);
 
   // ----- Cancel / resolve handlers --------------------------------------
   const cancel = useCallback(() => {
@@ -291,6 +300,41 @@ export default function PhotoVerificationModal({
     onResolve({ verificationTier: 'verified', headshotUrl: uploadedHeadshotUrl });
   };
 
+  // C-2: every route into the Verified Identity tier now passes through
+  // the biometric consent step first. Both HeadshotDoneStep CTAs that
+  // previously called finishWithVerified route here instead, covering the
+  // tier-select choice AND the headshot-to-verified in-modal upgrade.
+  const goToBiometricConsent = () => {
+    setError(null);
+    setStep(STEP_BIOMETRIC_CONSENT);
+  };
+
+  // Accept: record biometric_consent@1.0.0 in the ledger, then continue
+  // with the existing verified resolution (tier PATCH + resolve).
+  const acceptBiometricConsent = async () => {
+    if (!biometricChecked || biometricSubmitting) return;
+    setBiometricSubmitting(true);
+    setError(null);
+    try {
+      await postBiometricConsent();
+    } catch {
+      setBiometricSubmitting(false);
+      setError('We could not record your consent. Please try again.');
+      return;
+    }
+    setBiometricSubmitting(false);
+    await finishWithVerified();
+  };
+
+  // Decline: NOT a dead end. The headshot is already uploaded at this
+  // point, so the candidate proceeds with the headshot tier instead.
+  // No biometric consent is recorded and they are not routed to verified.
+  const declineBiometricConsent = () => {
+    setBiometricChecked(false);
+    setError(null);
+    finishWithHeadshot();
+  };
+
   // ----- Back from upload step (preserves consent acceptance) ------------
   const backToConsent = () => {
     setError(null);
@@ -306,7 +350,7 @@ export default function PhotoVerificationModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="photo-verify-title"
-      onClick={() => !consentSubmitting && !uploading && !tierPatchSubmitting && cancel()}
+      onClick={() => !consentSubmitting && !uploading && !tierPatchSubmitting && !biometricSubmitting && cancel()}
       style={overlayStyle}
     >
       <div
@@ -321,7 +365,7 @@ export default function PhotoVerificationModal({
           <button
             type="button"
             onClick={cancel}
-            disabled={consentSubmitting || uploading || tierPatchSubmitting}
+            disabled={consentSubmitting || uploading || tierPatchSubmitting || biometricSubmitting}
             style={cancelLinkStyle}
           >
             Cancel
@@ -377,8 +421,19 @@ export default function PhotoVerificationModal({
             previewUrl={headshotPreviewUrl}
             selectedTier={selectedTier}
             onFinishHeadshot={finishWithHeadshot}
-            onFinishVerified={finishWithVerified}
+            onFinishVerified={goToBiometricConsent}
             submitting={tierPatchSubmitting}
+            error={error}
+          />
+        )}
+
+        {step === STEP_BIOMETRIC_CONSENT && (
+          <BiometricConsentStep
+            checked={biometricChecked}
+            onToggle={() => setBiometricChecked((v) => !v)}
+            onDecline={declineBiometricConsent}
+            onAccept={acceptBiometricConsent}
+            submitting={biometricSubmitting || tierPatchSubmitting}
             error={error}
           />
         )}
@@ -668,6 +723,97 @@ function PhotoConsentStep({ checked, onToggle, onDecline, onAccept, submitting, 
           style={primaryBtn(!checked || submitting)}
         >
           {submitting ? 'Recording...' : 'Accept and Continue'}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// =========================================================================
+// Step: BIOMETRIC_CONSENT (C-2, Verified Identity path only)
+// =========================================================================
+// A SEPARATE affirmative action from photo_consent. Mirrors the
+// PhotoConsentStep layout. Decline is not a dead end: the candidate
+// proceeds with the headshot tier instead.
+function BiometricConsentStep({ checked, onToggle, onDecline, onAccept, submitting, error }) {
+  return (
+    <>
+      <h2 id="photo-verify-title" style={titleStyle}>Biometric Identity Verification</h2>
+      <div style={{ fontSize: 13, color: MUTED, marginBottom: 18, lineHeight: 1.5 }}>
+        One more consent is needed for Verified Identity
+      </div>
+
+      <div
+        style={{
+          background: BG1,
+          border: `1px solid ${BORDER2}`,
+          borderRadius: 3,
+          padding: '16px 18px',
+          fontSize: 13,
+          color: WHITE,
+          lineHeight: 1.65,
+          marginBottom: 16,
+        }}
+      >
+        <p style={{ margin: '0 0 10px' }}>
+          Verified Identity uses biometric face comparison. The selfies you
+          capture when you start the assessment and the simulator are
+          compared with your uploaded headshot to confirm the same person
+          completes each step.
+        </p>
+        <p style={{ margin: '0 0 10px' }}>
+          Your face images are used only for this comparison. They are
+          stored privately and never shown on your public verify page.
+        </p>
+        <a
+          href="https://atacglobalcx.com/biometric-consent"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: GOLD, fontSize: 13 }}
+        >
+          Read the full biometric consent disclosure
+        </a>
+      </div>
+
+      <label style={{
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+        cursor: submitting ? 'not-allowed' : 'pointer',
+        marginBottom: 16,
+        opacity: submitting ? 0.7 : 1,
+      }}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+          disabled={submitting}
+          style={{ marginTop: 3, accentColor: GOLD, cursor: submitting ? 'not-allowed' : 'pointer' }}
+        />
+        <span style={{ fontSize: 13, color: WHITE, lineHeight: 1.5 }}>
+          I have read the biometric consent disclosure and I agree to
+          biometric identity verification.
+        </span>
+      </label>
+
+      {error && <ErrorBanner>{error}</ErrorBanner>}
+
+      <div style={footerRow}>
+        <button
+          type="button"
+          onClick={onDecline}
+          disabled={submitting}
+          style={secondaryBtn(submitting)}
+        >
+          Continue with Headshot Instead
+        </button>
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={!checked || submitting}
+          style={primaryBtn(!checked || submitting)}
+        >
+          {submitting ? 'Recording...' : 'Agree and Continue'}
         </button>
       </div>
     </>

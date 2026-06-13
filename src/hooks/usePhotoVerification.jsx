@@ -115,6 +115,35 @@ export async function uploadSelfie(blob) {
   return apiPostMultipart('/api/photo/selfie', formData);
 }
 
+// C-2 Checkpoint 2: uploads a simulator-start selfie. Mirrors uploadSelfie
+// exactly (field 'file', filename 'selfie.jpg') but posts to the
+// simulator-bound endpoint. Backend is shadow mode: stores the selfie,
+// runs identity checks fire-and-forget, blocks no one.
+// Returns { selfieId, capturedAt, simulatorSessionId } on success.
+export async function uploadSimulatorSelfie(blob) {
+  const formData = new FormData();
+  formData.append('file', blob, 'selfie.jpg');
+  return apiPostMultipart('/api/photo/simulator-selfie', formData);
+}
+
+// C-2: records biometric consent against the existing /api/consent/accept
+// endpoint. Mirrors postPhotoConsent exactly. The version string MUST be
+// '1.0.0' to match the seeded ledger document; the backend identity-check
+// gate requires an accepted biometric_consent record at exactly this
+// version before it will run any face comparison.
+export async function postBiometricConsent() {
+  return apiPostJson('/api/consent/accept', {
+    acceptances: [
+      {
+        documentKey: 'biometric_consent',
+        version: '1.0.0',
+        accepted: true,
+      },
+    ],
+    context: 'profile',
+  });
+}
+
 // Patches candidates.verification_tier via PATCH /api/photo/tier.
 // Body: { verificationTier: 'none' | 'headshot' | 'verified' }
 // Backend returns 400 SELFIE_REQUIRED if 'verified' is requested without a
@@ -172,6 +201,7 @@ export function usePhotoVerification() {
       isOpen={modalOpen}
       onResolve={handleResolve}
       postConsent={postPhotoConsent}
+      postBiometricConsent={postBiometricConsent}
       uploadHeadshot={uploadHeadshot}
       patchTier={patchTier}
     />
