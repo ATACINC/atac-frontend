@@ -56,6 +56,21 @@ function navigateNormalized(navigate, rawUrl) {
   navigate(parsed.pathname + parsed.search + parsed.hash);
 }
 
+// Never show a raw ISO timestamp to a candidate. The backend resolver embeds
+// them in some `reason` strings (e.g. the simulator cooldown reason
+// "... Available again at 2026-...Z"). Strip any ISO 8601 datetime and tidy a
+// dangling "at/on/by" connector so a leaked timestamp can never reach the UI.
+const ISO_DATETIME_RE = /\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g;
+function stripIsoTimestamps(text) {
+  if (typeof text !== 'string' || !text) return text;
+  return text
+    .replace(ISO_DATETIME_RE, '')
+    .replace(/\s+(?:at|on|by)\s*(?=[.,;:!?]|$)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    .trim();
+}
+
 export default function CandidateStateRenderer({
   flowState,
   navigate,
@@ -63,7 +78,12 @@ export default function CandidateStateRenderer({
   onOpenPhotoVerification,
 }) {
   if (!flowState || !flowState.nextStep) return null;
-  const { nextStep, reason, action, timers } = flowState;
+  const { nextStep, reason: rawReason, action, timers } = flowState;
+  // Sanitize before any display path uses `reason`. The simulator_cooldown
+  // branch below already drops reason entirely; this guards every other
+  // surface (generic hero body, queued card, revoked banner) so no raw ISO
+  // timestamp from the resolver can ever render to a candidate.
+  const reason = stripIsoTimestamps(rawReason);
 
   // States the existing render handles: do not render a hero here.
   if (nextStep === 'view_credential') return null;
@@ -365,6 +385,9 @@ function CooldownCard({ endsAt, navigate }) {
       `}</style>
 
       <div className="sim-cd-left">
+        <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
+          Cooldown in progress
+        </div>
         <h2
           style={{
             fontFamily: VAULT_DISPLAY,
@@ -375,7 +398,7 @@ function CooldownCard({ endsAt, navigate }) {
             lineHeight: 1.15,
           }}
         >
-          Simulator cooldown active
+          Your next attempt is almost ready
         </h2>
         <p
           style={{
@@ -386,7 +409,7 @@ function CooldownCard({ endsAt, navigate }) {
             maxWidth: 720,
           }}
         >
-          This is a short cooldown after an attempt, not an error - your progress is saved.
+          There is a short wait between attempts so you can come back fresh. Use the time to review your feedback so your next call is your strongest one.
         </p>
         <button
           type="button"
