@@ -122,7 +122,7 @@ function hexWithOpacity(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-export default function ScenarioPicker({ credentialId, onError }) {
+export default function ScenarioPicker({ credentialId, onError, onQueued }) {
   const navigate = useNavigate();
   const [submittingCode, setSubmittingCode] = useState(null);
 
@@ -131,6 +131,16 @@ export default function ScenarioPicker({ credentialId, onError }) {
     setSubmittingCode(scenarioCode);
     try {
       const res = await assignSimulator(scenarioCode, credentialId);
+      if (res.data?.queued === true) {
+        // All lines busy (HTTP 200, not an error). Hand the queued payload
+        // up to SimulatorEntry, which renders the wait view and runs the
+        // admit-on-repoll loop. Pass the picked args so each re-poll
+        // re-assigns the SAME scenario the candidate chose.
+        if (typeof onQueued === 'function') {
+          onQueued(res.data, { scenarioCode, credentialId });
+        }
+        return;
+      }
       const stashed = stashSimulatorSession(res.data, credentialId);
       navigate(`/simulator/briefing/${stashed.sessionId}`, { replace: true });
     } catch (err) {

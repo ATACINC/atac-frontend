@@ -97,6 +97,21 @@ export default function CandidateStateRenderer({
     return <CooldownCard endsAt={timers?.simulator_cooldown_ends_at} navigate={navigate} />;
   }
 
+  if (nextStep === 'simulator_queued') {
+    // Display-only. Admission into the call is driven by the /assign re-poll
+    // on the simulator page, NOT by /me/state; this card just keeps the
+    // dashboard consistent for a candidate who is waiting in line. The CTA
+    // re-enters the simulator (which re-takes a place in the queue).
+    return (
+      <QueuedCard
+        position={flowState.position ?? flowState.context?.position}
+        reason={reason}
+        actionUrl={action?.url}
+        navigate={navigate}
+      />
+    );
+  }
+
   // All other states use the generic hero card.
   const cfg = HERO_CONFIG[nextStep];
   if (!cfg) {
@@ -446,6 +461,103 @@ function formatCooldownTimer(endsAt, nowMs) {
   if (minutes > 0) return { ready: false, display: `${minutes}m` };
   // Sub-minute remainder: show 1m rather than 0m while still in cooldown.
   return { ready: false, display: '1m' };
+}
+
+/* ============================================================
+ * Simulator queue card (display-only; admission is driven elsewhere)
+ * ============================================================ */
+
+function QueuedCard({ position, reason, actionUrl, navigate }) {
+  const hasPosition = typeof position === 'number' && position > 0;
+  return (
+    <div
+      className="vault-up"
+      style={{
+        background: BG1,
+        border: `1px solid ${BORDER2}`,
+        borderLeft: `3px solid ${AMBER}`,
+        borderRadius: 4,
+        padding: '28px 32px',
+        marginBottom: 28,
+        fontFamily: VAULT_BODY,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          color: AMBER,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          marginBottom: 14,
+        }}
+      >
+        Waiting for an open line
+      </div>
+      <h2
+        style={{
+          fontFamily: VAULT_DISPLAY,
+          fontSize: 28,
+          fontWeight: 400,
+          color: WHITE,
+          margin: '0 0 12px',
+          lineHeight: 1.15,
+        }}
+      >
+        You are in the simulator queue
+      </h2>
+      {hasPosition && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 11, color: MUTED, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
+            Position
+          </span>
+          <span
+            style={{
+              fontFamily: "'Consolas', 'Menlo', monospace",
+              fontSize: 30,
+              fontWeight: 700,
+              color: GOLD,
+              lineHeight: 1,
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {position}
+          </span>
+        </div>
+      )}
+      <p
+        style={{
+          fontSize: 14,
+          color: 'rgba(238,233,223,0.76)',
+          lineHeight: 1.7,
+          margin: '0 0 22px',
+          maxWidth: 720,
+        }}
+      >
+        {reason ||
+          'All simulator lines are busy right now. Reopen the simulator to take your place in line; we will connect you automatically when a line opens.'}
+      </p>
+      <button
+        type="button"
+        onClick={() => navigateNormalized(navigate, actionUrl || '/simulator?auto=true')}
+        style={{
+          background: GOLD,
+          color: BG,
+          border: 'none',
+          borderRadius: 2,
+          padding: '13px 26px',
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          fontFamily: VAULT_BODY,
+        }}
+      >
+        Return to Simulator
+      </button>
+    </div>
+  );
 }
 
 /* ============================================================
