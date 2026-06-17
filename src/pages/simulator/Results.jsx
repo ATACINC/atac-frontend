@@ -31,7 +31,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import API, { getSimulatorStatus } from '../../api/client';
 import FeedbackPanel from '../../components/FeedbackPanel';
 
@@ -40,6 +40,7 @@ const BG1   = '#0C1018';
 const GOLD  = '#C9A84C';
 const TEAL2 = '#22A67E';
 const RED   = '#C45C5C';
+const AMBER = '#C48A2A';
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.45)';
 const BORDER  = 'rgba(201,168,76,0.15)';
@@ -69,22 +70,21 @@ export default function Results() {
   const [errorText, setErrorText] = useState('');
 
   const pollRef = useRef(null);
-  const isPioneerFlowRef = useRef(false);
-  const sessionCreatedAtRef = useRef(null);
 
-  // Detect Pioneer flow + clean up sessionStorage once scored.
-  useEffect(() => {
+  // Pioneer flow is fixed for the lifetime of this screen, so read it once
+  // from sessionStorage in a lazy state initializer rather than writing a
+  // ref in an effect and reading ref.current during render (which trips
+  // react-hooks). sessionStorage cleanup on 'scored' lives in the poll
+  // effect below, not here.
+  const [isPioneerFlow] = useState(() => {
     try {
       const raw = sessionStorage.getItem('atac_sim_session');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        isPioneerFlowRef.current = !!parsed.credentialId;
-        sessionCreatedAtRef.current = parsed.createdAt || null;
-      }
+      if (raw) return !!JSON.parse(raw).credentialId;
     } catch (_) {
       // Tolerate; default to new-candidate copy.
     }
-  }, []);
+    return false;
+  });
 
   // Poll until scored or timeout.
   useEffect(() => {
@@ -136,6 +136,63 @@ export default function Results() {
       }
     };
   }, [routeSessionId]);
+
+  // Assessment id for the post-simulator FeedbackPanel. Sourced from
+  // the candidate state resolver (auth-gated, owner-only, populated
+  // across the two-step flow) so feedback still works when the
+  // candidate returns later or signs in from a different device and
+  // localStorage.atac_result is absent. localStorage stays as a
+  // fallback only if the /me/state call fails or returns no id, so a
+  // transient resolver error never eats the feedback when the local
+  // blob happens to hold it. FeedbackPanel guards on !assessmentId
+  // and silently hides when both sources are null (Pioneer
+  // re-validation flows where neither has it).
+  //
+  // These hooks MUST stay above the early return below: declaring them
+  // after it made the hook count jump (9 -> 12) on the polling -> scored
+  // transition, throwing "Rendered more hooks than during the previous
+  // render" straight into SimulatorErrorBoundary. The effect still no-ops
+  // until status === 'scored', so behavior is unchanged.
+  const [feedbackAssessmentId, setFeedbackAssessmentId] = useState(null);
+  const feedbackFetchedRef = useRef(false);
+
+  useEffect(() => {
+    // Fire once when the simulator status first reaches scored.
+    // Non-scored states (in_progress, scoring, etc.) skip entirely so
+    // /me/state is not called during the scoring interim.
+    if (statusData?.status !== 'scored') return undefined;
+    if (feedbackFetchedRef.current) return undefined;
+    feedbackFetchedRef.current = true;
+
+    let cancelled = false;
+    const localFallback = (() => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('atac_result') || 'null');
+        return stored?.assessmentId || null;
+      } catch (_) { return null; }
+    })();
+
+    API.get('/api/candidate/me/state')
+      .then((res) => {
+        if (cancelled) return;
+        const data = res?.data || {};
+        const id =
+          data?.context?.latestAssessment?.id ||
+          data?.context?.passedAwaitingSimAssessment?.id ||
+          localFallback ||
+          null;
+        setFeedbackAssessmentId(id);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Resolver call failed. Fall back to localStorage so a
+        // transient error never loses feedback when atac_result
+        // happens to hold the assessmentId.
+        setFeedbackAssessmentId(localFallback);
+      });
+
+    return () => { cancelled = true; };
+  }, [statusData?.status]);
 
   // ---------- Loading / interim ----------
   if (!statusData || statusData.status !== 'scored') {
@@ -223,60 +280,9 @@ export default function Results() {
   const credentialId  = statusData.credential_id || statusData.credentialId || statusData.credential?.credential_id || null;
   const passThreshold = statusData.pass_threshold ?? 70;
   const weights       = statusData.scoring_weights ?? null;
-  const isPioneer     = isPioneerFlowRef.current;
+  const isPioneer     = isPioneerFlow;
   const overallNum    = overall != null ? Math.round(overall) : null;
   const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
-
-  // Assessment id for the post-simulator FeedbackPanel. Sourced from
-  // the candidate state resolver (auth-gated, owner-only, populated
-  // across the two-step flow) so feedback still works when the
-  // candidate returns later or signs in from a different device and
-  // localStorage.atac_result is absent. localStorage stays as a
-  // fallback only if the /me/state call fails or returns no id, so a
-  // transient resolver error never eats the feedback when the local
-  // blob happens to hold it. FeedbackPanel guards on !assessmentId
-  // and silently hides when both sources are null (Pioneer
-  // re-validation flows where neither has it).
-  const [feedbackAssessmentId, setFeedbackAssessmentId] = useState(null);
-  const feedbackFetchedRef = useRef(false);
-
-  useEffect(() => {
-    // Fire once when the simulator status first reaches scored.
-    // Non-scored states (in_progress, scoring, etc.) skip entirely so
-    // /me/state is not called during the scoring interim.
-    if (statusData?.status !== 'scored') return undefined;
-    if (feedbackFetchedRef.current) return undefined;
-    feedbackFetchedRef.current = true;
-
-    let cancelled = false;
-    const localFallback = (() => {
-      try {
-        const stored = JSON.parse(localStorage.getItem('atac_result') || 'null');
-        return stored?.assessmentId || null;
-      } catch (_) { return null; }
-    })();
-
-    API.get('/api/candidate/me/state')
-      .then((res) => {
-        if (cancelled) return;
-        const data = res?.data || {};
-        const id =
-          data?.context?.latestAssessment?.id ||
-          data?.context?.passedAwaitingSimAssessment?.id ||
-          localFallback ||
-          null;
-        setFeedbackAssessmentId(id);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        // Resolver call failed. Fall back to localStorage so a
-        // transient error never loses feedback when atac_result
-        // happens to hold the assessmentId.
-        setFeedbackAssessmentId(localFallback);
-      });
-
-    return () => { cancelled = true; };
-  }, [statusData?.status]);
 
   // Passed celebration is a full-screen layout, distinct from the
   // standard scored render below. Early-return keeps the failed-state
@@ -298,31 +304,54 @@ export default function Results() {
     );
   }
 
+  // Lowest one or two scored dimensions, surfaced as concrete "areas to
+  // improve". The /status payload exposes only numeric scores_breakdown (no
+  // written per-dimension feedback candidate-side), so this is the closest
+  // actionable signal we can show. Exposing the model's written feedback is
+  // a small backend follow-up.
+  const improveAreas = DIMENSION_KEYS
+    .map((k) => ({ label: DIMENSION_LABEL[k], score: typeof dimensions[k] === 'number' ? dimensions[k] : null }))
+    .filter((d) => d.score != null)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 2);
+
+  // "View my feedback" scrolls to the on-page breakdown; there is no
+  // separate feedback route.
+  const scrollToBreakdown = () => {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('sim-breakdown');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Reached only when the attempt did NOT pass (passed returns the
+  // celebration above). Deliberately a calm "scored, did not pass" screen:
+  // gold eyebrow, amber score, encouraging copy, and a path back through the
+  // feedback. Never the red error treatment.
   return (
     <div style={containerStyle}>
       <div style={{ ...cardStyle, maxWidth: 640 }}>
-        <div style={kickerStyle}>Post-Call Report</div>
+        <div style={kickerStyle}>Assessment Scored</div>
 
         <h1 style={titleStyle}>
-          {passed ? 'You passed.' : 'Not this time.'}
+          You did not pass this time, but you were close
         </h1>
 
-        {/* Overall score circle - shows number prominently with / threshold below. */}
+        {/* Overall score circle - amber (close, not an error). */}
         <div
           style={{
             width: 130,
             height: 130,
             borderRadius: '50%',
-            border: `2px solid ${passed ? TEAL2 : RED}`,
+            border: `2px solid ${AMBER}`,
             margin: '14px auto 16px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            background: passed ? 'rgba(34,166,126,0.06)' : 'rgba(196,92,92,0.06)',
+            background: 'rgba(196,138,42,0.06)',
           }}
         >
-          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, color: passed ? TEAL2 : RED, fontWeight: 600, lineHeight: 1 }}>
+          <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, color: AMBER, fontWeight: 600, lineHeight: 1 }}>
             {overallNum != null ? overallNum : '--'}
           </div>
           <div style={{ fontFamily: VAULT_BODY, fontSize: 14, color: MUTED, marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
@@ -330,44 +359,57 @@ export default function Results() {
           </div>
         </div>
 
-        {/* Pass / fail pill - includes the numeric score alongside the verdict. */}
-        <div style={{ textAlign: 'center', marginBottom: 10 }}>
-          <span
+        {/* Approved body copy: actual score out of 100, with 70 to pass. */}
+        <p style={{ textAlign: 'center', marginBottom: 24, fontFamily: VAULT_BODY, fontSize: 14, color: 'rgba(238,233,223,0.82)', lineHeight: 1.65 }}>
+          {overallNum != null
+            ? `We recorded your call and scored it: ${overallNum} out of 100, with ${passThreshold} to pass. That is a strong, fixable gap. Look over your feedback below, and you can run the simulator again once your short cooldown ends.`
+            : `We recorded your call and your score is being finalized. Look over your feedback below, and you can run the simulator again once your short cooldown ends.`}
+        </p>
+
+        {/* Areas to improve: the lowest one or two dimensions. */}
+        {improveAreas.length > 0 && (
+          <div
             style={{
-              display: 'inline-block',
-              padding: '4px 14px',
-              borderRadius: 999,
-              fontSize: 10,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              background: overallNum == null
-                ? 'rgba(238,233,223,0.05)'
-                : passed ? 'rgba(34,166,126,0.08)' : 'rgba(196,92,92,0.08)',
-              border: `1px solid ${overallNum == null ? MUTED : passed ? TEAL2 : RED}`,
-              color: overallNum == null ? MUTED : passed ? TEAL2 : RED,
-              fontWeight: 700,
+              background: 'rgba(196,138,42,0.06)',
+              border: '1px solid rgba(196,138,42,0.28)',
+              borderRadius: 3,
+              padding: '14px 16px',
+              marginBottom: 24,
             }}
           >
-            {overallNum == null
-              ? 'Score Unavailable'
-              : passed
-                ? `Passed · ${overallNum} / ${passThreshold}`
-                : `Not Passed · ${overallNum} / ${passThreshold}`}
-          </span>
-        </div>
-
-        {/* Threshold-delta descriptor - hidden when score is unavailable. */}
-        {overallNum != null && (
-          <div style={{ textAlign: 'center', marginBottom: 28, fontFamily: VAULT_BODY, fontSize: 13, color: WHITE, lineHeight: 1.5 }}>
-            {passed
-              ? `You scored ${deltaPts} ${pluralize(deltaPts, 'point')} above the threshold.`
-              : `You were ${deltaPts} ${pluralize(deltaPts, 'point')} short of passing.`}
+            <div style={{ fontSize: 10, color: AMBER, letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 10 }}>
+              Areas to improve
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {improveAreas.map((d) => (
+                <span
+                  key={d.label}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'baseline',
+                    gap: 6,
+                    fontSize: 13,
+                    color: WHITE,
+                    fontFamily: VAULT_BODY,
+                    background: 'rgba(238,233,223,0.05)',
+                    border: `1px solid ${BORDER2}`,
+                    borderRadius: 3,
+                    padding: '6px 12px',
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{d.label}</span>
+                  <span style={{ color: MUTED, fontVariantNumeric: 'tabular-nums' }}>{Math.round(d.score)}</span>
+                </span>
+              ))}
+            </div>
+            <div style={{ marginTop: 10, fontSize: 12, color: MUTED, lineHeight: 1.55 }}>
+              Focus here next time. Your full breakdown is below.
+            </div>
           </div>
         )}
-        {overallNum == null && <div style={{ marginBottom: 18 }} />}
 
-        {/* Dimension breakdown */}
-        <div style={{ marginBottom: 28 }}>
+        {/* Dimension breakdown (the "feedback below"; the scroll target). */}
+        <div id="sim-breakdown" style={{ marginBottom: 28, scrollMarginTop: 24 }}>
           <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
             Performance Breakdown
           </div>
@@ -381,40 +423,38 @@ export default function Results() {
           })}
         </div>
 
-        {/* Outcome copy */}
-        <OutcomeBlock
-          passed={passed}
-          isPioneer={isPioneer}
-          credentialId={credentialId}
-        />
+        {/* Pioneer fail keeps the "credential unaffected" reassurance. For
+            new candidates the body above already states the retake path, so
+            the structured note is omitted to avoid repeating (and hardening)
+            the cooldown message. */}
+        {isPioneer && (
+          <OutcomeBlock
+            passed={passed}
+            isPioneer={isPioneer}
+            credentialId={credentialId}
+          />
+        )}
 
         {/* Post-simulator assessment feedback (gated by FeedbackPanel's
-            own assessmentId guard). Only renders when the candidate has
-            an assessment in localStorage from the same flow; Pioneer
-            re-validation paths silently hide it. */}
+            own assessmentId guard). */}
         <FeedbackPanel assessmentId={feedbackAssessmentId} source="pioneer" />
 
-        {/* Actions */}
+        {/* Actions: primary scrolls to the on-page breakdown, secondary
+            returns to the dashboard. */}
         <div style={{ marginTop: 26, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {passed && credentialId && (
-            <Link
-              to={`/verify/${credentialId}`}
-              style={{
-                ...primaryBtn(false),
-                textDecoration: 'none',
-                textAlign: 'center',
-                display: 'block',
-              }}
-            >
-              View Verify Page
-            </Link>
-          )}
+          <button
+            type="button"
+            onClick={scrollToBreakdown}
+            style={primaryBtn(false)}
+          >
+            View My Feedback
+          </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
             style={outlinedBtn(false)}
           >
-            Return to Dashboard
+            Back to Dashboard
           </button>
         </div>
       </div>

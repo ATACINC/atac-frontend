@@ -67,6 +67,24 @@ function parseAssignError(err) {
   };
 }
 
+// Format a future Date as a friendly, ASCII-only local unlock time:
+// "today at 1:30 PM", "tomorrow at 1:30 PM", or "on Monday at 1:30 PM".
+// Returns null for an invalid date so callers fall back to generic copy.
+function formatUnlockTime(target) {
+  if (!(target instanceof Date) || Number.isNaN(target.getTime())) return null;
+  let h = target.getHours();
+  const m = String(target.getMinutes()).padStart(2, '0');
+  const meridiem = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  const time = `${h}:${m} ${meridiem}`;
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((dayStart(target) - dayStart(new Date())) / 86400000);
+  if (dayDiff <= 0) return `today at ${time}`;
+  if (dayDiff === 1) return `tomorrow at ${time}`;
+  return `on ${target.toLocaleDateString([], { weekday: 'long' })} at ${time}`;
+}
+
 const SESSION_STORAGE_KEY = 'atac_sim_session';
 const SESSION_MAX_AGE_MIN = 5;
 
@@ -305,30 +323,20 @@ export default function SimulatorEntry() {
     );
   }
 
-  // Cooldown state: the candidate's previous simulator attempt is still
-  // inside the retake window. Matches the dashboard CooldownCard copy
-  // ("Simulator cooldown active") and surfaces the backend's hours_remaining
-  // plus its human-readable reason. Back to Dashboard is the only action;
-  // a retry button here would just re-trigger the same 429.
+  // Cooldown state: the candidate's previous attempt is still inside the 24h
+  // retake window. A calm "almost ready" screen, NOT an error. The 429
+  // carries no absolute timestamp, so derive a friendly unlock time from
+  // hours_remaining. Back to Dashboard is the only action; a retry here
+  // would just re-trigger the same 429. Mirrors the dashboard CooldownCard.
   if (errorState && errorState.kind === 'cooldown') {
-    // hours_remaining arrives as a float (e.g. 23.45). Round (not ceil)
-    // so "about N hours" tracks the dashboard's precise "17h 08m"
-    // countdown rather than rounding up to 18. When the remainder rounds
-    // below an hour, say so plainly; the floor of 1 only guards the
-    // N-hours path.
     const hours = errorState.hoursRemaining;
     const hasHours = typeof hours === 'number' && hours > 0;
-    const rounded = hasHours ? Math.round(hours) : null;
-    let cooldownLead;
-    if (!hasHours) {
-      cooldownLead = 'Your retry opens shortly.';
-    } else if (rounded < 1) {
-      cooldownLead = 'Your retry opens in less than an hour.';
-    } else {
-      const n = Math.max(1, rounded);
-      cooldownLead = `Your retry opens in about ${n} ${n === 1 ? 'hour' : 'hours'}.`;
-    }
-    const cooldownMessage = `${cooldownLead} This is a short cooldown after an attempt, not an error - your progress is saved.`;
+    const unlockStr = hasHours
+      ? formatUnlockTime(new Date(Date.now() + hours * 3600 * 1000))
+      : null;
+    const cooldownBody = unlockStr
+      ? `There is a short wait between attempts so you can come back fresh. Your next run unlocks ${unlockStr}. Use the time to review your feedback so your next call is your strongest one.`
+      : 'There is a short wait between attempts so you can come back fresh. Your next run unlocks shortly. Use the time to review your feedback so your next call is your strongest one.';
     return (
       <div
         style={{
@@ -347,13 +355,13 @@ export default function SimulatorEntry() {
             maxWidth: 480,
             background: BG1,
             border: `1px solid ${BORDER2}`,
-            borderLeft: `3px solid ${AMBER}`,
+            borderLeft: `3px solid ${GOLD}`,
             borderRadius: 4,
             padding: '28px 32px',
           }}
         >
-          <div style={{ fontSize: 11, color: AMBER, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
-            Simulator on cooldown
+          <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
+            Cooldown in progress
           </div>
           <h2
             style={{
@@ -365,10 +373,10 @@ export default function SimulatorEntry() {
               lineHeight: 1.2,
             }}
           >
-            Simulator cooldown active
+            Your next attempt is almost ready
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(238,233,223,0.76)', lineHeight: 1.7, margin: '0 0 22px' }}>
-            {cooldownMessage}
+            {cooldownBody}
           </p>
           <button
             type="button"
