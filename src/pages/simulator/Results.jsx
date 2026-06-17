@@ -69,22 +69,21 @@ export default function Results() {
   const [errorText, setErrorText] = useState('');
 
   const pollRef = useRef(null);
-  const isPioneerFlowRef = useRef(false);
-  const sessionCreatedAtRef = useRef(null);
 
-  // Detect Pioneer flow + clean up sessionStorage once scored.
-  useEffect(() => {
+  // Pioneer flow is fixed for the lifetime of this screen, so read it once
+  // from sessionStorage in a lazy state initializer rather than writing a
+  // ref in an effect and reading ref.current during render (which trips
+  // react-hooks). sessionStorage cleanup on 'scored' lives in the poll
+  // effect below, not here.
+  const [isPioneerFlow] = useState(() => {
     try {
       const raw = sessionStorage.getItem('atac_sim_session');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        isPioneerFlowRef.current = !!parsed.credentialId;
-        sessionCreatedAtRef.current = parsed.createdAt || null;
-      }
+      if (raw) return !!JSON.parse(raw).credentialId;
     } catch (_) {
       // Tolerate; default to new-candidate copy.
     }
-  }, []);
+    return false;
+  });
 
   // Poll until scored or timeout.
   useEffect(() => {
@@ -280,7 +279,7 @@ export default function Results() {
   const credentialId  = statusData.credential_id || statusData.credentialId || statusData.credential?.credential_id || null;
   const passThreshold = statusData.pass_threshold ?? 70;
   const weights       = statusData.scoring_weights ?? null;
-  const isPioneer     = isPioneerFlowRef.current;
+  const isPioneer     = isPioneerFlow;
   const overallNum    = overall != null ? Math.round(overall) : null;
   const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
 
