@@ -282,6 +282,11 @@ export default function Payment() {
   async function handleResendCode() {
     if (resendCooldown > 0) return;
     setResendStatus('');
+    // Anti-abuse: disable + start the visible countdown the instant the
+    // button is pressed (not after the round-trip), so rapid repeats are
+    // impossible. A real error below resets it so a transient failure does
+    // not strand the candidate; a 429 honors the server's wait window.
+    setResendCooldown(60);
     try {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/auth/resend-verification`,
@@ -299,14 +304,15 @@ export default function Payment() {
       }
 
       if (!res.ok) {
-        setResendStatus(data.error || 'Could not resend code.');
+        setResendCooldown(0);
+        setResendStatus(data.error || 'Could not resend code. Please try again.');
         return;
       }
 
-      setResendCooldown(60);
-      setResendStatus('New code sent. Check your inbox.');
+      setResendStatus('New code sent. Check your inbox and spam folder.');
       setVerifyError('');
-    } catch (err) {
+    } catch {
+      setResendCooldown(0);
       setResendStatus('Network error. Please try again.');
     }
   }
@@ -432,16 +438,25 @@ export default function Payment() {
               {verifying ? 'Verifying…' : 'Verify & Continue to Payment'}
             </button>
 
-            {/* Resend */}
+            {/* Resend + spam-folder stopgap. Purely additive: the verify
+                submit logic and the 6-digit code format are untouched. */}
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              {resendStatus && (
-                <div style={{ fontSize: 12, color: resendStatus.includes('sent') ? TEAL2 : MUTED, marginBottom: 8 }}>
-                  {resendStatus}
-                </div>
-              )}
+              {/* Live region so the resend confirmation/error is announced to
+                  screen readers. Kept always-mounted so content changes fire. */}
+              <div role="status" aria-live="polite">
+                {resendStatus && (
+                  <div style={{ fontSize: 12, color: resendStatus.includes('sent') ? TEAL2 : MUTED, marginBottom: 10 }}>
+                    {resendStatus}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, margin: '0 0 8px' }}>
+                Didn't get the email? Check your spam folder, it may be there. Still nothing?
+              </p>
               <button
                 onClick={handleResendCode}
                 disabled={resendCooldown > 0}
+                aria-disabled={resendCooldown > 0 ? 'true' : undefined}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -453,7 +468,7 @@ export default function Payment() {
                   textDecoration: resendCooldown > 0 ? 'none' : 'underline',
                   textUnderlineOffset: 3,
                 }}>
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Didn’t get it? Resend code'}
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
               </button>
             </div>
 
