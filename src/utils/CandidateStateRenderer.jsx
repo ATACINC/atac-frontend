@@ -132,6 +132,13 @@ export default function CandidateStateRenderer({
     );
   }
 
+  if (nextStep === 'verify_email') {
+    // Returning unverified candidates (including Gmail registrants whose code
+    // landed in spam) recover here. Real resend affordance with the same
+    // press-triggered cooldown and states as the checkout gate (Payment.jsx).
+    return <VerifyEmailCard reason={reason} />;
+  }
+
   // All other states use the generic hero card.
   const cfg = HERO_CONFIG[nextStep];
   if (!cfg) {
@@ -158,14 +165,6 @@ export default function CandidateStateRenderer({
       if (typeof onOpenPhotoVerification === 'function') onOpenPhotoVerification();
       return;
     }
-    if (cfg.handler === 'verify_email') {
-      // No verify-email resend endpoint exists today; offer mailto fallback
-      // so the candidate can contact support if they cannot find the email.
-      if (typeof window !== 'undefined') {
-        window.location.href = `mailto:${SUPPORT_EMAIL}?subject=Verification%20email%20request`;
-      }
-      return;
-    }
   };
 
   return (
@@ -186,13 +185,6 @@ export default function CandidateStateRenderer({
  * ============================================================ */
 
 const HERO_CONFIG = {
-  verify_email: {
-    heading: 'Verify your email to continue',
-    ctaLabel: 'Open Email Help',
-    handler: 'verify_email',
-    accent: GOLD,
-    subtext: 'Check your inbox for a verification link. If it is missing, contact support.',
-  },
   pay: {
     heading: 'Choose your tier',
     ctaLabel: 'Choose Your Tier',
@@ -484,6 +476,121 @@ function formatCooldownTimer(endsAt, nowMs) {
   if (minutes > 0) return { ready: false, display: `${minutes}m` };
   // Sub-minute remainder: show 1m rather than 0m while still in cooldown.
   return { ready: false, display: '1m' };
+}
+
+/* ============================================================
+ * Verify-email card (dashboard recovery surface with real resend)
+ * ============================================================ */
+
+function VerifyEmailCard({ reason }) {
+  const [cooldown, setCooldown] = useState(0);
+  const [status, setStatus] = useState('');
+
+  // Tick the press-triggered cooldown down to zero (mirrors Payment.jsx).
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
+
+  // Resend the verification email. Same contract as the checkout gate: POST
+  // with the Bearer token; the backend resolves the authenticated email.
+  // Anti-abuse: disable + start the countdown on press (not after the
+  // round-trip), so rapid repeats are impossible; reset on a transient error
+  // so a returning candidate is never stranded; a 429 honors the server wait.
+  const resend = async () => {
+    if (cooldown > 0) return;
+    setStatus('');
+    setCooldown(60);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/resend-verification`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('atac_token')}` },
+        }
+      );
+      const data = await res.json();
+
+      if (res.status === 429 && data.waitSeconds) {
+        setCooldown(data.waitSeconds);
+        setStatus('Please wait before requesting another code.');
+        return;
+      }
+      if (!res.ok) {
+        setCooldown(0);
+        setStatus(data.error || 'Could not resend code. Please try again.');
+        return;
+      }
+      setStatus('New code sent. Check your inbox and spam folder.');
+    } catch {
+      setCooldown(0);
+      setStatus('Network error. Please try again.');
+    }
+  };
+
+  return (
+    <div
+      className="vault-up"
+      style={{
+        background: BG1,
+        border: `1px solid ${BORDER2}`,
+        borderLeft: `3px solid ${GOLD}`,
+        borderRadius: 4,
+        padding: '28px 32px',
+        marginBottom: 28,
+        fontFamily: VAULT_BODY,
+      }}
+    >
+      <h2 style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, fontWeight: 400, color: WHITE, margin: '0 0 12px', lineHeight: 1.15 }}>
+        Verify your email to continue
+      </h2>
+      <p style={{ fontSize: 14, color: 'rgba(238,233,223,0.76)', lineHeight: 1.7, margin: '0 0 18px', maxWidth: 720 }}>
+        {reason || 'We sent a verification email when you signed up. Confirm your email to unlock the rest of your certification.'}
+      </p>
+      <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: '0 0 14px', maxWidth: 720 }}>
+        Didn't get the email? Check your spam folder, it may be there. Still nothing?
+      </p>
+      {/* Live region so the resend confirmation/error is announced. */}
+      <div role="status" aria-live="polite">
+        {status && (
+          <div style={{ fontSize: 13, color: status.includes('sent') ? TEAL2 : MUTED, margin: '0 0 14px' }}>
+            {status}
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          onClick={resend}
+          disabled={cooldown > 0}
+          aria-disabled={cooldown > 0 ? 'true' : undefined}
+          style={{
+            background: cooldown > 0 ? 'rgba(201,168,76,0.4)' : GOLD,
+            color: BG,
+            border: 'none',
+            borderRadius: 2,
+            padding: '13px 26px',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            cursor: cooldown > 0 ? 'not-allowed' : 'pointer',
+            fontFamily: VAULT_BODY,
+            opacity: cooldown > 0 ? 0.7 : 1,
+          }}
+        >
+          {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+        </button>
+        <a
+          href={`mailto:${SUPPORT_EMAIL}?subject=Verification%20email%20help`}
+          style={{ fontSize: 12, color: MUTED, fontFamily: VAULT_BODY, textDecoration: 'underline', textUnderlineOffset: 3 }}
+        >
+          Still stuck? Contact support
+        </a>
+      </div>
+    </div>
+  );
 }
 
 /* ============================================================
