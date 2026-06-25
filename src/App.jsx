@@ -26,6 +26,12 @@ const SimulatorResults        = lazy(() => import('./pages/simulator/Results'));
 import SimulatorLoadingScreen from './pages/simulator/SimulatorLoadingScreen';
 import SimulatorErrorBoundary from './components/SimulatorErrorBoundary';
 
+// Invite-only voice demonstration. Public (no PrivateRoute), not in the main
+// nav, reachable directly by URL so it can be shared with specific invitees.
+// Lazy-loaded so its chunk (and the voice SDK it pulls only at the call step)
+// stays out of the main bundle.
+const SandboxPage = lazy(() => import('./pages/sandbox/SandboxPage'));
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
   return token ? children : <Navigate to="/login" replace />;
@@ -74,6 +80,14 @@ export default function App() {
           <Route path="/admin" element={<ExternalRedirect to="https://admin.atacglobalcx.com" />} />
           <Route path="/"           element={<Navigate to="/dashboard" replace />} />
           <Route path="/try" element={<Trial />} />
+          <Route
+            path="/sandbox"
+            element={
+              <Suspense fallback={<SimulatorLoadingScreen />}>
+                <SandboxPage />
+              </Suspense>
+            }
+          />
           <Route path="/verify" element={<VerifyLanding />} />
           <Route path="/verify/:credentialId" element={<Verify />} />
         </Routes>
