@@ -42,7 +42,7 @@ const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 const MODE_LISTENING = 'listening';
 const MODE_SPEAKING  = 'speaking';
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded }) {
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -143,6 +143,12 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
               ...prev,
               { source: src, message: text, ts: Date.now() },
             ]);
+            // Optional: surface the raw turn (native SDK source + text) to a
+            // parent that wants it. The candidate wrapper does not pass this
+            // prop, so this is a no-op on the candidate path.
+            if (typeof onTranscriptTurn === 'function') {
+              onTranscriptTurn({ source: src, message: text });
+            }
           },
 
           onModeChange: (m) => {
