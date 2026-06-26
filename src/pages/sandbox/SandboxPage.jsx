@@ -245,8 +245,13 @@ export default function SandboxPage() {
     // On-brand entry gate (Vault tokens). The verify-access form wiring below
     // is unchanged: same handleVerify, email/accessCode state, emailError, and
     // verifying. Only the visual presentation differs from prior versions.
-    const waveBars = Array.from({ length: 40 }, (_, i) => {
-      const h = 14 + Math.round(24 * Math.abs(Math.sin(i * 0.5)) + 12 * Math.abs(Math.sin(i * 0.17 + 1)));
+    // Full-width signature waveform. Many bars distributed edge to edge via
+    // justify-content: space-between on a left:0/right:0 band (full viewport
+    // width within the unconstrained gate root). Heights scaled up for a
+    // taller, more confident band; the band is shortened on mobile by a CSS
+    // transform (see gateCss) rather than re-rendering fewer bars.
+    const waveBars = Array.from({ length: 88 }, (_, i) => {
+      const h = 16 + Math.round(46 * Math.abs(Math.sin(i * 0.5)) + 22 * Math.abs(Math.sin(i * 0.17 + 1)));
       return (
         <span
           key={i}
@@ -284,8 +289,11 @@ export default function SandboxPage() {
         <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 96px)', pointerEvents: 'none', zIndex: 0 }} />
         {/* Rotating seal watermark */}
         <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', right: -180, top: '50%', width: 680, height: 'auto', opacity: 0.05, pointerEvents: 'none', userSelect: 'none', zIndex: 0, animation: 'sbxSpin 120s linear infinite' }} />
-        {/* Bottom voice waveform */}
-        <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, bottom: 44, height: 64, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, opacity: 0.3, pointerEvents: 'none', zIndex: 0, WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)', maskImage: 'linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)' }}>
+        {/* Full-width signature waveform: spans the entire bottom edge of the
+            viewport as an ambient horizontal band. Sits at zIndex 0 behind the
+            content; the access card is opaque and the footer carries a dark
+            scrim, so legibility is preserved. */}
+        <div aria-hidden="true" className="sbx-wave" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 112, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', opacity: 0.28, pointerEvents: 'none', zIndex: 0, WebkitMaskImage: 'linear-gradient(90deg, transparent 0, #000 2.5%, #000 97.5%, transparent 100%)', maskImage: 'linear-gradient(90deg, transparent 0, #000 2.5%, #000 97.5%, transparent 100%)' }}>
           {waveBars}
         </div>
 
@@ -299,12 +307,12 @@ export default function SandboxPage() {
         </header>
 
         {/* Main two-column */}
-        <main className="sbx-gate-main" style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '64px 48px 86px' }}>
-          <div className="sbx-gate-inner" style={{ width: '100%', maxWidth: 1280, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 64 }}>
+        <main className="sbx-gate-main" style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '72px 48px 100px' }}>
+          <div className="sbx-gate-inner" style={{ width: '100%', maxWidth: 1320, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 64 }}>
 
             {/* LEFT */}
             <section className="sbx-gate-left" style={{ flex: '1 1 520px', minWidth: 300 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 11px', border: '1px solid rgba(201,168,76,0.32)', borderRadius: 999 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'sbxPulse 1.8s ease-in-out infinite' }} />
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: GOLD }}>LIVE</span>
@@ -317,17 +325,17 @@ export default function SandboxPage() {
                 <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.24em', textTransform: 'uppercase', color: MUTED }}>ATAC Call Readiness Simulator</span>
               </div>
 
-              <h1 className="sbx-gate-h1" style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 'clamp(36px, 5.4vw, 68px)', lineHeight: 1.04, letterSpacing: '-0.01em', margin: '0 0 24px', color: WHITE }}>
+              <h1 className="sbx-gate-h1" style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 'clamp(38px, 6vw, 80px)', lineHeight: 1.04, letterSpacing: '-0.01em', margin: '0 0 28px', color: WHITE }}>
                 This is not a test.<br />
                 <span style={{ fontStyle: 'italic', color: GOLD }}>It&apos;s a live call.</span>
               </h1>
 
-              <p style={{ maxWidth: 524, fontSize: 19.5, lineHeight: 1.62, color: 'rgba(238,233,223,0.72)', margin: '0 0 32px' }}>
+              <p style={{ maxWidth: 560, fontSize: 21, lineHeight: 1.62, color: 'rgba(238,233,223,0.72)', margin: '0 0 40px' }}>
                 You have been invited to a private voice demonstration. Handle a real customer scenario and watch ATAC score your empathy, tone, resolution, and call control, in real time, the way employers actually measure them.
               </p>
 
               {/* Illustrative sample card (decorative; not the user's actual scenario) */}
-              <div style={{ maxWidth: 524, background: 'rgba(255,255,255,0.022)', border: `1px solid ${BORDER2}`, borderRadius: 16, padding: '18px 20px 16px', marginBottom: 30 }}>
+              <div style={{ maxWidth: 560, background: 'rgba(255,255,255,0.022)', border: `1px solid ${BORDER2}`, borderRadius: 16, padding: '18px 20px 16px', marginBottom: 40 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'sbxPulse 1.8s ease-in-out infinite' }} />
@@ -370,7 +378,7 @@ export default function SandboxPage() {
             </section>
 
             {/* RIGHT / ACCESS CARD */}
-            <section className="sbx-gate-right" style={{ position: 'relative', flex: '0 0 480px', maxWidth: 480, minWidth: 300 }}>
+            <section className="sbx-gate-right" style={{ position: 'relative', flex: '0 0 512px', maxWidth: 512, minWidth: 300 }}>
               <img src={certificateSeal} alt="ATAC Global CX Certification Authority" className="sbx-gate-seal" style={{ position: 'absolute', top: -30, right: -26, width: 100, height: 'auto', zIndex: 4, filter: 'drop-shadow(0 10px 22px rgba(0,0,0,0.6))' }} />
               <div style={{ position: 'relative', background: `linear-gradient(165deg, ${BG3}, ${BG})`, border: '1px solid rgba(201,168,76,0.22)', borderRadius: 18, padding: '34px 34px 30px', boxShadow: '0 40px 90px -36px rgba(0,0,0,0.85)', overflow: 'hidden' }}>
                 <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, rgba(201,168,76,0), ${GOLD} 50%, rgba(201,168,76,0))` }} />
@@ -380,8 +388,8 @@ export default function SandboxPage() {
                   <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Invite-Only Demonstration</span>
                 </div>
 
-                <h2 style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 36, lineHeight: 1.1, margin: '0 0 9px', color: WHITE }}>Enter the simulator</h2>
-                <p style={{ fontSize: 15, lineHeight: 1.55, color: MUTED, margin: '0 0 26px' }}>Use the email and access code from your invitation to begin a live voice demonstration.</p>
+                <h2 style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 38, lineHeight: 1.1, margin: '0 0 10px', color: WHITE }}>Enter the simulator</h2>
+                <p style={{ fontSize: 15.5, lineHeight: 1.55, color: MUTED, margin: '0 0 28px' }}>Use the email and access code from your invitation to begin a live voice demonstration.</p>
 
                 <form onSubmit={handleVerify} noValidate>
                   <label htmlFor="sandbox-email" style={gateFieldLabel}>Email</label>
@@ -422,7 +430,7 @@ export default function SandboxPage() {
         </main>
 
         {/* Footer */}
-        <footer className="sbx-gate-footer" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 11, letterSpacing: '0.08em', color: 'rgba(238,233,223,0.45)' }}>
+        <footer className="sbx-gate-footer" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'linear-gradient(0deg, rgba(8,11,18,0.96), rgba(8,11,18,0.6))', fontSize: 11, letterSpacing: '0.08em', color: 'rgba(238,233,223,0.45)' }}>
           <span>2026 ATAC Global CX. Blockchain-verified credentials.</span>
           <span>app.atacglobalcx.com/sandbox</span>
         </footer>
@@ -774,7 +782,7 @@ const gateInputStyle = {
   border: '1px solid rgba(255,255,255,0.10)',
   borderRadius: 10,
   color: WHITE,
-  fontSize: 16,
+  fontSize: 17,
   fontFamily: VAULT_BODY,
   outline: 'none',
   transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
@@ -789,7 +797,7 @@ function gateCtaStyle(disabled) {
     borderRadius: 10,
     background: disabled ? 'rgba(201,168,76,0.4)' : `linear-gradient(135deg, #D8BA63, ${GOLD} 55%, #B6912F)`,
     color: BG,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 700,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
@@ -816,12 +824,16 @@ const gateCss = `
     .sbx-gate-right { flex: 1 1 100% !important; max-width: 520px !important; min-width: 0 !important; order: 1 !important; }
     .sbx-gate-seal { width: 80px !important; top: -20px !important; right: -4px !important; }
     .sbx-gate-footer { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; padding: 18px 24px !important; }
+    /* Keep the signature waveform full-width on mobile but shorter, so it */
+    /* frames the bottom without crowding the stacked content. */
+    .sbx-wave { transform: scaleY(0.66); transform-origin: bottom; }
   }
   @media (max-width: 480px) {
     .sbx-gate-header { padding: 14px 16px !important; flex-wrap: wrap !important; gap: 12px !important; }
     .sbx-gate-main { padding: 28px 16px 56px !important; }
     .sbx-gate-h1 { font-size: 34px !important; }
     .sbx-gate-seal { width: 66px !important; top: -14px !important; }
+    .sbx-wave { transform: scaleY(0.5); transform-origin: bottom; }
   }
 `;
 
