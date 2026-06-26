@@ -64,8 +64,11 @@ export default function SandboxPage() {
   const [starting, setStarting] = useState(false);
   const [signedUrl, setSignedUrl] = useState(null);
   const conversationIdRef = useRef(null);
+  // Live transcript turns accumulated during the call, raw SDK shape
+  // ({ source: 'user' | 'ai', message }). Ref only, never persisted.
+  const transcriptRef = useRef([]);
 
-  // Results. scoreState: { status: 'scoring' | 'done' | 'error', breakdown?, message? }
+  // Results. scoreState: { status: 'scoring' | 'finalizing' | 'done' | 'error', breakdown?, message? }
   const [scoreState, setScoreState] = useState({ status: 'scoring' });
 
   // ---------- Step B: access gate ----------
@@ -149,6 +152,7 @@ export default function SandboxPage() {
         return;
       }
       conversationIdRef.current = null;
+      transcriptRef.current = [];
       setSignedUrl(url);
       setPhase('call');
     } catch {
@@ -159,14 +163,27 @@ export default function SandboxPage() {
   }
 
   // ---------- Step D: score the demonstration ----------
-  async function runScore() {
+  // Sends the live transcript captured during the call so scoring does not
+  // depend on the backend poll fallback. The live SDK source token "ai" (the
+  // simulated customer) is translated to the backend role "agent"; "user"
+  // (the person on the call) is sent unchanged. conversation_id is still
+  // included so the backend poll fallback can run if the transcript is empty
+  // or invalid.
+  async function runScore(attempt = 0) {
     if (!conversationIdRef.current) {
       const msg = 'The demonstration did not capture a conversation to score. Please try again.';
       setScoreState({ status: 'error', message: msg });
       showToast(msg, { type: 'error' });
       return;
     }
-    setScoreState({ status: 'scoring' });
+    setScoreState({ status: attempt === 0 ? 'scoring' : 'finalizing' });
+
+    // Translate each turn's live source token to the backend role token.
+    const transcript = transcriptRef.current.map((turn) => ({
+      role: turn.source === 'ai' ? 'agent' : turn.source,
+      message: turn.message,
+    }));
+
     try {
       const res = await fetch(`${API_BASE}/api/sandbox/voice-score`, {
         method: 'POST',
@@ -175,10 +192,25 @@ export default function SandboxPage() {
           email,
           accessCode: accessCode.trim(),
           conversation_id: conversationIdRef.current,
+          transcript,
         }),
       });
       const data = await res.json().catch(() => ({}));
 
+      if (res.status === 202 && data.pending) {
+        // Backend still finalizing via its poll fallback. The client
+        // transcript normally lets a quick retry succeed; after two retries
+        // fall back to the manual Try Again affordance.
+        if (attempt < 2) {
+          setScoreState({ status: 'finalizing' });
+          setTimeout(() => runScore(attempt + 1), 3000);
+          return;
+        }
+        const msg = 'Scoring is taking longer than expected. Please try again.';
+        setScoreState({ status: 'error', message: msg });
+        showToast(msg, { type: 'warning' });
+        return;
+      }
       if (res.status === 422) {
         const msg = data.error || 'Your demonstration is still being processed. Please try again in a moment.';
         setScoreState({ status: 'error', message: msg });
@@ -328,6 +360,7 @@ export default function SandboxPage() {
         <VoiceCall
           signedUrl={signedUrl}
           onConversationId={(id) => { conversationIdRef.current = id; }}
+          onTranscriptTurn={(turn) => { transcriptRef.current.push(turn); }}
           onEnded={() => setPhase('results')}
         />
       </Suspense>
@@ -339,10 +372,14 @@ export default function SandboxPage() {
     <Shell wide>
       <DemoBanner />
 
-      {scoreState.status === 'scoring' && (
+      {(scoreState.status === 'scoring' || scoreState.status === 'finalizing') && (
         <div style={{ ...cardStyle, textAlign: 'center' }}>
-          <div style={eyebrowStyle}>Scoring</div>
-          <p style={{ ...leadStyle, marginBottom: 0 }}>Scoring your demonstration. This usually takes under a minute.</p>
+          <div style={eyebrowStyle}>{scoreState.status === 'finalizing' ? 'Finalizing' : 'Scoring'}</div>
+          <p style={{ ...leadStyle, marginBottom: 0 }}>
+            {scoreState.status === 'finalizing'
+              ? 'Scoring is finalizing. This will just take a moment.'
+              : 'Scoring your demonstration. This usually takes under a minute.'}
+          </p>
         </div>
       )}
 
@@ -351,7 +388,7 @@ export default function SandboxPage() {
           <div style={{ ...eyebrowStyle, color: GOLD }}>Almost there</div>
           <p style={leadStyle}>{scoreState.message}</p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button type="button" onClick={runScore} style={primaryBtn(false)}>Try again</button>
+            <button type="button" onClick={() => runScore()} style={primaryBtn(false)}>Try again</button>
             <button type="button" onClick={() => setPhase('intro')} style={secondaryBtn}>
               Start a new demonstration
             </button>
