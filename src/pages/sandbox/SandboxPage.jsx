@@ -31,7 +31,7 @@ const BG3   = '#141B26';
 const GOLD  = '#C9A84C';
 const RED   = '#C45C5C';
 const WHITE = '#EEE9DF';
-const MUTED = 'rgba(238,233,223,0.45)';
+const MUTED = 'rgba(238,233,223,0.6)';
 const BORDER2 = 'rgba(238,233,223,0.07)';
 const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
@@ -270,24 +270,47 @@ export default function SandboxPage() {
   }
 
   if (phase === 'briefing') {
-    // Light pre-call briefing. The three blocks below are reused verbatim
-    // from the candidate pre-call briefing (Briefing.jsx): Your Objective,
-    // the "you speak first" reminder, and Quick Reminders. No scenario,
-    // scoring, mic-test, or credential copy is brought across.
+    // Fuller SC-002 briefing, mirroring the production candidate briefing for
+    // the member-services scenario: overview, role, customer, intro script,
+    // what good looks like, the five resolution moves with a worked example,
+    // and quick reminders. The candidate scoring block is excluded entirely.
     return (
-      <Shell>
-        <div style={cardStyle}>
-          <div style={eyebrowStyle}>Your Objective</div>
-          <p style={leadStyle}>Listen carefully and handle the call professionally.</p>
+      <Shell wide>
+        <div style={{ ...cardStyle, maxWidth: 640 }}>
+          <div style={eyebrowStyle}>Overview</div>
+          <p style={leadStyle}>This is a healthcare member services call. You will speak with a member about a billing question.</p>
 
-          <p style={{ ...leadStyle, marginBottom: 26 }}>
-            The customer is waiting for you to greet them. Start speaking as soon as the call begins.
-          </p>
+          <div style={sectionLabelStyle}>Your Role</div>
+          <p style={leadStyle}>You are a Member Services Representative at a health insurance company. You help members understand their benefits, billing, and claims.</p>
 
-          <div style={{ ...eyebrowStyle, marginBottom: 12 }}>Quick Reminders</div>
-          <ul style={{ margin: '0 0 4px', paddingLeft: 20, color: 'rgba(238,233,223,0.76)', fontSize: 14, lineHeight: 1.8 }}>
+          <div style={sectionLabelStyle}>About Your Customer</div>
+          <p style={leadStyle}>Linda, 67, retired widow, lives alone. She has been with this insurance plan for 11 years, originally through her late husband's employer and now through her own Medicare supplemental coverage. She received an Explanation of Benefits letter showing an $847 charge for a doctor visit she thought was covered. She doesn't fully understand what the letter is saying. The medical and insurance terms confuse her. She is not angry, she is worried and apologetic.</p>
+
+          <div style={sectionLabelStyle}>You Speak First</div>
+          <div style={openingCalloutStyle}>Thank you for calling Member Services, this is [your name]. How can I help you today?</div>
+          <p style={leadStyle}>The customer is waiting for you to greet them. Start speaking as soon as the call begins.</p>
+
+          <div style={sectionLabelStyle}>What Good Looks Like</div>
+          <p style={leadStyle}>Explain what the charge means in plain language without insurance jargon. Confirm whether she actually owes the money or whether it's a billing error. Be patient, slow down, and let her ask things twice if she needs to.</p>
+
+          <div style={sectionLabelStyle}>Five Moves to Nail Resolution</div>
+          <p style={leadStyle}>Warm and clear is the hard part. To resolve the call well, make sure you land all five of these before the call ends.</p>
+          <ol style={fiveMovesListStyle}>
+            <li><strong>The specific reason:</strong> Name the real cause using a proper term, not a vague summary.</li>
+            <li><strong>A reference number:</strong> Give a case or confirmation ID the customer can keep.</li>
+            <li><strong>A concrete figure:</strong> State an actual dollar amount and timeline, never "we will bill you later".</li>
+            <li><strong>A verification or escalation path:</strong> Tell them how to dispute, confirm, or follow up.</li>
+            <li><strong>A specific follow-up commitment:</strong> When and how you will be in touch, and what they get in writing.</li>
+          </ol>
+          <div style={workedExampleStyle}>
+            <div style={workedExampleLabelStyle}>What This Sounds Like for Linda</div>
+            <p style={workedExampleTextStyle}>This $847 applies to your annual deductible, which is why your plan did not cover it. Your reference number is EOB-2026-04891. If you would like to dispute it, I can email you a claims-review form and you have 30 days to file. I can also set up a payment plan of $84.70 per month over 10 months starting July 1. I will send a written summary to your email today so you have everything in one place.</p>
+          </div>
+
+          <div style={sectionLabelStyle}>Quick Reminders</div>
+          <ul style={quickRemindersListStyle}>
             <li>Speak first when the call begins</li>
-            <li>Aim for 4 to 6 minutes of conversation</li>
+            <li>Aim for 5 to 10 minutes of conversation</li>
             <li>Watch your mic indicator during the call</li>
           </ul>
 
@@ -363,10 +386,10 @@ function DemoBanner() {
         marginRight: 'auto',
       }}
     >
-      <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>
+      <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 5 }}>
         Demonstration
       </div>
-      <div style={{ fontSize: 14, color: WHITE, lineHeight: 1.55 }}>
+      <div style={{ fontSize: 16, color: WHITE, lineHeight: 1.6 }}>
         This is a demonstration. No credential has been issued.
       </div>
     </div>
@@ -376,8 +399,8 @@ function DemoBanner() {
 function ResultsBreakdown({ breakdown }) {
   const data = breakdown || {};
   const feedback = (data.feedback && typeof data.feedback === 'object') ? data.feedback : {};
-  // Overall is shown as a raw DEMONSTRATION score, never as a verdict or
-  // against a threshold. pass_fail is intentionally not read or displayed.
+  // Overall is shown as a raw DEMONSTRATION score, never as a verdict.
+  // pass_fail is intentionally not read or displayed.
   const overall = typeof data.overall === 'number' ? Math.round(data.overall) : null;
 
   return (
@@ -385,15 +408,15 @@ function ResultsBreakdown({ breakdown }) {
       <div style={eyebrowStyle}>Your demonstration results</div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, margin: '6px 0 24px' }}>
-        <span style={{ fontSize: 11, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+        <span style={{ fontSize: 13, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
           Demonstration score
         </span>
-        <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 44, fontWeight: 600, color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, fontWeight: 600, color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
           {overall != null ? overall : 'NA'}
         </span>
       </div>
 
-      <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
+      <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
         Breakdown
       </div>
       {DIMENSIONS.map((d) => (
@@ -415,7 +438,7 @@ function ResultsBreakdown({ breakdown }) {
           padding: '20px 22px',
         }}
       >
-        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 22, fontWeight: 400, color: WHITE, marginBottom: 14, lineHeight: 1.25 }}>
+        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 24, fontWeight: 400, color: WHITE, marginBottom: 14, lineHeight: 1.25 }}>
           Want the real, blockchain-verified credential?
         </div>
         <a href={REGISTER_URL} style={{ ...primaryBtn(false), textDecoration: 'none', display: 'inline-block' }}>
@@ -430,13 +453,13 @@ function DimensionRow({ label, score, feedback }) {
   return (
     <div style={{ padding: '12px 0', borderTop: `1px solid ${BORDER2}` }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ fontSize: 14, color: WHITE, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontFamily: 'Consolas, Menlo, monospace', fontSize: 16, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 16, color: WHITE, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontFamily: 'Consolas, Menlo, monospace', fontSize: 18, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
           {score != null ? score : 'NA'}
         </span>
       </div>
       {feedback && (
-        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginTop: 6, maxWidth: 620 }}>
+        <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.6, marginTop: 6, maxWidth: 620 }}>
           {feedback}
         </div>
       )}
@@ -471,7 +494,7 @@ function Shell({ children, wide }) {
 function ConnectingScreen() {
   return (
     <div style={{ minHeight: '100vh', background: BG, color: MUTED, fontFamily: VAULT_BODY, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Connecting...</div>
+      <div style={{ fontSize: 13, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Connecting...</div>
     </div>
   );
 }
@@ -487,9 +510,9 @@ const cardStyle = {
 };
 
 const eyebrowStyle = {
-  fontSize: 11,
+  fontSize: 13,
   color: GOLD,
-  letterSpacing: '0.22em',
+  letterSpacing: '0.2em',
   textTransform: 'uppercase',
   fontWeight: 700,
   marginBottom: 14,
@@ -497,25 +520,25 @@ const eyebrowStyle = {
 
 const titleStyle = {
   fontFamily: VAULT_DISPLAY,
-  fontSize: 30,
+  fontSize: 32,
   fontWeight: 400,
   color: WHITE,
   margin: '0 0 14px',
-  lineHeight: 1.15,
+  lineHeight: 1.2,
 };
 
 const leadStyle = {
-  fontSize: 14,
-  color: 'rgba(238,233,223,0.76)',
+  fontSize: 16,
+  color: 'rgba(238,233,223,0.9)',
   lineHeight: 1.7,
   margin: '0 0 24px',
 };
 
 const labelStyle = {
   display: 'block',
-  fontSize: 11,
+  fontSize: 13,
   color: MUTED,
-  letterSpacing: '0.16em',
+  letterSpacing: '0.14em',
   textTransform: 'uppercase',
   fontWeight: 600,
   marginBottom: 8,
@@ -524,18 +547,18 @@ const labelStyle = {
 const inputStyle = {
   width: '100%',
   boxSizing: 'border-box',
-  padding: '13px 14px',
+  padding: '14px 14px',
   background: 'rgba(255,255,255,0.04)',
   border: `1px solid ${BORDER2}`,
   borderRadius: 2,
   color: WHITE,
-  fontSize: 15,
+  fontSize: 16,
   fontFamily: VAULT_BODY,
   outline: 'none',
 };
 
 const fieldErrorStyle = {
-  fontSize: 12,
+  fontSize: 13,
   color: RED,
   marginTop: 6,
 };
@@ -548,8 +571,8 @@ function primaryBtn(disabled) {
     color: BG,
     border: 'none',
     borderRadius: 2,
-    padding: '14px 22px',
-    fontSize: 12,
+    padding: '15px 22px',
+    fontSize: 13,
     fontWeight: 700,
     letterSpacing: '0.18em',
     textTransform: 'uppercase',
@@ -564,11 +587,70 @@ const secondaryBtn = {
   color: WHITE,
   border: `1px solid ${BORDER2}`,
   borderRadius: 2,
-  padding: '14px 22px',
-  fontSize: 12,
+  padding: '15px 22px',
+  fontSize: 13,
   fontWeight: 600,
   letterSpacing: '0.16em',
   textTransform: 'uppercase',
   cursor: 'pointer',
   fontFamily: VAULT_BODY,
+};
+
+// Briefing-specific styles. Section labels reuse the eyebrow treatment with
+// top spacing so the longer briefing stays skimmable, not a wall of text.
+const sectionLabelStyle = { ...eyebrowStyle, marginTop: 30 };
+
+const openingCalloutStyle = {
+  background: 'rgba(201,168,76,0.08)',
+  border: '1px solid rgba(201,168,76,0.35)',
+  borderRadius: 4,
+  padding: '16px 18px',
+  margin: '0 0 14px',
+  fontFamily: VAULT_DISPLAY,
+  fontStyle: 'italic',
+  fontSize: 19,
+  color: WHITE,
+  lineHeight: 1.45,
+};
+
+const fiveMovesListStyle = {
+  margin: '0 0 18px',
+  paddingLeft: 22,
+  color: 'rgba(238,233,223,0.9)',
+  fontSize: 16,
+  lineHeight: 1.7,
+};
+
+const workedExampleStyle = {
+  background: 'rgba(34,166,126,0.07)',
+  border: '1px solid rgba(34,166,126,0.3)',
+  borderRadius: 6,
+  padding: '18px 20px',
+  marginBottom: 4,
+};
+
+const workedExampleLabelStyle = {
+  fontSize: 12,
+  color: '#22A67E',
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  fontWeight: 700,
+  marginBottom: 10,
+};
+
+const workedExampleTextStyle = {
+  fontFamily: VAULT_DISPLAY,
+  fontStyle: 'italic',
+  fontSize: 17,
+  color: WHITE,
+  lineHeight: 1.5,
+  margin: 0,
+};
+
+const quickRemindersListStyle = {
+  margin: '0 0 4px',
+  paddingLeft: 22,
+  color: 'rgba(238,233,223,0.9)',
+  fontSize: 16,
+  lineHeight: 1.9,
 };
