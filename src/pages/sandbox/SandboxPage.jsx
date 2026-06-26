@@ -299,8 +299,8 @@ export default function SandboxPage() {
         </header>
 
         {/* Main two-column */}
-        <main className="sbx-gate-main" style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '52px 48px 86px' }}>
-          <div className="sbx-gate-inner" style={{ width: '100%', maxWidth: 1200, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 64 }}>
+        <main className="sbx-gate-main" style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '64px 48px 86px' }}>
+          <div className="sbx-gate-inner" style={{ width: '100%', maxWidth: 1280, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 64 }}>
 
             {/* LEFT */}
             <section className="sbx-gate-left" style={{ flex: '1 1 520px', minWidth: 300 }}>
@@ -317,12 +317,12 @@ export default function SandboxPage() {
                 <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.24em', textTransform: 'uppercase', color: MUTED }}>ATAC Call Readiness Simulator</span>
               </div>
 
-              <h1 className="sbx-gate-h1" style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 'clamp(40px, 5vw, 60px)', lineHeight: 1.04, letterSpacing: '-0.01em', margin: '0 0 24px', color: WHITE }}>
+              <h1 className="sbx-gate-h1" style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 'clamp(36px, 5.4vw, 68px)', lineHeight: 1.04, letterSpacing: '-0.01em', margin: '0 0 24px', color: WHITE }}>
                 This is not a test.<br />
                 <span style={{ fontStyle: 'italic', color: GOLD }}>It&apos;s a live call.</span>
               </h1>
 
-              <p style={{ maxWidth: 524, fontSize: 18, lineHeight: 1.62, color: 'rgba(238,233,223,0.72)', margin: '0 0 32px' }}>
+              <p style={{ maxWidth: 524, fontSize: 19.5, lineHeight: 1.62, color: 'rgba(238,233,223,0.72)', margin: '0 0 32px' }}>
                 You have been invited to a private voice demonstration. Handle a real customer scenario and watch ATAC score your empathy, tone, resolution, and call control, in real time, the way employers actually measure them.
               </p>
 
@@ -339,17 +339,17 @@ export default function SandboxPage() {
 
                 <div style={{ display: 'flex', gap: 11, marginBottom: 13 }}>
                   <div style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', background: 'rgba(26,143,105,0.25)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: WHITE }}>C</div>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: 'rgba(238,233,223,0.82)' }}>"I was charged for something I did not expect, and I need it sorted out today."</p>
+                  <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.5, color: 'rgba(238,233,223,0.82)' }}>"I was charged for something I did not expect, and I need it sorted out today."</p>
                 </div>
                 <div style={{ display: 'flex', gap: 11 }}>
                   <div style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: BG }}>A</div>
-                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: WHITE }}>"I completely understand, and I am sorry. Let me pull up your account and make this right."</p>
+                  <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.5, color: WHITE }}>"I completely understand, and I am sorry. Let me pull up your account and make this right."</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                   {[['Empathy', '86'], ['Resolution', '78'], ['Call Close', '84']].map(([label, val], i) => (
                     <div key={label} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 20, color: GOLD }}>{val}</div>
+                      <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 22, color: GOLD }}>{val}</div>
                       <div style={{ fontSize: 9.5, letterSpacing: '0.14em', color: 'rgba(238,233,223,0.5)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
                     </div>
                   ))}
@@ -370,7 +370,7 @@ export default function SandboxPage() {
             </section>
 
             {/* RIGHT / ACCESS CARD */}
-            <section className="sbx-gate-right" style={{ position: 'relative', flex: '0 0 440px', maxWidth: 440, minWidth: 300 }}>
+            <section className="sbx-gate-right" style={{ position: 'relative', flex: '0 0 480px', maxWidth: 480, minWidth: 300 }}>
               <img src={certificateSeal} alt="ATAC Global CX Certification Authority" className="sbx-gate-seal" style={{ position: 'absolute', top: -30, right: -26, width: 100, height: 'auto', zIndex: 4, filter: 'drop-shadow(0 10px 22px rgba(0,0,0,0.6))' }} />
               <div style={{ position: 'relative', background: `linear-gradient(165deg, ${BG3}, ${BG})`, border: '1px solid rgba(201,168,76,0.22)', borderRadius: 18, padding: '34px 34px 30px', boxShadow: '0 40px 90px -36px rgba(0,0,0,0.85)', overflow: 'hidden' }}>
                 <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, rgba(201,168,76,0), ${GOLD} 50%, rgba(201,168,76,0))` }} />
@@ -380,8 +380,8 @@ export default function SandboxPage() {
                   <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Invite-Only Demonstration</span>
                 </div>
 
-                <h2 style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, margin: '0 0 9px', color: WHITE }}>Enter the simulator</h2>
-                <p style={{ fontSize: 14.5, lineHeight: 1.55, color: MUTED, margin: '0 0 26px' }}>Use the email and access code from your invitation to begin a live voice demonstration.</p>
+                <h2 style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 36, lineHeight: 1.1, margin: '0 0 9px', color: WHITE }}>Enter the simulator</h2>
+                <p style={{ fontSize: 15, lineHeight: 1.55, color: MUTED, margin: '0 0 26px' }}>Use the email and access code from your invitation to begin a live voice demonstration.</p>
 
                 <form onSubmit={handleVerify} noValidate>
                   <label htmlFor="sandbox-email" style={gateFieldLabel}>Email</label>
@@ -758,7 +758,7 @@ const secondaryBtn = {
 
 const gateFieldLabel = {
   display: 'block',
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 600,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
@@ -774,7 +774,7 @@ const gateInputStyle = {
   border: '1px solid rgba(255,255,255,0.10)',
   borderRadius: 10,
   color: WHITE,
-  fontSize: 15,
+  fontSize: 16,
   fontFamily: VAULT_BODY,
   outline: 'none',
   transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
@@ -789,7 +789,7 @@ function gateCtaStyle(disabled) {
     borderRadius: 10,
     background: disabled ? 'rgba(201,168,76,0.4)' : `linear-gradient(135deg, #D8BA63, ${GOLD} 55%, #B6912F)`,
     color: BG,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 700,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
