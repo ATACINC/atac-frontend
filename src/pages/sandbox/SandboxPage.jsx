@@ -21,6 +21,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useToast } from '../../hooks/useToast';
 import { getEmailError, normalizeEmail } from '../../utils/validation';
+import brandLogo from '../../assets/atac-globalcx-logo-header.png';
+import certificateSeal from '../../assets/agcx-certificate-seal-cropped.png';
 
 const VoiceCall = lazy(() => import('../simulator/VoiceCall'));
 
@@ -240,45 +242,191 @@ export default function SandboxPage() {
 
   // ---------- Render ----------
   if (phase === 'gate') {
+    // On-brand entry gate (Vault tokens). The verify-access form wiring below
+    // is unchanged: same handleVerify, email/accessCode state, emailError, and
+    // verifying. Only the visual presentation differs from prior versions.
+    const waveBars = Array.from({ length: 40 }, (_, i) => {
+      const h = 14 + Math.round(24 * Math.abs(Math.sin(i * 0.5)) + 12 * Math.abs(Math.sin(i * 0.17 + 1)));
+      return (
+        <span
+          key={i}
+          style={{
+            display: 'block', width: 3, height: h, borderRadius: 3, transformOrigin: 'bottom',
+            background: 'linear-gradient(180deg, rgba(201,168,76,0), rgba(201,168,76,0.85))',
+            animation: `sbxWave ${1.4 + (i % 7) * 0.12}s ease-in-out infinite`,
+            animationDelay: `${i * 0.045}s`,
+          }}
+        />
+      );
+    });
+
     return (
-      <Shell>
-        <div style={cardStyle}>
-          <div style={eyebrowStyle}>ATAC Call Readiness Simulator</div>
-          <h1 style={titleStyle}>Invite-only demonstration</h1>
-          <p style={leadStyle}>
-            Enter your email and the access code from your invitation to begin a live voice demonstration.
-          </p>
+      <div
+        style={{
+          position: 'relative',
+          minHeight: '100vh',
+          width: '100%',
+          overflow: 'hidden',
+          background:
+            'radial-gradient(1100px 720px at 66% 6%, rgba(201,168,76,0.10), rgba(201,168,76,0) 60%), ' +
+            'radial-gradient(900px 640px at 8% 92%, rgba(26,143,105,0.16), rgba(26,143,105,0) 62%), ' + BG,
+          color: WHITE,
+          fontFamily: VAULT_BODY,
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <style>{gateCss}</style>
 
-          <form onSubmit={handleVerify} noValidate>
-            <label style={labelStyle} htmlFor="sandbox-email">Email</label>
-            <input
-              id="sandbox-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
-              style={{ ...inputStyle, borderColor: emailError ? RED : BORDER2 }}
-              placeholder="you@example.com"
-            />
-            {emailError && <div style={fieldErrorStyle}>{emailError}</div>}
-
-            <label style={{ ...labelStyle, marginTop: 18 }} htmlFor="sandbox-code">Access code</label>
-            <input
-              id="sandbox-code"
-              type="text"
-              autoComplete="one-time-code"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value)}
-              style={inputStyle}
-              placeholder="Your invitation code"
-            />
-
-            <button type="submit" disabled={verifying} style={primaryBtn(verifying)}>
-              {verifying ? 'Checking...' : 'Continue'}
-            </button>
-          </form>
+        {/* Top gold hairline */}
+        <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.55), transparent)', zIndex: 5 }} />
+        {/* Faint vertical grid */}
+        <div aria-hidden="true" style={{ position: 'absolute', inset: 0, backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.022) 0, rgba(255,255,255,0.022) 1px, transparent 1px, transparent 96px)', pointerEvents: 'none', zIndex: 0 }} />
+        {/* Rotating seal watermark */}
+        <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', right: -180, top: '50%', width: 680, height: 'auto', opacity: 0.05, pointerEvents: 'none', userSelect: 'none', zIndex: 0, animation: 'sbxSpin 120s linear infinite' }} />
+        {/* Bottom voice waveform */}
+        <div aria-hidden="true" style={{ position: 'absolute', left: 0, right: 0, bottom: 44, height: 64, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 3, opacity: 0.3, pointerEvents: 'none', zIndex: 0, WebkitMaskImage: 'linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)', maskImage: 'linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent)' }}>
+          {waveBars}
         </div>
-      </Shell>
+
+        {/* Header */}
+        <header className="sbx-gate-header" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '22px 48px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <img src={brandLogo} alt="ATAC Global CX" style={{ height: 46, width: 'auto', display: 'block' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', border: '1px solid rgba(201,168,76,0.34)', borderRadius: 999 }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD }} />
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD }}>Invitation required</span>
+          </div>
+        </header>
+
+        {/* Main two-column */}
+        <main className="sbx-gate-main" style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '52px 48px 86px' }}>
+          <div className="sbx-gate-inner" style={{ width: '100%', maxWidth: 1200, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 64 }}>
+
+            {/* LEFT */}
+            <section className="sbx-gate-left" style={{ flex: '1 1 520px', minWidth: 300 }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 11px', border: '1px solid rgba(201,168,76,0.32)', borderRadius: 999 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'sbxPulse 1.8s ease-in-out infinite' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: GOLD }}>LIVE</span>
+                </span>
+                <span aria-hidden="true" style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 11 }}>
+                  {[0, 1, 2, 3].map((i) => (
+                    <span key={i} style={{ display: 'block', width: 2, height: 11, borderRadius: 2, transformOrigin: 'bottom', background: GOLD, animation: `sbxWave ${0.8 + i * 0.12}s ease-in-out infinite`, animationDelay: `${i * 0.1}s` }} />
+                  ))}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.24em', textTransform: 'uppercase', color: MUTED }}>ATAC Call Readiness Simulator</span>
+              </div>
+
+              <h1 className="sbx-gate-h1" style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 'clamp(40px, 5vw, 60px)', lineHeight: 1.04, letterSpacing: '-0.01em', margin: '0 0 24px', color: WHITE }}>
+                This is not a test.<br />
+                <span style={{ fontStyle: 'italic', color: GOLD }}>It&apos;s a live call.</span>
+              </h1>
+
+              <p style={{ maxWidth: 524, fontSize: 18, lineHeight: 1.62, color: 'rgba(238,233,223,0.72)', margin: '0 0 32px' }}>
+                You have been invited to a private voice demonstration. Handle a real customer scenario and watch ATAC score your empathy, tone, resolution, and call control, in real time, the way employers actually measure them.
+              </p>
+
+              {/* Illustrative sample card (decorative; not the user's actual scenario) */}
+              <div style={{ maxWidth: 524, background: 'rgba(255,255,255,0.022)', border: `1px solid ${BORDER2}`, borderRadius: 16, padding: '18px 20px 16px', marginBottom: 30 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'sbxPulse 1.8s ease-in-out infinite' }} />
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: GOLD }}>LIVE SIMULATION</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(238,233,223,0.4)' }}>ILLUSTRATIVE</span>
+                  </div>
+                  <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: 'rgba(238,233,223,0.4)' }}>SCORING, REAL TIME</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 11, marginBottom: 13 }}>
+                  <div style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', background: 'rgba(26,143,105,0.25)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: WHITE }}>C</div>
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: 'rgba(238,233,223,0.82)' }}>"I was charged for something I did not expect, and I need it sorted out today."</p>
+                </div>
+                <div style={{ display: 'flex', gap: 11 }}>
+                  <div style={{ width: 26, height: 26, flex: '0 0 26px', borderRadius: '50%', background: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: BG }}>A</div>
+                  <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.5, color: WHITE }}>"I completely understand, and I am sorry. Let me pull up your account and make this right."</p>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                  {[['Empathy', '86'], ['Resolution', '78'], ['Call Close', '84']].map(([label, val], i) => (
+                    <div key={label} style={{ flex: 1, textAlign: 'center', borderLeft: i === 0 ? 'none' : '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 20, color: GOLD }}>{val}</div>
+                      <div style={{ fontSize: 9.5, letterSpacing: '0.14em', color: 'rgba(238,233,223,0.5)', textTransform: 'uppercase', marginTop: 2 }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: 'rgba(238,233,223,0.42)', marginTop: 12, lineHeight: 1.5 }}>
+                  Sample only. Your scenario is revealed after you enter.
+                </div>
+              </div>
+
+              {/* Trust row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>20+ Years CX Leadership</span>
+                <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: GOLD }} />
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Blockchain-Verified</span>
+                <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: GOLD }} />
+                <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Multilingual by Design</span>
+              </div>
+            </section>
+
+            {/* RIGHT / ACCESS CARD */}
+            <section className="sbx-gate-right" style={{ position: 'relative', flex: '0 0 440px', maxWidth: 440, minWidth: 300 }}>
+              <img src={certificateSeal} alt="ATAC Global CX Certification Authority" className="sbx-gate-seal" style={{ position: 'absolute', top: -30, right: -26, width: 100, height: 'auto', zIndex: 4, filter: 'drop-shadow(0 10px 22px rgba(0,0,0,0.6))' }} />
+              <div style={{ position: 'relative', background: `linear-gradient(165deg, ${BG3}, ${BG})`, border: '1px solid rgba(201,168,76,0.22)', borderRadius: 18, padding: '34px 34px 30px', boxShadow: '0 40px 90px -36px rgba(0,0,0,0.85)', overflow: 'hidden' }}>
+                <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, rgba(201,168,76,0), ${GOLD} 50%, rgba(201,168,76,0))` }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                  <span style={{ width: 7, height: 7, background: GOLD, borderRadius: 2 }} />
+                  <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Invite-Only Demonstration</span>
+                </div>
+
+                <h2 style={{ fontFamily: VAULT_DISPLAY, fontWeight: 500, fontSize: 30, lineHeight: 1.1, margin: '0 0 9px', color: WHITE }}>Enter the simulator</h2>
+                <p style={{ fontSize: 14.5, lineHeight: 1.55, color: MUTED, margin: '0 0 26px' }}>Use the email and access code from your invitation to begin a live voice demonstration.</p>
+
+                <form onSubmit={handleVerify} noValidate>
+                  <label htmlFor="sandbox-email" style={gateFieldLabel}>Email</label>
+                  <input
+                    id="sandbox-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (emailError) setEmailError(''); }}
+                    className="sbx-input"
+                    style={{ ...gateInputStyle, borderColor: emailError ? RED : 'rgba(255,255,255,0.10)' }}
+                    placeholder="you@company.com"
+                  />
+                  {emailError && <div style={{ fontSize: 13, color: RED, marginTop: 6 }}>{emailError}</div>}
+
+                  <label htmlFor="sandbox-code" style={{ ...gateFieldLabel, marginTop: 18 }}>Access code</label>
+                  <input
+                    id="sandbox-code"
+                    type="text"
+                    autoComplete="one-time-code"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    className="sbx-input"
+                    style={{ ...gateInputStyle, letterSpacing: '0.06em' }}
+                    placeholder="Your invitation code"
+                  />
+
+                  <button type="submit" disabled={verifying} className="sbx-cta" style={gateCtaStyle(verifying)}>
+                    {verifying ? 'Checking...' : 'Begin Demonstration'}
+                  </button>
+                </form>
+
+                <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(238,233,223,0.5)', margin: '16px 0 0' }}>Private session. Nothing recorded without your consent.</p>
+              </div>
+            </section>
+
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="sbx-gate-footer" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 48px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: 11, letterSpacing: '0.08em', color: 'rgba(238,233,223,0.45)' }}>
+          <span>2026 ATAC Global CX. Blockchain-verified credentials.</span>
+          <span>app.atacglobalcx.com/sandbox</span>
+        </footer>
+      </div>
     );
   }
 
@@ -571,35 +719,6 @@ const leadStyle = {
   margin: '0 0 24px',
 };
 
-const labelStyle = {
-  display: 'block',
-  fontSize: 13,
-  color: MUTED,
-  letterSpacing: '0.14em',
-  textTransform: 'uppercase',
-  fontWeight: 600,
-  marginBottom: 8,
-};
-
-const inputStyle = {
-  width: '100%',
-  boxSizing: 'border-box',
-  padding: '14px 14px',
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${BORDER2}`,
-  borderRadius: 2,
-  color: WHITE,
-  fontSize: 16,
-  fontFamily: VAULT_BODY,
-  outline: 'none',
-};
-
-const fieldErrorStyle = {
-  fontSize: 13,
-  color: RED,
-  marginTop: 6,
-};
-
 function primaryBtn(disabled) {
   return {
     width: '100%',
@@ -632,6 +751,79 @@ const secondaryBtn = {
   cursor: 'pointer',
   fontFamily: VAULT_BODY,
 };
+
+/* ============================================================
+ * Gate (entry) styles
+ * ============================================================ */
+
+const gateFieldLabel = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: '0.14em',
+  textTransform: 'uppercase',
+  color: 'rgba(238,233,223,0.55)',
+  marginBottom: 8,
+};
+
+const gateInputStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '14px 16px',
+  background: 'rgba(255,255,255,0.03)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  borderRadius: 10,
+  color: WHITE,
+  fontSize: 15,
+  fontFamily: VAULT_BODY,
+  outline: 'none',
+  transition: 'border-color 0.18s, box-shadow 0.18s, background 0.18s',
+};
+
+function gateCtaStyle(disabled) {
+  return {
+    width: '100%',
+    marginTop: 26,
+    padding: 15,
+    border: 'none',
+    borderRadius: 10,
+    background: disabled ? 'rgba(201,168,76,0.4)' : `linear-gradient(135deg, #D8BA63, ${GOLD} 55%, #B6912F)`,
+    color: BG,
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    boxShadow: disabled ? 'none' : '0 14px 30px -12px rgba(201,168,76,0.6)',
+    transition: 'transform 0.15s, box-shadow 0.15s, filter 0.15s',
+  };
+}
+
+const gateCss = `
+  @keyframes sbxPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.8)} }
+  @keyframes sbxWave { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+  @keyframes sbxSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .sbx-input::placeholder { color: rgba(238,233,223,0.32); }
+  .sbx-input:focus { border-color: rgba(201,168,76,0.6); box-shadow: 0 0 0 3px rgba(201,168,76,0.13); background: rgba(255,255,255,0.05); }
+  .sbx-cta:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+  @media (max-width: 980px) { .sbx-gate-inner { gap: 48px !important; } }
+  @media (max-width: 768px) {
+    .sbx-gate-header { padding: 18px 24px !important; }
+    .sbx-gate-main { padding: 40px 24px 72px !important; }
+    /* Action-first on mobile: lift the entry card above the hero and the */
+    /* illustrative sample so an invitee reaches the form without scrolling. */
+    .sbx-gate-left { flex: 1 1 100% !important; min-width: 0 !important; order: 2 !important; }
+    .sbx-gate-right { flex: 1 1 100% !important; max-width: 520px !important; min-width: 0 !important; order: 1 !important; }
+    .sbx-gate-seal { width: 80px !important; top: -20px !important; right: -4px !important; }
+    .sbx-gate-footer { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; padding: 18px 24px !important; }
+  }
+  @media (max-width: 480px) {
+    .sbx-gate-header { padding: 14px 16px !important; flex-wrap: wrap !important; gap: 12px !important; }
+    .sbx-gate-main { padding: 28px 16px 56px !important; }
+    .sbx-gate-h1 { font-size: 34px !important; }
+    .sbx-gate-seal { width: 66px !important; top: -14px !important; }
+  }
+`;
 
 // Briefing-specific styles. Section labels reuse the eyebrow treatment with
 // top spacing so the longer briefing stays skimmable, not a wall of text.
