@@ -9,13 +9,17 @@
  * demonstration of the ATAC Call Readiness Simulator, and sees a score
  * breakdown on screen. No credential is issued.
  *
- * Backend: POST /api/sandbox/verify-access, /voice-start, /voice-score.
+ * Backend: POST /api/sandbox/verify-access, /voice-start, /voice-score, and
+ * GET /api/sandbox/scenario/:code (generic briefing config).
  *
  * State is kept in React only for the session. The email and access code are
  * never written to localStorage or sessionStorage.
  *
- * The voice step (VoiceCall, which pulls the @elevenlabs/client SDK) is
- * lazy-loaded so the access gate's first paint stays light.
+ * Post-gate visual flow follows the approved redesign (sandboxTheme +
+ * SandboxBackground). The gate is NOT rebuilt; its background recipe is reused
+ * and its typography is repointed to the shared Playfair/Hanken voice. The
+ * scoring/transcript pipeline (transcript capture, ai->agent translation, the
+ * voice-score POST, and the 202/422 handling) is unchanged.
  */
 
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
@@ -23,24 +27,31 @@ import { useToast } from '../../hooks/useToast';
 import { getEmailError, normalizeEmail } from '../../utils/validation';
 import brandLogo from '../../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../../assets/agcx-certificate-seal-cropped.png';
+import { T, scoreBand, goldCta, ghostCta } from './sandboxTheme';
+import {
+  SandboxFrame, SandboxConnecting, MicOrb, ScoreDonut, Dot,
+  InfoIcon, CheckIcon, WarnIcon, ArrowIcon, MicIcon,
+} from './SandboxBackground';
 
 const VoiceCall = lazy(() => import('../simulator/VoiceCall'));
 
-// Vault palette (per-file convention used across the app).
+// Vault palette (per-file convention; the gate still uses these tokens).
 const BG    = '#080B12';
-const BG1   = '#0C1018';
 const BG3   = '#141B26';
 const GOLD  = '#C9A84C';
 const RED   = '#C45C5C';
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.6)';
 const BORDER2 = 'rgba(238,233,223,0.07)';
-const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
-const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+// Reskinned to the shared sandbox type voice (Playfair Display + Hanken
+// Grotesk). Type only; the gate's layout, colours, and wiring are unchanged.
+const VAULT_DISPLAY = "'Playfair Display', Georgia, 'Times New Roman', serif";
+const VAULT_BODY    = "'Hanken Grotesk', system-ui, -apple-system, sans-serif";
 
 const API_BASE = import.meta.env.VITE_API_URL;
 // Exact registration link for the real credential (not the base domain).
 const REGISTER_URL = 'https://app.atacglobalcx.com/login?action=register';
+const SANDBOX_SCENARIO_CODE = 'SC-002';
 
 const DIMENSIONS = [
   { key: 'greeting',   label: 'Greeting' },
@@ -50,10 +61,34 @@ const DIMENSIONS = [
   { key: 'close',      label: 'Close' },
 ];
 
+// Local fallback so the Briefing renders even if the scenario request fails.
+// Mirrors the live SC-002 config; ASCII, no smart quotes or dashes.
+const SCENARIO_FALLBACK = {
+  code: 'SC-002',
+  sector: 'Health Insurance',
+  persona: { name: 'Linda', age: 67, descriptor: 'Retired widow, 11-year member', avatarInitial: 'L' },
+  emotionalRead: 'Worried, apologetic',
+  difficulty: 'MEDIUM',
+  suggestedLength: '4-6 min',
+  firstLine: 'Thank you for calling Member Services, this is [your name]. How can I help you today?',
+  role: 'You are a Member Services Representative at a health insurance company. You help members understand their benefits, billing, and claims.',
+  aboutCustomer: 'Linda, 67, is a retired widow who lives alone. She has been with this plan for 11 years, originally through her late husband\'s employer, now through her own Medicare supplemental coverage. She received an Explanation of Benefits letter showing an $847 charge for a doctor visit she thought was covered. She does not fully understand what the letter is saying; the medical and insurance terms confuse her. She is not angry, she is worried and apologetic.',
+  whatGoodLooksLike: 'Explain what the charge means in plain language, without insurance jargon. Confirm whether she actually owes the money or whether it is a billing error. Be patient, slow down, and let her ask things twice if she needs to.',
+  fiveMoves: [
+    { n: 1, title: 'The specific reason', body: 'name the real cause using a proper term, not a vague summary.' },
+    { n: 2, title: 'A reference number', body: 'give a case or confirmation ID the customer can keep.' },
+    { n: 3, title: 'A concrete figure', body: 'state an actual dollar amount and timeline, never "we will bill you later".' },
+    { n: 4, title: 'A verification or escalation path', body: 'tell her how to dispute, confirm, or follow up.' },
+    { n: 5, title: 'A specific follow-up commitment', body: 'when and how you will be in touch, and what she gets in writing.' },
+  ],
+};
+
+const isNoAttempts = (status, data) => status === 403 && /no attempts/i.test((data && data.error) || '');
+
 export default function SandboxPage() {
   const { showToast } = useToast();
 
-  // phase: 'gate' | 'intro' | 'briefing' | 'call' | 'results'
+  // phase: 'gate' | 'intro' | 'briefing' | 'call' | 'results' | 'exhausted'
   const [phase, setPhase] = useState('gate');
 
   // Gate inputs (React state only, never persisted).
@@ -72,6 +107,9 @@ export default function SandboxPage() {
 
   // Results. scoreState: { status: 'scoring' | 'finalizing' | 'done' | 'error', breakdown?, message? }
   const [scoreState, setScoreState] = useState({ status: 'scoring' });
+
+  // Scenario briefing config (fetched once after entry; SC-002 fallback).
+  const [scenario, setScenario] = useState(null);
 
   // ---------- Step B: access gate ----------
   async function handleVerify(e) {
@@ -103,12 +141,18 @@ export default function SandboxPage() {
         // Defensive read: accept camelCase or snake_case.
         const remaining = data.attemptsRemaining ?? data.attempts_remaining;
         if (typeof remaining === 'number' && remaining <= 0) {
-          showToast('You have no demonstration attempts remaining.', { type: 'error' });
+          setPhase('exhausted');
           return;
         }
         // Store the normalized email for the subsequent calls.
         setEmail(normEmail);
         setPhase('intro');
+        return;
+      }
+
+      // Out of attempts: show the dedicated exhausted screen, not a toast.
+      if (isNoAttempts(res.status, data)) {
+        setPhase('exhausted');
         return;
       }
 
@@ -140,6 +184,10 @@ export default function SandboxPage() {
         // Daily capacity reached. Return to the gate.
         showToast(data.error || 'The demonstration is at capacity for today. Please try again tomorrow.', { type: 'error' });
         setPhase('gate');
+        return;
+      }
+      if (isNoAttempts(res.status, data)) {
+        setPhase('exhausted');
         return;
       }
       if (!res.ok) {
@@ -239,6 +287,22 @@ export default function SandboxPage() {
     runScore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
+
+  // Fetch the scenario briefing config once the invitee is past the gate. The
+  // render uses the SC-002 fallback until (or unless) this resolves.
+  useEffect(() => {
+    if (phase === 'gate' || phase === 'exhausted' || scenario) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/sandbox/scenario/${SANDBOX_SCENARIO_CODE}`);
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (!cancelled && data && typeof data === 'object' && data.persona) setScenario(data);
+      } catch { /* keep the fallback */ }
+    })();
+    return () => { cancelled = true; };
+  }, [phase, scenario]);
 
   // ---------- Render ----------
   if (phase === 'gate') {
@@ -438,83 +502,31 @@ export default function SandboxPage() {
     );
   }
 
+  const sc = scenario || SCENARIO_FALLBACK;
+
   if (phase === 'intro') {
     return (
-      <Shell>
-        <div style={cardStyle}>
-          <div style={eyebrowStyle}>Live demonstration</div>
-          <h1 style={titleStyle}>You are about to start a live voice demonstration</h1>
-          <p style={leadStyle}>
-            This is a live demonstration of the ATAC Call Readiness Simulator. You will speak with a
-            customer on a live voice call. Find a quiet spot, allow microphone access when prompted, and
-            speak naturally.
-          </p>
-          <button type="button" onClick={() => setPhase('briefing')} style={primaryBtn(false)}>
-            Continue
-          </button>
-        </div>
-      </Shell>
+      <SandboxFrame step={0}>
+        <ReadyScreen onContinue={() => setPhase('briefing')} />
+      </SandboxFrame>
     );
   }
 
   if (phase === 'briefing') {
-    // Fuller SC-002 briefing, mirroring the production candidate briefing for
-    // the member-services scenario: overview, role, customer, intro script,
-    // what good looks like, the five resolution moves with a worked example,
-    // and quick reminders. The candidate scoring block is excluded entirely.
     return (
-      <Shell wide>
-        <div style={{ ...cardStyle, maxWidth: 640 }}>
-          <div style={eyebrowStyle}>Overview</div>
-          <p style={leadStyle}>This is a healthcare member services call. You will speak with a member about a billing question.</p>
-
-          <div style={sectionLabelStyle}>Your Role</div>
-          <p style={leadStyle}>You are a Member Services Representative at a health insurance company. You help members understand their benefits, billing, and claims.</p>
-
-          <div style={sectionLabelStyle}>About Your Customer</div>
-          <p style={leadStyle}>Linda, 67, retired widow, lives alone. She has been with this insurance plan for 11 years, originally through her late husband's employer and now through her own Medicare supplemental coverage. She received an Explanation of Benefits letter showing an $847 charge for a doctor visit she thought was covered. She doesn't fully understand what the letter is saying. The medical and insurance terms confuse her. She is not angry, she is worried and apologetic.</p>
-
-          <div style={sectionLabelStyle}>You Speak First</div>
-          <div style={openingCalloutStyle}>Thank you for calling Member Services, this is [your name]. How can I help you today?</div>
-          <p style={leadStyle}>The customer is waiting for you to greet them. Start speaking as soon as the call begins.</p>
-
-          <div style={sectionLabelStyle}>What Good Looks Like</div>
-          <p style={leadStyle}>Explain what the charge means in plain language without insurance jargon. Confirm whether she actually owes the money or whether it's a billing error. Be patient, slow down, and let her ask things twice if she needs to.</p>
-
-          <div style={sectionLabelStyle}>Five Moves to Nail Resolution</div>
-          <p style={leadStyle}>Warm and clear is the hard part. To resolve the call well, make sure you land all five of these before the call ends.</p>
-          <ol style={fiveMovesListStyle}>
-            <li><strong>The specific reason:</strong> Name the real cause using a proper term, not a vague summary.</li>
-            <li><strong>A reference number:</strong> Give a case or confirmation ID the customer can keep.</li>
-            <li><strong>A concrete figure:</strong> State an actual dollar amount and timeline, never "we will bill you later".</li>
-            <li><strong>A verification or escalation path:</strong> Tell them how to dispute, confirm, or follow up.</li>
-            <li><strong>A specific follow-up commitment:</strong> When and how you will be in touch, and what they get in writing.</li>
-          </ol>
-          <div style={workedExampleStyle}>
-            <div style={workedExampleLabelStyle}>What This Sounds Like for Linda</div>
-            <p style={workedExampleTextStyle}>This $847 applies to your annual deductible, which is why your plan did not cover it. Your reference number is EOB-2026-04891. If you would like to dispute it, I can email you a claims-review form and you have 30 days to file. I can also set up a payment plan of $84.70 per month over 10 months starting July 1. I will send a written summary to your email today so you have everything in one place.</p>
-          </div>
-
-          <div style={sectionLabelStyle}>Quick Reminders</div>
-          <ul style={quickRemindersListStyle}>
-            <li>Speak first when the call begins</li>
-            <li>Aim for 5 to 10 minutes of conversation</li>
-            <li>Watch your mic indicator during the call</li>
-          </ul>
-
-          <button type="button" onClick={handleBegin} disabled={starting} style={primaryBtn(starting)}>
-            {starting ? 'Starting...' : 'Begin the demonstration'}
-          </button>
-        </div>
-      </Shell>
+      <SandboxFrame step={1}>
+        <BriefingScreen scenario={sc} starting={starting} onBegin={handleBegin} />
+      </SandboxFrame>
     );
   }
 
   if (phase === 'call') {
     return (
-      <Suspense fallback={<ConnectingScreen />}>
+      <Suspense fallback={<SandboxFrame step={2} headerRight={<span />}><SandboxConnecting /></SandboxFrame>}>
         <VoiceCall
+          variant="sandbox"
           signedUrl={signedUrl}
+          personaName={sc?.persona?.name}
           onConversationId={(id) => { conversationIdRef.current = id; }}
           onTranscriptTurn={(turn) => { transcriptRef.current.push(turn); }}
           onEnded={() => setPhase('results')}
@@ -523,242 +535,367 @@ export default function SandboxPage() {
     );
   }
 
+  if (phase === 'exhausted') {
+    return (
+      <SandboxFrame step={null}>
+        <ExhaustedScreen />
+      </SandboxFrame>
+    );
+  }
+
   // phase === 'results'
   return (
-    <Shell wide>
-      <DemoBanner />
-
+    <SandboxFrame step={3}>
       {(scoreState.status === 'scoring' || scoreState.status === 'finalizing') && (
-        <div style={{ ...cardStyle, textAlign: 'center' }}>
-          <div style={eyebrowStyle}>{scoreState.status === 'finalizing' ? 'Finalizing' : 'Scoring'}</div>
-          <p style={{ ...leadStyle, marginBottom: 0 }}>
-            {scoreState.status === 'finalizing'
-              ? 'Scoring is finalizing. This will just take a moment.'
-              : 'Scoring your demonstration. This usually takes under a minute.'}
-          </p>
-        </div>
+        <FinalizingScreen status={scoreState.status} />
       )}
-
       {scoreState.status === 'error' && (
-        <div style={cardStyle}>
-          <div style={{ ...eyebrowStyle, color: GOLD }}>Almost there</div>
-          <p style={leadStyle}>{scoreState.message}</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => runScore()} style={primaryBtn(false)}>Try again</button>
-            <button type="button" onClick={() => setPhase('intro')} style={secondaryBtn}>
-              Start a new demonstration
-            </button>
-          </div>
-        </div>
+        <ErrorScreen
+          onRetry={() => runScore()}
+          onRestart={() => setPhase('intro')}
+        />
       )}
-
       {scoreState.status === 'done' && (
-        <ResultsBreakdown breakdown={scoreState.breakdown} />
+        <DebriefScreen
+          breakdown={scoreState.breakdown}
+          onTryAgain={() => setPhase('briefing')}
+          onRestart={() => setPhase('intro')}
+        />
       )}
-    </Shell>
+    </SandboxFrame>
   );
 }
 
 /* ============================================================
- * Results pieces
+ * Post-gate screens (redesign)
  * ============================================================ */
 
-function DemoBanner() {
+function ReadyScreen({ onContinue }) {
+  const preps = [
+    { title: 'Find a quiet space', body: 'Background noise affects how the customer hears you.', icon: <HeadsetIcon /> },
+    { title: 'Allow microphone access', body: 'Your browser will ask once the call connects.', icon: <MicIcon size={15} color={T.goldBright} /> },
+    { title: 'Speak naturally', body: 'Talk to the customer the way you would on a real call.', icon: <ChatIcon /> },
+  ];
   return (
-    <div
-      role="status"
-      style={{
-        background: 'rgba(201,168,76,0.08)',
-        border: `1px solid rgba(201,168,76,0.3)`,
-        borderLeft: `3px solid ${GOLD}`,
-        borderRadius: 4,
-        padding: '14px 18px',
-        marginBottom: 22,
-        maxWidth: 760,
-        marginLeft: 'auto',
-        marginRight: 'auto',
-      }}
-    >
-      <div style={{ fontSize: 12, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 5 }}>
-        Demonstration
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 40px 72px' }}>
+      <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
+        <MicOrb />
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft, margin: '30px 0 16px' }}>Live Demonstration</div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(32px, 4.4vw, 46px)', lineHeight: 1.1, letterSpacing: '-0.01em', margin: '0 0 18px', color: T.ink }}>
+          You are about to start a<br />
+          <span style={{ fontStyle: 'italic', color: T.goldSoft }}>live voice demonstration</span>
+        </h1>
+        <p style={{ fontSize: 18, lineHeight: 1.62, color: T.muted, margin: '0 auto 34px', maxWidth: 470 }}>
+          You will speak with a customer on a live voice call. Find a quiet spot, allow microphone access when prompted, and speak naturally.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 440, margin: '0 auto 34px', textAlign: 'left' }}>
+          {preps.map((p) => (
+            <div key={p.title} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 16px', background: T.panel, border: `1px solid ${T.panelLine}`, borderRadius: 12 }}>
+              <span style={{ width: 30, height: 30, flex: '0 0 30px', borderRadius: 8, background: 'rgba(239,192,60,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.icon}</span>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: T.ink2 }}>{p.title}</div>
+                <div style={{ fontSize: 13.5, color: T.faint }}>{p.body}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" onClick={onContinue} className="sbx-cta" style={{ ...goldCta, width: '100%', maxWidth: 440 }}>
+          Continue <ArrowIcon />
+        </button>
+        <p style={{ fontSize: 12.5, color: T.faint2, margin: '16px 0 0', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          Private session <Dot /> This is a demonstration, not a graded assessment
+        </p>
       </div>
-      <div style={{ fontSize: 16, color: WHITE, lineHeight: 1.6 }}>
-        This is a demonstration. No credential has been issued.
+    </section>
+  );
+}
+
+function BriefingScreen({ scenario, starting, onBegin }) {
+  const p = scenario.persona || {};
+  const diffMap = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+  const filled = diffMap[String(scenario.difficulty || '').toUpperCase()] ?? 2;
+  const moves = Array.isArray(scenario.fiveMoves) && scenario.fiveMoves.length ? scenario.fiveMoves : SCENARIO_FALLBACK.fiveMoves;
+
+  const briefRow = (label, body) => (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 11 }}>{label}</div>
+      <p style={{ margin: 0, fontSize: 18, lineHeight: 1.66, color: '#BFC2CB' }}>{body}</p>
+    </div>
+  );
+  const divider = <div aria-hidden="true" style={{ height: 1, background: T.panelLine }} />;
+
+  return (
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, padding: '40px 40px 56px' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft }}>Your Scenario</span>
+          <Dot />
+          <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: T.faint2 }}>{scenario.sector}</span>
+        </div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(30px, 3.6vw, 42px)', lineHeight: 1.12, margin: '0 0 28px', color: T.ink }}>Read the brief, then take the call</h1>
+
+        <div className="sbx-brief-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 34, alignItems: 'start' }}>
+          {/* LEFT RAIL */}
+          <aside className="sbx-brief-rail" style={{ position: 'sticky', top: 96, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ background: `linear-gradient(165deg, ${T.navy1}, ${T.navy2})`, border: '1px solid rgba(239,192,60,0.2)', borderRadius: 16, padding: 22, boxShadow: '0 30px 70px -34px rgba(0,0,0,0.8)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
+                <div style={{ width: 48, height: 48, flex: '0 0 48px', borderRadius: '50%', background: T.avatarBg, border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontDisplay, fontSize: 19, color: '#D7E0EF' }}>{p.avatarInitial || (p.name || '?').charAt(0)}</div>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#F1ECDF' }}>{p.name}{p.age ? `, ${p.age}` : ''}</div>
+                  <div style={{ fontSize: 13, color: T.faint }}>{p.descriptor}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11, paddingTop: 14, borderTop: `1px solid ${T.panelLine}` }}>
+                <BriefStat label="Sector" value={scenario.sector} />
+                <BriefStat label="Emotional read" value={scenario.emotionalRead} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12.5, color: T.faint }}>Difficulty</span>
+                  <span style={{ display: 'inline-flex', gap: 3 }}>
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: i < filled ? T.gold : 'rgba(255,255,255,0.15)' }} />
+                    ))}
+                  </span>
+                </div>
+                <BriefStat label="Suggested length" value={scenario.suggestedLength} />
+              </div>
+            </div>
+
+            <div style={{ background: 'rgba(239,192,60,0.05)', border: '1px solid rgba(239,192,60,0.22)', borderRadius: 16, padding: '18px 20px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 10 }}>You speak first</div>
+              <p style={{ margin: 0, fontFamily: T.fontDisplay, fontStyle: 'italic', fontSize: 18, lineHeight: 1.5, color: '#EFEADD' }}>"{scenario.firstLine}"</p>
+            </div>
+
+            <button type="button" onClick={onBegin} disabled={starting} className="sbx-cta" style={{ ...goldCta, opacity: starting ? 0.6 : 1, cursor: starting ? 'not-allowed' : 'pointer' }}>
+              {starting ? 'Starting...' : <>Begin the call <ArrowIcon /></>}
+            </button>
+          </aside>
+
+          {/* RIGHT BRIEF */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
+            {briefRow('Your role', scenario.role)}
+            {divider}
+            {briefRow('About your customer', scenario.aboutCustomer)}
+            {divider}
+            {briefRow('What good looks like', scenario.whatGoodLooksLike)}
+            {divider}
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 6 }}>Five moves to nail resolution</div>
+              <p style={{ margin: '0 0 18px', fontSize: 16, lineHeight: 1.55, color: '#8E9099' }}>Warm and clear is the hard part. To resolve the call well, land all five before it ends.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {moves.map((m) => (
+                  <div key={m.n} style={{ display: 'flex', gap: 14, padding: '15px 17px', background: T.panel, border: `1px solid ${T.panelLine}`, borderRadius: 13 }}>
+                    <span style={{ width: 27, height: 27, flex: '0 0 27px', borderRadius: '50%', background: 'rgba(239,192,60,0.12)', border: '1px solid rgba(239,192,60,0.34)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.fontDisplay, fontSize: 14, color: T.goldBright }}>{m.n}</span>
+                    <p style={{ margin: 0, fontSize: 16, lineHeight: 1.55, color: '#C7CAD2' }}>
+                      <strong style={{ color: '#EFEADD', fontWeight: 600 }}>{m.title}.</strong> {m.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+    </section>
+  );
+}
+
+function BriefStat({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <span style={{ fontSize: 12.5, color: T.faint }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: '#D7D9DF', textAlign: 'right' }}>{value}</span>
     </div>
   );
 }
 
-function ResultsBreakdown({ breakdown }) {
+function FinalizingScreen({ status }) {
+  return (
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 40px 72px' }}>
+      <div style={{ width: '100%', maxWidth: 480, textAlign: 'center' }}>
+        <MicOrb />
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft, margin: '30px 0 14px' }}>{status === 'finalizing' ? 'Finalizing' : 'Scoring'}</div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(28px, 3.6vw, 40px)', lineHeight: 1.12, margin: '0 0 16px', color: T.ink }}>Scoring your call</h1>
+        <p style={{ fontSize: 18, lineHeight: 1.6, color: T.muted, margin: '0 auto 26px', maxWidth: 420 }}>
+          {status === 'finalizing'
+            ? 'Almost done. Please keep this tab open while we finish.'
+            : 'This usually takes under a minute. Please keep this tab open while we finish.'}
+        </p>
+        <div aria-hidden="true" style={{ width: '100%', maxWidth: 340, height: 6, margin: '0 auto', borderRadius: 3, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: '100%', borderRadius: 3, backgroundImage: `linear-gradient(90deg, rgba(239,192,60,0) 0%, ${T.gold} 45%, ${T.goldBright} 50%, ${T.gold} 55%, rgba(239,192,60,0) 100%)`, backgroundSize: '160% 100%', animation: 'sbxShimmer 1.4s linear infinite' }} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ErrorScreen({ onRetry, onRestart }) {
+  return (
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 40px 64px' }}>
+      <div style={{ width: '100%', maxWidth: 520, textAlign: 'center' }}>
+        <DemoBanner />
+        <div style={{ width: 84, height: 84, margin: '8px auto 26px', borderRadius: '50%', background: 'radial-gradient(circle at 50% 38%, #2a2310, #15110a)', border: '1px solid rgba(232,185,104,0.34)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <WarnIcon size={34} />
+        </div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(28px, 3.6vw, 40px)', lineHeight: 1.12, margin: '0 0 16px', color: T.ink }}>That call did not record cleanly</h1>
+        <p style={{ fontSize: 18, lineHeight: 1.62, color: T.muted, margin: '0 auto 22px', maxWidth: 440 }}>
+          Something interrupted the recording before we could score it. No problem, you can try again.
+        </p>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 15px', borderRadius: 999, background: 'rgba(127,203,166,0.12)', border: '1px solid rgba(127,203,166,0.34)', marginBottom: 30 }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: T.green }} />
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: T.greenInk }}>This did not count against your attempts.</span>
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 440, margin: '0 auto' }}>
+          <button type="button" onClick={onRetry} className="sbx-cta" style={goldCta}>Try again</button>
+          <button type="button" onClick={onRestart} className="sbx-ghost" style={ghostCta}>Start a new demonstration</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ExhaustedScreen() {
+  return (
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 40px 64px' }}>
+      <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
+        <DemoBanner />
+        <div style={{ width: 84, height: 84, margin: '8px auto 26px', borderRadius: '50%', background: 'radial-gradient(circle at 50% 38%, #14233c, #0a1322)', border: '1px solid rgba(239,192,60,0.32)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <CheckIcon size={34} color={T.goldBright} />
+        </div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(28px, 3.6vw, 42px)', lineHeight: 1.12, margin: '0 0 16px', color: T.ink }}>You have used both attempts</h1>
+        <p style={{ fontSize: 18, lineHeight: 1.62, color: T.muted, margin: '0 auto 30px', maxWidth: 460 }}>
+          That is all the demonstration attempts for this invitation. Nothing was issued or saved, this was a demonstration only.
+        </p>
+        <CredentialUpsell />
+      </div>
+    </section>
+  );
+}
+
+function DebriefScreen({ breakdown, onTryAgain, onRestart }) {
   const data = breakdown || {};
-  const feedback = (data.feedback && typeof data.feedback === 'object') ? data.feedback : {};
-  // Overall is shown as a raw DEMONSTRATION score, never as a verdict.
-  // pass_fail is intentionally not read or displayed.
   const overall = typeof data.overall === 'number' ? Math.round(data.overall) : null;
+  const band = data.band || '';
+  const summary = data.summary || '';
+  const pill = scoreBand(overall);
+
+  const dims = (Array.isArray(data.dimensions) && data.dimensions.length)
+    ? data.dimensions
+    : DIMENSIONS.map((d) => ({ name: d.label, score: data[d.key], feedback: (data.feedback || {})[d.key] || '' }));
 
   return (
-    <div style={{ ...cardStyle, maxWidth: 760 }}>
-      <div style={eyebrowStyle}>Your demonstration results</div>
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, padding: '40px 40px 60px' }}>
+      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+        <DemoBanner />
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, margin: '6px 0 24px' }}>
-        <span style={{ fontSize: 13, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-          Demonstration score
-        </span>
-        <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, fontWeight: 600, color: GOLD, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-          {overall != null ? overall : 'NA'}
-        </span>
-      </div>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 10 }}>Your Debrief</div>
+        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(30px, 3.8vw, 44px)', lineHeight: 1.1, margin: '0 0 26px', color: T.ink }}>Here is how that call landed</h1>
 
-      <div style={{ fontSize: 12, color: MUTED, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
-        Breakdown
-      </div>
-      {DIMENSIONS.map((d) => (
-        <DimensionRow
-          key={d.key}
-          label={d.label}
-          score={typeof data[d.key] === 'number' ? Math.round(data[d.key]) : null}
-          feedback={typeof feedback[d.key] === 'string' ? feedback[d.key] : ''}
-        />
-      ))}
-
-      {/* Single call to action toward the real credential. */}
-      <div
-        style={{
-          marginTop: 26,
-          background: BG3,
-          border: `1px solid ${BORDER2}`,
-          borderRadius: 4,
-          padding: '20px 22px',
-        }}
-      >
-        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 24, fontWeight: 400, color: WHITE, marginBottom: 14, lineHeight: 1.25 }}>
-          Want the real, blockchain-verified credential?
+        {/* Overall */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', background: `linear-gradient(165deg, ${T.navy1}, ${T.navy2})`, border: '1px solid rgba(239,192,60,0.2)', borderRadius: 18, padding: '26px 30px', marginBottom: 8, boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)' }}>
+          <div style={{ flex: '0 0 auto', width: 122, height: 122, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ScoreDonut value={overall} />
+          </div>
+          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 11 }}>Demonstration Score</div>
+            {band && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 13px', borderRadius: 999, background: pill.pillBg, border: `1px solid ${pill.pillBorder}`, marginBottom: 13 }}>
+                <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: pill.dot }} />
+                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: pill.pillInk }}>{band}</span>
+              </span>
+            )}
+            {summary && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.62, color: T.muted }}>{summary}</p>}
+          </div>
         </div>
-        <a href={REGISTER_URL} style={{ ...primaryBtn(false), textDecoration: 'none', display: 'inline-block' }}>
-          Get your credential
+
+        {/* Breakdown */}
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, margin: '30px 0 0' }}>Breakdown</div>
+        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 30 }}>
+          {dims.map((d, i) => (
+            <DimensionRow key={`${d.name}-${i}`} name={d.name} score={typeof d.score === 'number' ? Math.round(d.score) : null} feedback={typeof d.feedback === 'string' ? d.feedback : ''} />
+          ))}
+        </div>
+
+        <CredentialUpsell />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 440 }}>
+          <button type="button" onClick={onTryAgain} className="sbx-cta" style={goldCta}>Try this scenario again</button>
+          <button type="button" onClick={onRestart} className="sbx-ghost" style={ghostCta}>Start a new demonstration</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DimensionRow({ name, score, feedback }) {
+  const c = scoreBand(score);
+  const pct = typeof score === 'number' ? `${Math.max(0, Math.min(100, score))}%` : '0%';
+  return (
+    <div style={{ padding: '21px 0', borderTop: `1px solid ${T.panelLine}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          <span aria-hidden="true" style={{ width: 9, height: 9, flex: '0 0 9px', borderRadius: '50%', background: c.dot }} />
+          <span style={{ fontSize: 16.5, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 15, flex: '0 0 auto' }}>
+          <span aria-hidden="true" style={{ width: 124, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'block', overflow: 'hidden' }}>
+            <span style={{ display: 'block', height: '100%', width: pct, background: c.bar, borderRadius: 3 }} />
+          </span>
+          <span style={{ fontFamily: T.fontDisplay, fontSize: 23, lineHeight: 1, color: c.scoreColor, minWidth: 34, textAlign: 'right' }}>{score != null ? score : 'NA'}</span>
+        </div>
+      </div>
+      {feedback && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.64, color: T.muted, maxWidth: 640 }}>{feedback}</p>}
+    </div>
+  );
+}
+
+function CredentialUpsell() {
+  return (
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #13223d, #0a1320)', border: '1px solid rgba(239,192,60,0.3)', borderRadius: 18, padding: '30px 32px', marginBottom: 34, boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)' }}>
+      <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', right: -46, top: '50%', transform: 'translateY(-50%)', width: 200, height: 'auto', opacity: 0.12, pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', maxWidth: 540 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 12 }}>Make it count</div>
+        <h3 style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 26, lineHeight: 1.18, margin: '0 0 12px', color: T.ink }}>Want the real, blockchain-verified credential?</h3>
+        <p style={{ margin: '0 0 22px', fontSize: 16, lineHeight: 1.62, color: '#AEB1BA' }}>
+          This was a demonstration. Take the full assessment to earn a CRSA(TM) credential you can share with employers, verifiable on-chain and issued by ATAC Global CX.
+        </p>
+        <a href={REGISTER_URL} className="sbx-cta" style={{ ...goldCta, textDecoration: 'none' }}>
+          Get your credential <ArrowIcon />
         </a>
       </div>
     </div>
   );
 }
 
-function DimensionRow({ label, score, feedback }) {
+function DemoBanner() {
   return (
-    <div style={{ padding: '12px 0', borderTop: `1px solid ${BORDER2}` }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-        <span style={{ fontSize: 16, color: WHITE, fontWeight: 600 }}>{label}</span>
-        <span style={{ fontFamily: 'Consolas, Menlo, monospace', fontSize: 18, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-          {score != null ? score : 'NA'}
-        </span>
-      </div>
-      {feedback && (
-        <div style={{ fontSize: 15, color: MUTED, lineHeight: 1.6, marginTop: 6, maxWidth: 620 }}>
-          {feedback}
-        </div>
-      )}
+    <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 18px', background: 'rgba(239,192,60,0.06)', border: '1px solid rgba(239,192,60,0.26)', borderRadius: 12, marginBottom: 28, textAlign: 'left' }}>
+      <InfoIcon size={17} color={T.goldSoft} />
+      <span style={{ fontSize: 14, lineHeight: 1.5, color: '#E9D9AE' }}>
+        <strong style={{ color: T.goldSoft, fontWeight: 700 }}>This is a demonstration.</strong> No credential has been issued. This debrief is for your eyes only.
+      </span>
     </div>
   );
 }
 
-/* ============================================================
- * Layout + shared styles
- * ============================================================ */
-
-function Shell({ children, wide }) {
+/* ---------- small inline icons used only by the Ready prep cards ---------- */
+function HeadsetIcon() {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: BG,
-        color: WHITE,
-        fontFamily: VAULT_BODY,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: wide ? 'flex-start' : 'center',
-        padding: wide ? '48px 20px 64px' : '24px',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: wide ? 800 : 460 }}>{children}</div>
-    </div>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.goldBright} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+    </svg>
   );
 }
 
-function ConnectingScreen() {
+function ChatIcon() {
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: MUTED, fontFamily: VAULT_BODY, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ fontSize: 13, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Connecting...</div>
-    </div>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.goldBright} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
   );
 }
-
-const cardStyle = {
-  background: BG1,
-  border: `1px solid ${BORDER2}`,
-  borderRadius: 4,
-  padding: '32px 30px',
-  width: '100%',
-  boxSizing: 'border-box',
-  margin: '0 auto',
-};
-
-const eyebrowStyle = {
-  fontSize: 13,
-  color: GOLD,
-  letterSpacing: '0.2em',
-  textTransform: 'uppercase',
-  fontWeight: 700,
-  marginBottom: 14,
-};
-
-const titleStyle = {
-  fontFamily: VAULT_DISPLAY,
-  fontSize: 32,
-  fontWeight: 400,
-  color: WHITE,
-  margin: '0 0 14px',
-  lineHeight: 1.2,
-};
-
-const leadStyle = {
-  fontSize: 16,
-  color: 'rgba(238,233,223,0.9)',
-  lineHeight: 1.7,
-  margin: '0 0 24px',
-};
-
-function primaryBtn(disabled) {
-  return {
-    width: '100%',
-    marginTop: 24,
-    background: disabled ? 'rgba(201,168,76,0.4)' : GOLD,
-    color: BG,
-    border: 'none',
-    borderRadius: 2,
-    padding: '15px 22px',
-    fontSize: 13,
-    fontWeight: 700,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: VAULT_BODY,
-  };
-}
-
-const secondaryBtn = {
-  marginTop: 24,
-  background: 'transparent',
-  color: WHITE,
-  border: `1px solid ${BORDER2}`,
-  borderRadius: 2,
-  padding: '15px 22px',
-  fontSize: 13,
-  fontWeight: 600,
-  letterSpacing: '0.16em',
-  textTransform: 'uppercase',
-  cursor: 'pointer',
-  fontFamily: VAULT_BODY,
-};
 
 /* ============================================================
  * Gate (entry) styles
@@ -836,62 +973,3 @@ const gateCss = `
     .sbx-wave { transform: scaleY(0.5); transform-origin: bottom; }
   }
 `;
-
-// Briefing-specific styles. Section labels reuse the eyebrow treatment with
-// top spacing so the longer briefing stays skimmable, not a wall of text.
-const sectionLabelStyle = { ...eyebrowStyle, marginTop: 30 };
-
-const openingCalloutStyle = {
-  background: 'rgba(201,168,76,0.08)',
-  border: '1px solid rgba(201,168,76,0.35)',
-  borderRadius: 4,
-  padding: '16px 18px',
-  margin: '0 0 14px',
-  fontFamily: VAULT_DISPLAY,
-  fontStyle: 'italic',
-  fontSize: 19,
-  color: WHITE,
-  lineHeight: 1.45,
-};
-
-const fiveMovesListStyle = {
-  margin: '0 0 18px',
-  paddingLeft: 22,
-  color: 'rgba(238,233,223,0.9)',
-  fontSize: 16,
-  lineHeight: 1.7,
-};
-
-const workedExampleStyle = {
-  background: 'rgba(34,166,126,0.07)',
-  border: '1px solid rgba(34,166,126,0.3)',
-  borderRadius: 6,
-  padding: '18px 20px',
-  marginBottom: 4,
-};
-
-const workedExampleLabelStyle = {
-  fontSize: 12,
-  color: '#22A67E',
-  letterSpacing: '0.16em',
-  textTransform: 'uppercase',
-  fontWeight: 700,
-  marginBottom: 10,
-};
-
-const workedExampleTextStyle = {
-  fontFamily: VAULT_DISPLAY,
-  fontStyle: 'italic',
-  fontSize: 17,
-  color: WHITE,
-  lineHeight: 1.5,
-  margin: 0,
-};
-
-const quickRemindersListStyle = {
-  margin: '0 0 4px',
-  paddingLeft: 22,
-  color: 'rgba(238,233,223,0.9)',
-  fontSize: 16,
-  lineHeight: 1.9,
-};

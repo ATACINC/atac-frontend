@@ -26,6 +26,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Conversation } from '@elevenlabs/client';
 import i18n from '../../i18n';
+// Sandbox-only presentational skin (opt-in via variant="sandbox"). The candidate
+// default path below never imports/renders these, so its look is unchanged.
+import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
+import { T } from '../sandbox/sandboxTheme';
 
 const BG    = '#080B12';
 const BG1   = '#0C1018';
@@ -42,7 +46,7 @@ const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 const MODE_LISTENING = 'listening';
 const MODE_SPEAKING  = 'speaking';
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn }) {
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -401,6 +405,93 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
     GOLD;
 
   const modeLabel = mode === MODE_SPEAKING ? 'Customer is speaking' : 'Your turn to speak';
+
+  // ---------- Sandbox skin (opt-in) ----------
+  // Same lifecycle/state as the candidate path; only the presentation differs.
+  if (variant === 'sandbox') {
+    const live = connectionStatus === 'live';
+    const sbxPersona = personaName || 'Your Customer';
+
+    if (connectionStatus === 'connecting') {
+      return (
+        <SandboxFrame step={2} headerRight={<span />}>
+          <SandboxConnecting />
+        </SandboxFrame>
+      );
+    }
+
+    const headerRight = (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: T.red, animation: live ? 'sbxPulseDot 1.4s ease-in-out infinite' : 'none' }} />
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: T.redInk }}>Live</span>
+          <Dot color={T.redInk} />
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: T.redInk, whiteSpace: 'nowrap' }}>{sbxPersona}</span>
+        </div>
+        <span style={{ fontFamily: T.fontDisplay, fontSize: 17, color: T.ink, letterSpacing: '0.04em', minWidth: 54, textAlign: 'right' }}>{formatDuration(durationSec)}</span>
+        <Bars count={5} maxH={16} width={2} gap={2} color={T.redInk} running={live} />
+      </div>
+    );
+
+    return (
+      <SandboxFrame step={2} headerRight={headerRight}>
+        {showSilenceBanner && (
+          <div role="alert" style={{ position: 'relative', zIndex: 10, background: 'rgba(196,138,42,0.14)', borderBottom: '1px solid rgba(196,138,42,0.5)', color: '#F0C975', padding: '12px 40px', fontSize: 13.5, lineHeight: 1.5 }}>
+            It is your turn to speak. If you have already started, your microphone may be muted, check the mic icon in your browser address bar. Your recording is still running either way, and this message does not affect your score.
+          </div>
+        )}
+        <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '26px 40px 30px' }}>
+          <div style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', background: 'rgba(229,72,77,0.06)', border: '1px solid rgba(229,72,77,0.26)', borderRadius: 13, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', background: mode === MODE_SPEAKING ? T.red : T.green, animation: live ? 'sbxPulseDot 1.4s ease-in-out infinite' : 'none' }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#F0D9DA' }}>{live ? modeLabel : 'Connecting...'}</span>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#9A6E70', whiteSpace: 'nowrap' }}>{sbxPersona}</span>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 6px 8px 2px', display: 'flex', flexDirection: 'column', gap: 18, minHeight: 240 }}>
+              {transcript.length === 0 ? (
+                <div style={{ fontSize: 15, color: T.faint, textAlign: 'center', padding: '40px 0' }}>The conversation will appear here as it happens.</div>
+              ) : (
+                transcript.map((turn, i) => {
+                  const isUser = turn.source === 'user';
+                  return (
+                    <div key={`${turn.ts}-${i}`} style={{ maxWidth: '74%', alignSelf: isUser ? 'flex-end' : 'flex-start' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: isUser ? '#C9A24B' : '#9A6E70', margin: isUser ? '0 6px 6px 0' : '0 0 6px 4px', textAlign: isUser ? 'right' : 'left' }}>{isUser ? 'You' : 'Your Customer'}</div>
+                      <div style={{ padding: '13px 16px', background: isUser ? 'rgba(99,170,140,0.08)' : 'rgba(229,72,77,0.07)', border: `1px solid ${isUser ? 'rgba(99,170,140,0.22)' : 'rgba(229,72,77,0.2)'}`, borderRadius: isUser ? '14px 4px 14px 14px' : '4px 14px 14px 14px', fontSize: 17, lineHeight: 1.55, color: isUser ? '#DDE7E1' : '#E6D7D8' }}>{turn.message}</div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={transcriptEndRef} />
+            </div>
+
+            {errorText && (
+              <div role="alert" style={{ padding: '10px 14px', background: 'rgba(229,72,77,0.08)', border: '1px solid rgba(229,72,77,0.32)', borderRadius: 8, color: T.redInk, fontSize: 14, lineHeight: 1.55, marginTop: 16 }}>
+                {errorText}
+              </div>
+            )}
+
+            <div style={{ position: 'relative', marginTop: 16 }}>
+              <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 34, marginBottom: 14, opacity: 0.7 }}>
+                <Bars count={48} maxH={30} width={3} gap={3} color="linear-gradient(180deg, rgba(239,192,60,0), rgba(239,192,60,0.85))" running={live} />
+              </div>
+              <button
+                type="button"
+                onClick={onEndCall}
+                disabled={connectionStatus === 'ending' || endedRef.current}
+                className="sbx-end"
+                style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: 15, border: '1px solid rgba(229,72,77,0.4)', borderRadius: 11, background: 'rgba(229,72,77,0.14)', color: '#F2C7C8', fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', cursor: connectionStatus === 'ending' ? 'not-allowed' : 'pointer', fontFamily: T.fontBody, transition: 'background 0.16s, transform 0.15s' }}
+              >
+                <PhoneOffIcon /> {connectionStatus === 'ending' ? 'Ending Call...' : 'End Call'}
+              </button>
+            </div>
+          </div>
+        </section>
+      </SandboxFrame>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY }}>
