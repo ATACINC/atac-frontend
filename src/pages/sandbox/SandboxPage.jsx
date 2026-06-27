@@ -111,6 +111,12 @@ export default function SandboxPage() {
   // Scenario briefing config (fetched once after entry; SC-002 fallback).
   const [scenario, setScenario] = useState(null);
 
+  // Server-minted attempt token from voice-start (the backend's move to
+  // count-attempts-on-score). React state only; lives for the session across
+  // intro -> call -> results. Backward-compatible: stays null until/unless the
+  // backend returns one, and nothing is gated on its presence.
+  const [attemptToken, setAttemptToken] = useState(null);
+
   // ---------- Step B: access gate ----------
   async function handleVerify(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -203,6 +209,8 @@ export default function SandboxPage() {
       }
       conversationIdRef.current = null;
       transcriptRef.current = [];
+      // Hold the attempt token if voice-start minted one (else stay null).
+      setAttemptToken(data.attempt_token ?? data.attemptToken ?? null);
       setSignedUrl(url);
       setPhase('call');
     } catch {
@@ -243,6 +251,9 @@ export default function SandboxPage() {
           accessCode: accessCode.trim(),
           conversation_id: conversationIdRef.current,
           transcript,
+          // Echo the attempt token when present; omitted entirely otherwise so
+          // the current backend behaves exactly as it does today.
+          ...(attemptToken ? { attempt_token: attemptToken } : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
