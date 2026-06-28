@@ -80,7 +80,7 @@ export function StepIndicator({ active }) {
         const labelColor = cur ? '#F1ECDF' : done ? T.muted : T.faint2;
         return (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 4px' }}>
-            <span style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, border: `1px solid ${ring}`, background: fill, color: fg, transition: 'all 0.25s' }}>
+            <span className={`sbx-step-dot ${cur ? 'sbx-step-cur' : done ? 'sbx-step-done' : 'sbx-step-future'}`} style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, border: `1px solid ${ring}`, background: fill, color: fg, transition: 'all 0.25s' }}>
               {done ? <CheckIcon size={12} color={T.goldSoft} /> : i + 1}
             </span>
             <span className="sbx-steps-labels" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: labelColor, whiteSpace: 'nowrap' }}>{label}</span>
@@ -101,16 +101,18 @@ export function SandboxFrame({ step = null, headerRight = null, children }) {
       <SandboxBackground />
 
       <header className="sbx-chrome" style={{ position: 'relative', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, padding: '18px 40px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,11,18,0.55)', backdropFilter: 'blur(8px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
-          <img src={brandLogo} alt="ATAC Global CX" style={{ height: 38, width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(239,192,60,0.16))' }} />
+        <div style={{ flex: '1 1 auto', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+          <img src={brandLogo} alt="ATAC Global CX" className="sbx-logo" style={{ height: 38, width: 'auto', display: 'block', filter: 'drop-shadow(0 4px 14px rgba(239,192,60,0.16))' }} />
           {showTitle && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 18 }}>
+            <span className="sbx-wordmark" style={{ display: 'inline-flex', alignItems: 'center', gap: 18 }}>
               <span aria-hidden="true" style={{ height: 26, width: 1, background: 'rgba(255,255,255,0.1)', flex: '0 0 auto' }} />
               <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.26em', textTransform: 'uppercase', color: '#8A8F9C', whiteSpace: 'nowrap' }}>{SIM_NAME}</span>
             </span>
           )}
         </div>
-        {headerRight || (step != null ? <StepIndicator active={step} /> : null)}
+        <div className="sbx-chrome-right" style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          {headerRight || (step != null ? <StepIndicator active={step} /> : null)}
+        </div>
       </header>
 
       <main style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column' }}>

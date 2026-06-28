@@ -69,11 +69,23 @@ export const SANDBOX_CSS = `
     .sbx-brief-rail { position: static !important; }
     .sbx-steps-labels { display: none !important; }
   }
+  /* Below 640 the shield logo is brand enough; drop the wordmark so the header */
+  /* logo and the step indicator never collide on a phone. */
+  @media (max-width: 640px) {
+    .sbx-wordmark { display: none !important; }
+  }
   @media (max-width: 560px) {
-    .sbx-chrome { padding-left: 16px !important; padding-right: 16px !important; }
+    .sbx-chrome { padding-left: 16px !important; padding-right: 16px !important; gap: 10px !important; }
     .sbx-pad { padding-left: 16px !important; padding-right: 16px !important; }
     .sbx-h { font-size: 30px !important; }
     .sbx-wave-band { transform: scaleY(0.6); transform-origin: bottom; }
+    .sbx-logo { height: 30px !important; }
+    /* Compact step indicator: four small dots that always fit; active is gold. */
+    .sbx-step-dot { width: 8px !important; height: 8px !important; border: none !important; color: transparent !important; }
+    .sbx-step-dot svg { display: none !important; }
+    .sbx-step-cur { background: #EFC03C !important; }
+    .sbx-step-done { background: rgba(239,192,60,0.5) !important; }
+    .sbx-step-future { background: rgba(255,255,255,0.18) !important; }
   }
 `;
 
