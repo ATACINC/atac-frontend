@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConsent } from '../hooks/useConsent';
+import API from '../api/client';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
@@ -21,12 +22,11 @@ const AMBER = '#C48A2A';
 const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
 
-const TIERS = [
-  {
-    id:    'standard',
-    name:  'Standard',
-    price: 39,
-    per:   'one-time',
+// Presentation-only details that GET /api/stripe/plans does not carry (feature
+// lists + accent colour), keyed by tier id. Names, prices, currency, interval,
+// perSeat, and the popular flag all come from the API at runtime.
+const TIER_PRESENTATION = {
+  standard: {
     color: TEAL2,
     features: [
       '40-question knowledge assessment',
@@ -35,15 +35,9 @@ const TIERS = [
       'PDF score report',
       'LinkedIn shareable badge',
     ],
-    cta: 'Start for $39',
   },
-  {
-    id:    'pro',
-    name:  'Pro',
-    price: 59,
-    per:   'one-time',
+  pro: {
     color: '#5BA8D4',
-    badge: 'Most Popular',
     features: [
       '40-question knowledge assessment',
       'ATAC Call Readiness Simulator™ (1 session)',
@@ -55,13 +49,8 @@ const TIERS = [
       '$20 credit toward full CRSA ($149)',
       '90-day score validity',
     ],
-    cta: 'Start for $59',
   },
-  {
-    id:    'team',
-    name:  'Team',
-    price: 49,
-    per:   'per seat',
+  team: {
     color: GOLD,
     features: [
       'Everything in Pro',
@@ -70,9 +59,35 @@ const TIERS = [
       'ATS webhook integration',
       'Minimum 10 seats',
     ],
-    cta: '$49/seat (Min 10 seats)',
   },
-];
+};
+
+// The team checkout enforces a minimum seat count server-side; reflected here
+// in the seat selector and CTA copy.
+const TEAM_MIN_SEATS = 10;
+const CURRENCY_SYMBOL = { usd: '$', cad: 'CA$', eur: '€', gbp: '£' };
+
+function tierHeading(tier) {
+  const s = String(tier || '');
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Plan';
+}
+
+// 3900 + 'usd' -> "$39"; whole amounts drop the cents, others keep two places.
+function formatPrice(unitAmount, currency) {
+  const major = (Number(unitAmount) || 0) / 100;
+  const num = Number.isInteger(major) ? String(major) : major.toFixed(2);
+  const sym = CURRENCY_SYMBOL[String(currency || '').toLowerCase()];
+  return sym ? `${sym}${num}` : `${num} ${String(currency || '').toUpperCase()}`;
+}
+
+// perSeat wins ("/ seat"); a recurring interval maps to "/mo" etc.; a null
+// interval (one-time) renders no suffix at all.
+function priceSuffix(plan) {
+  if (plan.perSeat) return '/ seat';
+  if (!plan.interval) return '';
+  const m = String(plan.interval).toLowerCase();
+  return m === 'month' ? '/mo' : m === 'year' ? '/yr' : m === 'week' ? '/wk' : m === 'day' ? '/day' : `/${m}`;
+}
 
 const injectKF = () => {
   if (document.getElementById('vault-pay-kf')) return;
@@ -86,6 +101,9 @@ const injectKF = () => {
     .tier-card { transition: border-color 0.2s, transform 0.3s, box-shadow 0.3s; }
     .tier-card:hover { border-color: rgba(201,168,76,0.2) !important; }
     .tier-card-highlighted { border-color: rgba(201,168,76,0.75) !important; transform: translateY(-4px); animation: tier-pulse 1.6s ease-out 2; box-shadow: 0 8px 32px rgba(201,168,76,0.18); }
+    @keyframes tier-shimmer { 0%,100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+    .tier-skel-bar { background: rgba(238,233,223,0.08); border-radius: 3px; animation: tier-shimmer 1.4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .tier-skel-bar { animation: none; } }
     ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.15); }
   `;
   document.head.appendChild(s);
@@ -96,6 +114,29 @@ export default function Payment() {
   const [loading,  setLoading]  = useState(null);
   const [error,    setError]    = useState('');
   const [seats,    setSeats]    = useState(10);
+
+  // -- Live pricing from GET /api/stripe/plans (via the shared axios client) --
+  // plans === null while loading; [] or array once resolved; plansError set on
+  // failure (page stays usable, Retry re-fetches). The checkout POST is
+  // unchanged: handlePay still sends the tier string to /api/stripe/checkout.
+  const [plans,      setPlans]      = useState(null);
+  const [plansError, setPlansError] = useState('');
+  const [plansNonce, setPlansNonce] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlans(null);
+    setPlansError('');
+    API.get('/api/stripe/plans')
+      .then((res) => {
+        if (cancelled) return;
+        setPlans(Array.isArray(res.data?.plans) ? res.data.plans : []);
+      })
+      .catch(() => {
+        if (!cancelled) setPlansError('We could not load pricing right now. Please try again.');
+      });
+    return () => { cancelled = true; };
+  }, [plansNonce]);
 
   // -- Consent gate hook (B2C: 4 docs required at checkout) -------------
   const consent = useConsent({
@@ -497,86 +538,109 @@ export default function Payment() {
 
           </div>
         </div>
+      ) : plansError ? (
+        <div className="vault-up" style={{ maxWidth: 600, margin: '0 auto 48px', padding: '0 24px' }}>
+          <div style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '30px 28px', textAlign: 'center' }}>
+            <div style={{ fontSize: 14, color: 'rgba(238,233,223,0.82)', lineHeight: 1.6, marginBottom: 18 }}>{plansError}</div>
+            <button
+              onClick={() => setPlansNonce(n => n + 1)}
+              style={{ background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '12px 28px', fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              Retry
+            </button>
+          </div>
+        </div>
       ) : (
         <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px', maxWidth: 1060, margin: '0 auto 48px' }}>
-          {TIERS.map((tier, i) => {
-            const isHighlighted = highlightedTier === tier.id;
-            return (
-              <div
-                key={tier.id}
-                ref={el => { tierRefs.current[tier.id] = el; }}
-                className={`tier-card vault-up${isHighlighted ? ' tier-card-highlighted' : ''}`}
-                style={{
-                  background: BG1,
-                  border: `1px solid ${tier.badge ? tier.color + '35' : BORDER2}`,
-                  borderRadius: 3,
-                  padding: '32px 28px',
-                  width: 310,
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  animationDelay: `${i * 80}ms`,
-                }}>
+          {plans === null
+            ? [0, 1, 2].map((i) => <PlanSkeleton key={i} delay={i * 80} />)
+            : plans.map((plan, i) => {
+                const pres   = TIER_PRESENTATION[plan.tier] || { color: GOLD, features: [] };
+                const color  = pres.color;
+                const isHighlighted = highlightedTier === plan.tier;
+                const price  = formatPrice(plan.unitAmount, plan.currency);
+                const suffix = priceSuffix(plan);
+                const cta    = plan.perSeat
+                  ? `${price} / seat (Min ${TEAM_MIN_SEATS} seats)`
+                  : `Start for ${price}`;
+                return (
+                  <div
+                    key={plan.tier}
+                    ref={el => { tierRefs.current[plan.tier] = el; }}
+                    className={`tier-card vault-up${isHighlighted ? ' tier-card-highlighted' : ''}`}
+                    style={{
+                      background: BG1,
+                      border: `1px solid ${plan.popular ? color + '35' : BORDER2}`,
+                      borderRadius: 3,
+                      padding: '32px 28px',
+                      width: 310,
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      animationDelay: `${i * 80}ms`,
+                    }}>
 
-                {/* Most Popular badge */}
-                {tier.badge && (
-                  <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: tier.color, color: BG, padding: '4px 16px', borderRadius: 1, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                    {tier.badge}
+                    {/* Most Popular badge */}
+                    {plan.popular && (
+                      <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: color, color: BG, padding: '4px 16px', borderRadius: 1, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                        Most Popular
+                      </div>
+                    )}
+
+                    {/* Heading (capitalized tier) + full Stripe name as descriptor */}
+                    <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>{tierHeading(plan.tier)}</div>
+                    {plan.name && (
+                      <div style={{ fontSize: 11, color: 'rgba(238,233,223,0.4)', lineHeight: 1.4, marginBottom: 12 }}>{plan.name}</div>
+                    )}
+
+                    {/* Price */}
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                      <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 52, color, fontWeight: 300, lineHeight: 1 }}>{price}</span>
+                      {suffix && <span style={{ fontSize: 13, color: MUTED }}>{suffix}</span>}
+                    </div>
+
+                    {/* Seat selector (per-seat plans only; min enforced) */}
+                    {plan.perSeat && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 16px', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px 12px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 11, color: MUTED }}>Seats</span>
+                        <input type="number" min={TEAM_MIN_SEATS} value={seats}
+                          onChange={e => setSeats(Math.max(TEAM_MIN_SEATS, parseInt(e.target.value) || TEAM_MIN_SEATS))}
+                          style={{ width: 56, padding: '4px 8px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER2}`, borderRadius: 2, color: WHITE, fontSize: 13, textAlign: 'center', fontFamily: VAULT_BODY, outline: 'none' }}
+                        />
+                        <span style={{ fontSize: 11, color: GOLD, fontFamily: VAULT_DISPLAY }}>= {formatPrice(seats * (Number(plan.unitAmount) || 0), plan.currency)} total</span>
+                      </div>
+                    )}
+
+                    {/* Divider */}
+                    <div style={{ height: 1, background: BORDER2, margin: '16px 0' }} />
+
+                    {/* Features (presentation-only; not carried by the API) */}
+                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
+                      {pres.features.map((f, fi) => (
+                        <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.5 }}>
+                          <span style={{ color, flexShrink: 0, marginTop: 1 }}>◆</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* CTA (unchanged behavior: posts the tier string to checkout) */}
+                    <button
+                      onClick={() => handlePay(plan.tier)}
+                      disabled={!!loading}
+                      style={{
+                        width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
+                        fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
+                        letterSpacing: '0.16em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer',
+                        background: loading === plan.tier ? 'rgba(255,255,255,0.1)' : color,
+                        color: loading === plan.tier ? MUTED : BG,
+                        opacity: loading && loading !== plan.tier ? 0.4 : 1,
+                        transition: 'all 0.2s',
+                      }}>
+                      {loading === plan.tier ? 'Redirecting to Stripe…' : cta}
+                    </button>
                   </div>
-                )}
-
-                {/* Tier name */}
-                <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>{tier.name}</div>
-
-                {/* Price */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                  <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 52, color: tier.color, fontWeight: 300, lineHeight: 1 }}>${tier.price}</span>
-                  <span style={{ fontSize: 13, color: MUTED }}>/{tier.per}</span>
-                </div>
-
-                {/* Seat selector */}
-                {tier.id === 'team' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 16px', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px 12px' }}>
-                    <span style={{ fontSize: 11, color: MUTED }}>Seats</span>
-                    <input type="number" min={10} value={seats}
-                      onChange={e => setSeats(Math.max(10, parseInt(e.target.value) || 10))}
-                      style={{ width: 56, padding: '4px 8px', background: 'rgba(255,255,255,0.06)', border: `1px solid ${BORDER2}`, borderRadius: 2, color: WHITE, fontSize: 13, textAlign: 'center', fontFamily: VAULT_BODY, outline: 'none' }}
-                    />
-                    <span style={{ fontSize: 11, color: GOLD, fontFamily: VAULT_DISPLAY }}>= ${(seats * 49).toLocaleString()} total</span>
-                  </div>
-                )}
-
-                {/* Divider */}
-                <div style={{ height: 1, background: BORDER2, margin: '16px 0' }} />
-
-                {/* Features */}
-                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
-                  {tier.features.map((f, fi) => (
-                    <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.5 }}>
-                      <span style={{ color: tier.color, flexShrink: 0, marginTop: 1 }}>◆</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* CTA */}
-                <button
-                  onClick={() => handlePay(tier.id)}
-                  disabled={!!loading}
-                  style={{
-                    width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
-                    fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
-                    letterSpacing: '0.16em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer',
-                    background: loading === tier.id ? 'rgba(255,255,255,0.1)' : tier.color,
-                    color: loading === tier.id ? MUTED : BG,
-                    opacity: loading && loading !== tier.id ? 0.4 : 1,
-                    transition: 'all 0.2s',
-                  }}>
-                  {loading === tier.id ? 'Redirecting to Stripe…' : tier.cta}
-                </button>
-              </div>
-            );
-          })}
+                );
+              })}
         </div>
       )}
 
@@ -588,6 +652,30 @@ export default function Payment() {
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
       {consent.modal}
 
+    </div>
+  );
+}
+
+// Loading placeholder shown while GET /api/stripe/plans is in flight. Mirrors
+// the tier-card shell; bars pulse (and hold static under reduced motion).
+function PlanSkeleton({ delay = 0 }) {
+  const bar = (w, h, mb) => (
+    <div className="tier-skel-bar" style={{ width: w, height: h, marginBottom: mb }} />
+  );
+  return (
+    <div
+      className="tier-card vault-up"
+      style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '32px 28px', width: 310, display: 'flex', flexDirection: 'column', animationDelay: `${delay}ms` }}
+      aria-hidden="true"
+    >
+      {bar('40%', 10, 16)}
+      {bar('55%', 44, 18)}
+      <div style={{ height: 1, background: BORDER2, margin: '16px 0' }} />
+      {bar('90%', 12, 12)}
+      {bar('80%', 12, 12)}
+      {bar('85%', 12, 12)}
+      {bar('70%', 12, 28)}
+      {bar('100%', 42, 0)}
     </div>
   );
 }
