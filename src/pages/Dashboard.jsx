@@ -10,6 +10,8 @@ import CharterCounter from '../components/CharterCounter';
 import CharterCohortBlock from '../components/CharterCohortBlock';
 import CandidateStateRenderer from '../utils/CandidateStateRenderer';
 import RegistryConsentCard from '../components/RegistryConsentCard';
+import { useAssessmentConfig } from '../hooks/useAssessmentConfig';
+import CountUp from '../components/CountUp';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -56,6 +58,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const photoVerification = usePhotoVerification();
+
+  // Assessment figures (questions / minutes / pass %) from GET /api/assessment/config.
+  const { questions: cfgQuestions, minutes: cfgMinutes, passPct: cfgPassPct } = useAssessmentConfig();
+  // Questions needed to pass, derived from the live pass % and question count.
+  const cfgPassMark = (cfgPassPct != null && cfgQuestions != null)
+    ? Math.round((cfgPassPct / 100) * cfgQuestions)
+    : null;
   const candidate = JSON.parse(localStorage.getItem('atac_candidate') || '{}');
   const result    = JSON.parse(localStorage.getItem('atac_result')    || 'null');
 
@@ -415,7 +424,7 @@ export default function Dashboard() {
           <div className="vault-up" style={{ background: 'rgba(26,143,105,0.08)', border: '1px solid rgba(26,143,105,0.25)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
               <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: TEAL2, marginBottom: 6 }}>Payment Confirmed: You're Ready to Begin</div>
-              <div style={{ fontSize: 14, color: MUTED }}>Your assessment session is ready. Click to start your 40-question timed assessment.</div>
+              <div style={{ fontSize: 14, color: MUTED }}>Your assessment session is ready. Click to start your {cfgQuestions ? `${cfgQuestions}-question ` : ''}timed assessment.</div>
             </div>
             <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting...' : 'Start Assessment →'}
@@ -438,7 +447,7 @@ export default function Dashboard() {
           <div className="vault-up" style={{ background: 'rgba(91,168,212,0.07)', border: '1px solid rgba(91,168,212,0.22)', borderRadius: 4, padding: '24px 30px', marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 22 }}>
             <div>
               <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 26, color: '#5BA8D4', marginBottom: 6 }}>Your Assessment Is Ready</div>
-              <div style={{ fontSize: 14, color: MUTED }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your 40-question timed assessment when you're ready.</div>
+              <div style={{ fontSize: 14, color: MUTED }}>Payment verified{paymentTier ? ` · ${paymentTier.toUpperCase()} tier` : ''}. Start your {cfgQuestions ? `${cfgQuestions}-question ` : ''}timed assessment when you're ready.</div>
             </div>
             <button className="btn-gold-h" style={{ ...btnGold, width: 'auto', padding: '15px 34px', whiteSpace: 'nowrap', marginBottom: 0, opacity: startingAssessment ? 0.7 : 1 }} onClick={startAssessment} disabled={startingAssessment}>
               {startingAssessment ? 'Starting...' : 'Start Assessment →'}
@@ -777,12 +786,12 @@ export default function Dashboard() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
               {[
-                { val: '40', lbl: 'Questions' },
-                { val: '40', lbl: 'Minutes' },
-                { val: '70%', lbl: 'Pass Mark' },
+                { val: cfgQuestions, lbl: 'Questions' },
+                { val: cfgMinutes,   lbl: 'Minutes' },
+                { val: cfgPassPct,   lbl: 'Pass Mark', suffix: '%' },
               ].map((m, i) => (
                 <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '20px 14px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 42, color: GOLD, fontWeight: 300, lineHeight: 1 }}>{m.val}</div>
+                  <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 42, color: GOLD, fontWeight: 300, lineHeight: 1 }}><CountUp value={m.val} suffix={m.suffix || ''} /></div>
                   <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 9 }}>{m.lbl}</div>
                 </div>
               ))}
@@ -798,10 +807,10 @@ export default function Dashboard() {
             {/* Score row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 22 }}>
               {[
-                { val: result.score,      lbl: 'Score / 40',  color: GOLD },
+                { val: result.score,      lbl: cfgQuestions ? `Score / ${cfgQuestions}` : 'Score', color: GOLD },
                 { val: `${result.percentage}%`, lbl: 'Percentage', color: result.passed ? TEAL2 : RED },
                 { val: result.passed ? 'PASS' : 'FAIL', lbl: 'Status', color: result.passed ? TEAL2 : RED },
-                { val: '28',              lbl: 'Pass Mark',   color: GOLD },
+                { val: cfgPassMark != null ? cfgPassMark : '—', lbl: 'Pass Mark',   color: GOLD },
               ].map((s, i) => (
                 <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '14px', textAlign: 'center' }}>
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: s.color, fontWeight: 300, lineHeight: 1 }}>{s.val}</div>
