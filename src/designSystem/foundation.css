@@ -1,0 +1,161 @@
+/* ATAC Platform - Design System foundation (canonical, shared)
+   Path: frontend/src/designSystem/foundation.css
+
+   Imported once by src/index.css. ADDITIVE ONLY: defines the redesign's CSS
+   custom properties, foundation classes, and keyframes for screens to ADOPT.
+   Nothing here is applied to a production screen in this PR.
+
+   Back-compat: the older Vault :root vars (--bg, --gold #C9A84C, Cormorant +
+   Syne) in src/index.css and the existing --sbx-* mirror are left untouched;
+   these --ds-* names are new and additive. Mirrors src/designSystem/tokens.js. */
+
+:root {
+  /* Surfaces */
+  --ds-bg:             #06080C;
+  --ds-panel:          rgba(255,255,255,0.02);
+  --ds-border:         rgba(255,255,255,0.07);
+  --ds-border-strong:  rgba(255,255,255,0.08);
+  --ds-card-grad:      linear-gradient(165deg, #0E1B30, #080D16);
+  --ds-chrome-bg:      rgba(6,8,12,0.6);
+  --ds-chrome-border:  rgba(255,255,255,0.06);
+
+  /* Gold */
+  --ds-gold:           #EFC03C;
+  --ds-gold-light:     #FFD86B;
+  --ds-gold-deep:      #CC9A2E;
+  --ds-gold-vault:     #C9A84C;
+  --ds-gold-grad:      linear-gradient(135deg, #FFD86B, #EFC03C 55%, #CC9A2E);
+  --ds-eyebrow:        #F2CB5C;
+  --ds-btn-shadow:     0 14px 30px -12px rgba(239,192,60,0.6);
+
+  /* Green / red */
+  --ds-green:          #7FCBA6;
+  --ds-green-text:     #9FE0C2;
+  --ds-green-grad:     linear-gradient(90deg, #5FA98A, #7FCBA6);
+  --ds-green-tint:     rgba(99,170,140,0.10);
+  --ds-red:            #E5484D;
+  --ds-red-text:       #E98086;
+
+  /* Domain accents */
+  --ds-domain-professionalism: #EFC03C;
+  --ds-domain-communication:   #6FA3E0;
+  --ds-domain-cx-operations:   #7FCBA6;
+  --ds-domain-technology:      #A98FE0;
+  --ds-domain-compliance:      #E5848A;
+  --ds-domain-remote:          #5FBFC4;
+  --ds-popular:                #6FA3E0;
+  --ds-popular-light:          #8FCBE0;
+
+  /* Text */
+  --ds-heading:     #F5F1E6;
+  --ds-heading-2:   #F4EFE3;
+  --ds-body:        #A9ACB6;
+  --ds-secondary:   #9296A0;
+  --ds-secondary-2: #82868F;
+  --ds-muted:       #7E8290;
+  --ds-muted-2:     #6E727C;
+
+  /* Type */
+  --ds-font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --ds-font-body:    'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+
+  /* Radius */
+  --ds-radius-sm:    9px;
+  --ds-radius-card:  14px;
+  --ds-radius-panel: 18px;
+  --ds-radius-pill:  999px;
+
+  /* Shadow */
+  --ds-shadow-panel: 0 40px 90px -38px rgba(0,0,0,0.85);
+  --ds-shadow-modal: 0 30px 70px -36px rgba(0,0,0,0.85);
+
+  /* Motion */
+  --ds-motion-ms: 850ms;
+  --ds-ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Canonical keyframes (defined once). ds- prefixed so they never collide
+   with the Vault (vault-*) or the scoped sandbox (sbx*) keyframes. ── */
+@keyframes ds-wave       { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+@keyframes ds-glow-drift { 0%,100% { transform: translate(0,0) scale(1); opacity: 0.5; } 50% { transform: translate(-28px,18px) scale(1.08); opacity: 0.78; } }
+@keyframes ds-pulse-dot  { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.8); } }
+@keyframes ds-seal-spin  { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes ds-spin       { to { transform: rotate(360deg); } }
+@keyframes ds-shimmer    { 0% { background-position: -160% 0; } 100% { background-position: 160% 0; } }
+
+/* ── Foundation primitives (classes). Defined for adoption; NOT applied to any
+   production screen in this PR. ── */
+
+/* Ambient app background: radial gold (top-right) + navy (bottom-left) glow,
+   faint 96px vertical grid (::before), 2px gold top hairline (::after). */
+.ds-app-bg {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  background:
+    radial-gradient(1100px 720px at 78% 0%, rgba(239,192,60,0.10), rgba(239,192,60,0) 60%),
+    radial-gradient(900px 640px at 4% 100%, rgba(20,52,96,0.28), rgba(20,52,96,0) 62%),
+    var(--ds-bg);
+  color: var(--ds-body);
+  font-family: var(--ds-font-body);
+}
+.ds-app-bg::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 96px);
+}
+.ds-app-bg::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px; z-index: 30; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(239,192,60,0.55), transparent);
+}
+
+.ds-eyebrow {
+  font-family: var(--ds-font-body);
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ds-eyebrow);
+}
+
+.ds-btn-gold {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border: none; border-radius: var(--ds-radius-sm); padding: 14px 22px;
+  background: var(--ds-gold-grad); color: #1A1206;
+  font-family: var(--ds-font-body); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; cursor: pointer;
+  box-shadow: var(--ds-btn-shadow);
+  transition: transform 0.16s, filter 0.16s, box-shadow 0.16s;
+}
+.ds-btn-gold:hover { transform: translateY(-2px); filter: brightness(1.06); }
+
+.ds-panel {
+  background: var(--ds-panel); border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-panel);
+}
+.ds-card {
+  background: var(--ds-card-grad); border: 1px solid rgba(239,192,60,0.2);
+  border-radius: var(--ds-radius-card); box-shadow: var(--ds-shadow-panel);
+}
+
+/* Reduced-motion-safe animation helpers (one per canonical keyframe). Using a
+   helper class rather than a raw animation guarantees the prefers-reduced-motion
+   rule below finalizes/disables it. */
+.ds-anim-wave    { animation: ds-wave 1.2s ease-in-out infinite; }
+.ds-anim-glow    { animation: ds-glow-drift 16s ease-in-out infinite; }
+.ds-anim-pulse   { animation: ds-pulse-dot 1.4s ease-in-out infinite; }
+.ds-anim-seal    { animation: ds-seal-spin 120s linear infinite; }
+.ds-anim-spin    { animation: ds-spin 0.9s linear infinite; }
+.ds-anim-shimmer { animation: ds-shimmer var(--ds-motion-ms) linear infinite; }
+
+/* Disable/finalize the foundation's motion under reduced-motion. Scoped to the
+   ds-* surface so the Vault and sandbox screens are unaffected. */
+@media (prefers-reduced-motion: reduce) {
+  .ds-app-bg::before,
+  .ds-app-bg::after,
+  .ds-btn-gold,
+  [class^="ds-anim-"],
+  [class*=" ds-anim-"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
