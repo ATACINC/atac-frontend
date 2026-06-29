@@ -592,7 +592,12 @@ function humanStatus(s) {
   if (s === 'in_progress') return 'Call in progress';
   if (s === 'completed')   return 'Call completed';
   if (s === 'scoring')     return 'Scoring';
-  return s || 'Pending';
+  // Any other interim or terminal status (e.g. 'failed',
+  // 'pending_manual_review', or an unrecognized value) must never surface the
+  // raw word to the candidate while the page is still polling. Show neutral
+  // in-progress copy; the five-minute failsafe popup is the only place a
+  // terminal state may appear.
+  return 'Still scoring your call';
 }
 
 function pluralize(count, word) {
