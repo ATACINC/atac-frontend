@@ -4,22 +4,25 @@ import API from '../api/client';
 import { useToast } from '../hooks/useToast';
 import SelfieCapture from '../components/SelfieCapture';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
+import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { useAssessmentConfig } from '../hooks/useAssessmentConfig';
 import CountUp from '../components/CountUp';
+import { color as ds, font as dsFont, goldButton } from '../designSystem/tokens';
 
-/* ── Vault Design Tokens ─────────────────────────────────────────── */
-const BG    = '#080B12';
-const BG1   = '#0C1018';
-const BG3   = '#141B26';
-const GOLD  = '#C9A84C';
-const TEAL  = '#1A8F69';
-const TEAL2 = '#22A67E';
-const WHITE = '#EEE9DF';
-const MUTED = 'rgba(238,233,223,0.45)';
-const FAINT = 'rgba(238,233,223,0.04)';
-const BORDER  = 'rgba(201,168,76,0.15)';
-const BORDER2 = 'rgba(238,233,223,0.07)';
-const RED   = '#C45C5C';
+/* ── Palette mapped to the redesign tokens (names kept; values now from
+   src/designSystem so the whole screen re-skins without structural churn) ─ */
+const BG    = ds.bg;
+const BG1   = ds.panel;
+const BG3   = ds.bg;
+const GOLD  = ds.gold;
+const TEAL  = ds.green;
+const TEAL2 = ds.greenText;
+const WHITE = ds.heading;
+const MUTED = ds.muted;
+const FAINT = 'rgba(255,255,255,0.04)';
+const BORDER  = 'rgba(239,192,60,0.18)';
+const BORDER2 = ds.border;
+const RED   = ds.red;
 const AMBER = '#C48A2A';
 
 const DOMAIN_META = {
@@ -37,8 +40,8 @@ const normalizeDomainKey = (domain) => {
   return domain;
 };
 
-const VAULT_FONT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
-const VAULT_FONT_BODY    = "'Syne', 'DM Sans', sans-serif";
+const VAULT_FONT_DISPLAY = dsFont.display;
+const VAULT_FONT_BODY    = dsFont.body;
 
 /* Stage labels for the processing screen */
 const STAGE_LABELS = {
@@ -76,14 +79,26 @@ const injectKeyframes = () => {
     }
     .vault-up   { animation: vault-up 0.5s ease both; }
     .vault-in   { animation: vault-in 0.4s ease both; }
-    .opt-hover:hover { border-color: ${BORDER} !important; background: rgba(201,168,76,0.05) !important; cursor: pointer; }
-    .opt-hover:hover .opt-letter { color: ${GOLD} !important; border-color: rgba(201,168,76,0.4) !important; }
+    .opt-hover { transition: border-color 0.18s, background 0.18s, transform 0.16s; }
+    .opt-hover:hover { border-color: ${BORDER} !important; background: rgba(239,192,60,0.05) !important; cursor: pointer; transform: translateY(-2px); }
+    .opt-hover:hover .opt-letter { color: ${GOLD} !important; border-color: rgba(239,192,60,0.4) !important; }
+    .asmt-tick { animation: tick 1s infinite; }
+    .asmt-fill { animation: progress-fill 0.85s cubic-bezier(0.22,1,0.36,1) both; }
     .stage-shimmer {
-      background: linear-gradient(90deg, rgba(201,168,76,0.06) 0%, rgba(201,168,76,0.2) 50%, rgba(201,168,76,0.06) 100%);
+      background: linear-gradient(90deg, rgba(239,192,60,0.06) 0%, rgba(239,192,60,0.2) 50%, rgba(239,192,60,0.06) 100%);
       background-size: 200% 100%;
       animation: shimmer 2s ease-in-out infinite;
     }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius:2px; }
+    @media (max-width: 620px) {
+      .asmt-active-grid { grid-template-columns: 1fr !important; }
+      .asmt-sidebar { border-right: none !important; border-bottom: 1px solid ${BORDER2} !important; max-height: 46vh; }
+    }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(239,192,60,0.2); border-radius:2px; }
+    @media (prefers-reduced-motion: reduce) {
+      .vault-up, .vault-in, .asmt-fill, .asmt-tick, .stage-shimmer { animation: none !important; }
+      .opt-hover { transition: none !important; }
+      .opt-hover:hover { transform: none !important; }
+    }
   `;
   document.head.appendChild(style);
 };
@@ -503,7 +518,15 @@ export default function Assessment() {
   });
 
   /* ─────────────────────────────────────── RENDER PHASES ────── */
-  const base = { minHeight: '100vh', background: BG, fontFamily: VAULT_FONT_BODY, color: WHITE };
+  const base = {
+    position: 'relative', minHeight: '100vh', color: WHITE, fontFamily: VAULT_FONT_BODY, overflowX: 'hidden',
+    background: 'radial-gradient(1100px 720px at 78% 0%, rgba(239,192,60,0.10), rgba(239,192,60,0) 60%), '
+      + 'radial-gradient(900px 640px at 4% 100%, rgba(20,52,96,0.28), rgba(20,52,96,0) 62%), '
+      + 'repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 96px), '
+      + ds.bg,
+  };
+  // 2px ambient gold top hairline; fixed so it overlays any phase layout.
+  const hairline = <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, rgba(239,192,60,0.55), transparent)', zIndex: 60 }} />;
 
   /* LOADING */
   if (phase === 'loading') return (
@@ -549,11 +572,14 @@ export default function Assessment() {
 
     return (
       <div style={{ ...base, padding: '56px 44px 48px', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
+        {hairline}
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 28, alignItems: 'stretch', marginBottom: 28 }}>
-            <section style={{ background: `linear-gradient(135deg, rgba(201,168,76,0.10), rgba(12,16,24,0.92) 46%, rgba(34,166,126,0.08))`, border: `1px solid ${BORDER}`, borderRadius: 4, padding: '44px 46px', minHeight: 520, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
+            <section style={{ position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, rgba(239,192,60,0.10), rgba(12,16,24,0.92) 46%, rgba(34,166,126,0.08))`, border: `1px solid ${BORDER}`, borderRadius: 4, padding: '44px 46px', minHeight: 520, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              {/* Slowly rotating atac-seal watermark (ds-anim-seal; off under reduced motion) */}
+              <img src={certificateSeal} alt="" aria-hidden="true" className="ds-anim-seal" style={{ position: 'absolute', top: -70, right: -70, width: 300, height: 300, objectFit: 'cover', borderRadius: '50%', opacity: 0.06, pointerEvents: 'none' }} />
+              <div style={{ position: 'relative' }}>
                 <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.24em', textTransform: 'uppercase', marginBottom: 18 }}>
                   Remote CX Readiness
                 </div>
@@ -566,7 +592,7 @@ export default function Assessment() {
                 </p>
               </div>
 
-              <div>
+              <div style={{ position: 'relative' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, margin: '34px 0 22px' }}>
                   {[
                     { val: cfgQuestions ?? questions.length, lbl: 'Questions' },
@@ -633,10 +659,11 @@ export default function Assessment() {
 
   /* ACTIVE */
   if (phase === 'active' && q) return (
-    <div style={{ ...base, display: 'grid', gridTemplateColumns: '240px 1fr', minHeight: '100vh' }}>
+    <div className="asmt-active-grid" style={{ ...base, display: 'grid', gridTemplateColumns: '240px 1fr', minHeight: '100vh' }}>
+      {hairline}
 
-      {/* ── Sidebar ── */}
-      <div style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      {/* ── Sidebar (collapses to a top bar on ≤620px) ── */}
+      <div className="asmt-sidebar" style={{ background: BG3, borderRight: `1px solid ${BORDER2}`, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
 
         {/* Branding */}
         <div style={{ padding: '20px 18px 14px', borderBottom: `1px solid ${BORDER2}` }}>
@@ -647,7 +674,7 @@ export default function Assessment() {
         {/* Timer */}
         <div style={{ padding: '16px 18px', borderBottom: `1px solid ${BORDER2}` }}>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Time Remaining</div>
-          <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: isLowTime ? RED : GOLD, fontWeight: 300, animation: isLowTime ? 'tick 1s infinite' : 'none' }}>
+          <div className={isLowTime ? 'asmt-tick' : undefined} style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: isLowTime ? RED : GOLD, fontWeight: 300 }}>
             {timeLeft != null ? formatTime(timeLeft) : '--:--'}
           </div>
           {isLowTime && <div style={{ fontSize: 10, color: RED, marginTop: 4, letterSpacing: '0.1em' }}>TIME RUNNING LOW</div>}
@@ -673,7 +700,7 @@ export default function Assessment() {
               const isAns   = answers[q2.id] !== undefined;
               const isFlag  = flagged.has(q2.id);
               let bg = FAINT, border = BORDER2, color = MUTED;
-              if (isCurr)  { bg = 'rgba(201,168,76,0.15)'; border = BORDER; color = GOLD; }
+              if (isCurr)  { bg = 'rgba(239,192,60,0.15)'; border = BORDER; color = GOLD; }
               else if (isFlag) { bg = 'rgba(196,92,92,0.1)'; border = 'rgba(196,92,92,0.3)'; color = RED; }
               else if (isAns) { bg = 'rgba(26,143,105,0.1)'; border = 'rgba(26,143,105,0.3)'; color = TEAL; }
               return (
@@ -750,7 +777,7 @@ export default function Assessment() {
                   onClick={() => selectAnswer(q.id, i)}
                   style={{
                     display: 'flex', alignItems: 'flex-start', gap: 14,
-                    background: selected ? 'rgba(201,168,76,0.08)' : FAINT,
+                    background: selected ? 'rgba(239,192,60,0.08)' : FAINT,
                     border: `1px solid ${selected ? BORDER : BORDER2}`,
                     borderRadius: 3, padding: '16px 18px',
                     cursor: 'pointer', transition: 'all 0.18s',
@@ -872,7 +899,7 @@ export default function Assessment() {
           <div style={{
             background: BG1, border: `2px solid ${GOLD}`, borderRadius: 12,
             maxWidth: 460, width: '100%', padding: '32px 28px 28px',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(201,168,76,0.15)',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(239,192,60,0.15)',
             color: WHITE, textAlign: 'center',
           }}>
             <h2
@@ -1008,7 +1035,7 @@ export default function Assessment() {
 
           {/* Long wait reassurance */}
           {showLongWait && (
-            <div style={{ background: 'rgba(201,168,76,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 20px', fontSize: 13, color: MUTED, lineHeight: 1.7, textAlign: 'center' }}>
+            <div style={{ background: 'rgba(239,192,60,0.05)', border: `1px solid ${BORDER}`, borderRadius: 3, padding: '16px 20px', fontSize: 13, color: MUTED, lineHeight: 1.7, textAlign: 'center' }}>
               <div style={{ color: GOLD, fontSize: 11, letterSpacing: '0.16em', textTransform: 'uppercase', marginBottom: 6 }}>
                 Taking Longer Than Usual
               </div>
@@ -1067,10 +1094,11 @@ export default function Assessment() {
 
     return (
       <div style={{ ...base, padding: '52px 44px', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
+        {hairline}
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1320, width: '100%', margin: '0 auto' }} className="vault-up">
 
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: 28, alignItems: 'stretch', marginBottom: 28 }}>
-            <div style={{ background: `linear-gradient(135deg, ${passed ? 'rgba(34,166,126,0.16)' : 'rgba(196,92,92,0.14)'}, rgba(12,16,24,0.96) 48%, rgba(201,168,76,0.08))`, border: `1px solid ${statusBorder}`, borderRadius: 4, padding: '44px 46px', minHeight: 470, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ background: `linear-gradient(135deg, ${passed ? 'rgba(34,166,126,0.16)' : 'rgba(196,92,92,0.14)'}, rgba(12,16,24,0.96) 48%, rgba(239,192,60,0.08))`, border: `1px solid ${statusBorder}`, borderRadius: 4, padding: '44px 46px', minHeight: 470, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.24em', textTransform: 'uppercase', marginBottom: 18 }}>
                   Assessment Complete
@@ -1125,12 +1153,12 @@ export default function Assessment() {
               </div>
 
               <div>
-                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 104, color: statusColor, fontWeight: 300, lineHeight: 0.9 }}>{scorePct}%</div>
+                <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 104, color: statusColor, fontWeight: 300, lineHeight: 0.9 }}><CountUp value={scorePct} suffix="%" duration={850} /></div>
                 <div style={{ color: MUTED, fontSize: 14, margin: '16px 0 18px' }}>
                   Pass threshold: {passMarkPct != null ? `${passMarkPct}%` : '—'}{gap != null ? ` | ${passed ? `${gap}% above threshold` : `${gap}% below threshold`}` : ''}
                 </div>
                 <div style={{ height: 8, background: BORDER2, borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
-                  <div style={{ height: '100%', width: `${scorePct}%`, background: statusColor, borderRadius: 999 }} />
+                  <div className="asmt-fill" style={{ height: '100%', width: `${scorePct}%`, '--target-w': `${scorePct}%`, background: statusColor, borderRadius: 999 }} />
                   {passMarkPct != null && <div style={{ position: 'absolute', left: `${passMarkPct}%`, top: -4, width: 2, height: 16, background: GOLD }} />}
                 </div>
               </div>
@@ -1161,20 +1189,20 @@ export default function Assessment() {
                   <div style={{ color: statusColor, fontSize: 13, letterSpacing: '0.16em', textTransform: 'uppercase' }}>{domainRows.length} domains</div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14 }}>
                   {domainRows.map(row => {
                     const domainPassed = passMarkPct != null && row.pct >= passMarkPct;
                     return (
-                      <div key={row.key} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '18px 18px 16px' }}>
+                      <div key={row.key} style={{ background: 'rgba(255,255,255,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '18px 18px 16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
                           <div>
                             <div style={{ color: WHITE, fontSize: 15, fontWeight: 600, lineHeight: 1.25 }}>{row.label}</div>
                             <div style={{ color: MUTED, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 7 }}>{domainPassed ? 'Meets mark' : 'Review area'}</div>
                           </div>
-                          <div style={{ color: domainPassed ? row.color : RED, fontFamily: VAULT_FONT_DISPLAY, fontSize: 28, lineHeight: 1 }}>{row.pct}%</div>
+                          <div style={{ color: domainPassed ? row.color : RED, fontFamily: VAULT_FONT_DISPLAY, fontSize: 28, lineHeight: 1 }}><CountUp value={row.pct} suffix="%" duration={850} /></div>
                         </div>
                         <div style={{ height: 5, background: BORDER2, borderRadius: 999, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${row.pct}%`, background: domainPassed ? row.color : RED, borderRadius: 999 }} />
+                          <div className="asmt-fill" style={{ height: '100%', width: `${row.pct}%`, '--target-w': `${row.pct}%`, background: domainPassed ? row.color : RED, borderRadius: 999 }} />
                         </div>
                       </div>
                     );
@@ -1252,17 +1280,16 @@ export default function Assessment() {
   return null;
 }
 
-/* ── Shared button styles ── */
+/* ── Shared button styles (gold = redesign gradient CTA) ── */
 const btnGold = {
-  background: GOLD, color: BG, border: 'none', borderRadius: 2,
-  padding: '11px 24px', fontSize: 11, fontWeight: 600,
-  letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
-  fontFamily: "'Syne', sans-serif",
+  ...goldButton,
+  borderRadius: 8, padding: '12px 24px', fontSize: 11, fontWeight: 700,
+  letterSpacing: '0.16em',
 };
 const btnOutline = {
   background: 'transparent', color: WHITE,
-  border: `1px solid ${BORDER2}`, borderRadius: 2,
-  padding: '10px 24px', fontSize: 11, cursor: 'pointer',
+  border: `1px solid ${BORDER2}`, borderRadius: 8,
+  padding: '11px 24px', fontSize: 11, cursor: 'pointer',
   letterSpacing: '0.1em', textTransform: 'uppercase',
-  fontFamily: "'Syne', sans-serif",
+  fontFamily: VAULT_FONT_BODY,
 };
