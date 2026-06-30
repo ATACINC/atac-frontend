@@ -4,6 +4,8 @@ import API from '../api/client';
 import { useToast } from '../hooks/useToast';
 import SelfieCapture from '../components/SelfieCapture';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
+import { useAssessmentConfig } from '../hooks/useAssessmentConfig';
+import CountUp from '../components/CountUp';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────── */
 const BG    = '#080B12';
@@ -107,11 +109,21 @@ export default function Assessment() {
     catch { return {}; }
   });
   const [flagged, setFlagged]       = useState(new Set());
-  const [timeLeft, setTimeLeft]     = useState(60 * 40); // 40 min
+  const [timeLeft, setTimeLeft]     = useState(null); // seeded from config.timeLimitSec
   const [result, setResult]         = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState('');
   const [animKey, setAnimKey]       = useState(0);
+
+  // Assessment config (questions / time limit / pass %) from GET /api/assessment/config.
+  const { config: cfg, questions: cfgQuestions, minutes: cfgMinutes, passPct: cfgPassPct } = useAssessmentConfig();
+
+  // Seed the countdown from the live time limit once config resolves. timeLeft
+  // starts null and only this sets it from null, so it fires exactly once and
+  // never resets a running timer.
+  useEffect(() => {
+    if (cfg?.timeLimitSec != null && timeLeft == null) setTimeLeft(cfg.timeLimitSec);
+  }, [cfg, timeLeft]);
 
   // Processing-phase state (for async credential minting)
   const [processingStatus, setProcessingStatus] = useState(null); // pending | processing | issued | failed
@@ -286,8 +298,11 @@ export default function Assessment() {
 
   const startAssessment = () => {
     setPhase('active');
+    // Defensive seed if the config-sync effect has not run yet.
+    setTimeLeft(prev => (prev != null ? prev : (cfg?.timeLimitSec ?? null)));
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
+        if (t == null) return t; // config not loaded yet; hold rather than submit
         if (t <= 1) { clearInterval(timerRef.current); handleSubmit(); return 0; }
         return t - 1;
       });
@@ -478,7 +493,7 @@ export default function Assessment() {
   const answered   = Object.keys(answers).length;
   const progress   = questions.length ? (answered / questions.length) * 100 : 0;
   const q          = questions[current] || null;
-  const isLowTime  = timeLeft < 300;
+  const isLowTime  = timeLeft != null && timeLeft < 300;
   const domainList = DOMAIN_KEYS;
 
   const domainProgress = domainList.map(d => {
@@ -526,7 +541,6 @@ export default function Assessment() {
 
   /* INTRO — bigger, clearer typography for CX demographic */
   if (phase === 'intro') {
-    const questionTotal = questions.length || 40;
     const domainTiles = DOMAIN_KEYS.map(key => {
       const meta = DOMAIN_META[key];
       const count = questions.filter(x => normalizeDomainKey(x.domain) === key).length;
@@ -555,12 +569,12 @@ export default function Assessment() {
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, margin: '34px 0 22px' }}>
                   {[
-                    { val: questionTotal, lbl: 'Questions' },
-                    { val: '40', lbl: 'Minutes' },
-                    { val: '70%', lbl: 'Pass Mark' },
+                    { val: cfgQuestions ?? questions.length, lbl: 'Questions' },
+                    { val: cfgMinutes, lbl: 'Minutes' },
+                    { val: cfgPassPct, lbl: 'Pass Mark', suffix: '%' },
                   ].map((s, i) => (
                     <div key={i} style={{ background: 'rgba(8,11,18,0.56)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '22px 18px' }}>
-                      <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 44, color: GOLD, fontWeight: 300, lineHeight: 1 }}>{s.val}</div>
+                      <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 44, color: GOLD, fontWeight: 300, lineHeight: 1 }}><CountUp value={s.val} suffix={s.suffix || ''} /></div>
                       <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.16em', textTransform: 'uppercase', marginTop: 8 }}>{s.lbl}</div>
                     </div>
                   ))}
@@ -602,7 +616,7 @@ export default function Assessment() {
 
           <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 4, padding: 26 }}>
             {[
-              { title: 'Timer Starts On Begin', body: 'You have 40 minutes and can move freely between questions.' },
+              { title: 'Timer Starts On Begin', body: `You have ${cfgMinutes ? `${cfgMinutes} minutes` : 'a fixed time limit'} and can move freely between questions.` },
               { title: 'Answer Every Question', body: 'Use the question tracker and flags to revisit anything before submitting.' },
               { title: 'Credential On Passing', body: 'Passing candidates receive a blockchain-verifiable ATAC credential.' },
             ].map((item, i) => (
@@ -634,7 +648,7 @@ export default function Assessment() {
         <div style={{ padding: '16px 18px', borderBottom: `1px solid ${BORDER2}` }}>
           <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 6 }}>Time Remaining</div>
           <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 32, color: isLowTime ? RED : GOLD, fontWeight: 300, animation: isLowTime ? 'tick 1s infinite' : 'none' }}>
-            {formatTime(timeLeft)}
+            {timeLeft != null ? formatTime(timeLeft) : '--:--'}
           </div>
           {isLowTime && <div style={{ fontSize: 10, color: RED, marginTop: 4, letterSpacing: '0.1em' }}>TIME RUNNING LOW</div>}
         </div>
@@ -643,7 +657,7 @@ export default function Assessment() {
         <div style={{ padding: '14px 18px', borderBottom: `1px solid ${BORDER2}` }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Progress</span>
-            <span style={{ fontSize: 10, color: GOLD }}>{answered}/40</span>
+            <span style={{ fontSize: 10, color: GOLD }}>{answered}/{questions.length}</span>
           </div>
           <div style={{ height: 2, background: BORDER2, borderRadius: 1 }}>
             <div style={{ height: 2, width: `${progress}%`, background: GOLD, borderRadius: 1, transition: 'width 0.3s ease' }} />
@@ -682,7 +696,7 @@ export default function Assessment() {
 
         {/* Submit */}
         <div style={{ padding: '14px 18px', borderTop: `1px solid ${BORDER2}` }}>
-          <div style={{ fontSize: 10, color: MUTED, marginBottom: 8 }}>{40 - answered} unanswered</div>
+          <div style={{ fontSize: 10, color: MUTED, marginBottom: 8 }}>{questions.length - answered} unanswered</div>
           <button
             onClick={handleSubmit}
             disabled={submitting}
@@ -713,7 +727,7 @@ export default function Assessment() {
                 {flagged.has(q.id) ? '⚑ Flagged' : '⚐ Flag'}
               </button>
               <span style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 22, color: MUTED, fontWeight: 300 }}>
-                <span style={{ color: GOLD }}>{current + 1}</span> / 40
+                <span style={{ color: GOLD }}>{current + 1}</span> / {questions.length}
               </span>
             </div>
           </div>
@@ -783,9 +797,9 @@ export default function Assessment() {
               ← Previous
             </button>
             <div style={{ fontSize: 11, color: MUTED, alignSelf: 'center' }}>
-              {answered} of 40 answered
+              {answered} of {questions.length} answered
             </div>
-            {current < 39
+            {current < questions.length - 1
               ? <button onClick={() => goTo(current + 1)} style={btnGold}>Next →</button>
               : <button onClick={handleSubmit} disabled={submitting} style={{ ...btnGold, opacity: submitting ? 0.6 : 1 }}>
                   {submitting ? 'Submitting…' : 'Submit Assessment'}
@@ -801,7 +815,7 @@ export default function Assessment() {
                 <div style={{ fontSize: 13, color: MUTED }}>Progress updates as questions are answered across the six assessment domains.</div>
               </div>
               <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 24, color: WHITE, fontWeight: 300, whiteSpace: 'nowrap' }}>
-                <span style={{ color: GOLD }}>{answered}</span> / 40
+                <span style={{ color: GOLD }}>{answered}</span> / {questions.length}
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 10 }}>
@@ -917,7 +931,7 @@ export default function Assessment() {
               {result?.percentage}%
             </div>
             <div style={{ fontSize: 13, color: MUTED, letterSpacing: '0.1em' }}>
-              {result?.score} of 40 correct · Pass threshold 70%
+              {result?.score}{cfgQuestions ? ` of ${cfgQuestions}` : ''} correct · Pass threshold {cfgPassPct != null ? `${cfgPassPct}%` : '—'}
             </div>
           </div>
 
@@ -1032,7 +1046,10 @@ export default function Assessment() {
     const cred = result.credentialId;
     const dims = result.dimScores || result.domainScores || result.dimensions || {};
     const credentialDelayed = passed && !cred;
-    const gap = passed ? Math.max(0, scorePct - 70) : Math.max(0, 70 - scorePct);
+    const passMarkPct = cfgPassPct;
+    const gap = passMarkPct != null
+      ? (passed ? Math.max(0, scorePct - passMarkPct) : Math.max(0, passMarkPct - scorePct))
+      : null;
     const statusColor = passed ? TEAL2 : RED;
     const statusBg = passed ? 'rgba(34,166,126,0.09)' : 'rgba(196,92,92,0.09)';
     const statusBorder = passed ? 'rgba(34,166,126,0.28)' : 'rgba(196,92,92,0.28)';
@@ -1110,18 +1127,18 @@ export default function Assessment() {
               <div>
                 <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 104, color: statusColor, fontWeight: 300, lineHeight: 0.9 }}>{scorePct}%</div>
                 <div style={{ color: MUTED, fontSize: 14, margin: '16px 0 18px' }}>
-                  Pass threshold: 70% | {passed ? `${gap}% above threshold` : `${gap}% below threshold`}
+                  Pass threshold: {passMarkPct != null ? `${passMarkPct}%` : '—'}{gap != null ? ` | ${passed ? `${gap}% above threshold` : `${gap}% below threshold`}` : ''}
                 </div>
                 <div style={{ height: 8, background: BORDER2, borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
                   <div style={{ height: '100%', width: `${scorePct}%`, background: statusColor, borderRadius: 999 }} />
-                  <div style={{ position: 'absolute', left: '70%', top: -4, width: 2, height: 16, background: GOLD }} />
+                  {passMarkPct != null && <div style={{ position: 'absolute', left: `${passMarkPct}%`, top: -4, width: 2, height: 16, background: GOLD }} />}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 30 }}>
                 {[
-                  { label: 'Questions', value: questions.length || 40 },
-                  { label: 'Pass Mark', value: '70%' },
+                  { label: 'Questions', value: questions.length || cfgQuestions || '—' },
+                  { label: 'Pass Mark', value: passMarkPct != null ? `${passMarkPct}%` : '—' },
                   { label: passed ? 'Status' : 'Gap', value: passed ? 'Ready' : `${gap}%` },
                 ].map(item => (
                   <div key={item.label} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '16px 14px' }}>
@@ -1146,7 +1163,7 @@ export default function Assessment() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
                   {domainRows.map(row => {
-                    const domainPassed = row.pct >= 70;
+                    const domainPassed = passMarkPct != null && row.pct >= passMarkPct;
                     return (
                       <div key={row.key} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '18px 18px 16px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
