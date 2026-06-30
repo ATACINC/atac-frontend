@@ -43,20 +43,23 @@ import { useNavigate, useParams } from 'react-router-dom';
 import API from '../../api/client';
 import SelfieCapture from '../../components/SelfieCapture';
 import { uploadSimulatorSelfie } from '../../hooks/usePhotoVerification';
+import { color as ds, font as dsFont, goldButton } from '../../designSystem/tokens';
 
-const BG    = '#080B12';
-const BG1   = '#0C1018';
-const GOLD  = '#C9A84C';
-const TEAL  = '#1A8F69';
-const TEAL2 = '#22A67E';
-const RED   = '#C45C5C';
+/* Palette mapped to the redesign tokens (names kept; the injected <style> block
+   below interpolates these, so the whole screen re-skins without churn). */
+const BG    = ds.bg;
+const BG1   = ds.panel;
+const GOLD  = ds.gold;
+const TEAL  = ds.green;
+const TEAL2 = ds.greenText;
+const RED   = ds.red;
 const RED2  = '#C84747';
-const WHITE = '#EEE9DF';
-const MUTED = 'rgba(238,233,223,0.45)';
-const BORDER  = 'rgba(201,168,76,0.15)';
-const BORDER2 = 'rgba(238,233,223,0.07)';
-const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
-const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+const WHITE = ds.heading;
+const MUTED = ds.muted;
+const BORDER  = 'rgba(239,192,60,0.18)';
+const BORDER2 = ds.border;
+const VAULT_DISPLAY = dsFont.display;
+const VAULT_BODY    = dsFont.body;
 
 // Microphone permission states.
 const MIC_UNCHECKED = 'unchecked';
@@ -265,7 +268,13 @@ export default function Briefing() {
   const objective      = 'Listen carefully and handle the call professionally.';
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY, padding: '48px 24px 60px' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', color: WHITE, fontFamily: VAULT_BODY, overflowX: 'hidden', padding: '48px 24px 60px',
+      background: 'radial-gradient(1100px 720px at 78% 0%, rgba(239,192,60,0.10), rgba(239,192,60,0) 60%), '
+        + 'radial-gradient(900px 640px at 4% 100%, rgba(20,52,96,0.28), rgba(20,52,96,0) 62%), '
+        + 'repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 96px), '
+        + ds.bg }}>
+      {/* 2px gold top hairline (ambient) */}
+      <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, rgba(239,192,60,0.55), transparent)', zIndex: 60 }} />
       {/* C-2: simulator-start selfie overlay (verified tier only).
           SelfieCapture renders its own fixed-position dialog and owns
           camera-stream cleanup on every exit path. */}
@@ -385,7 +394,7 @@ export default function Briefing() {
             {session.recommendedOpening && (
               <div
                 style={{
-                  background: 'rgba(201,168,76,0.08)',
+                  background: 'rgba(239,192,60,0.08)',
                   border: `1px solid ${GOLD}`,
                   borderRadius: 6,
                   padding: '28px',
@@ -563,7 +572,12 @@ export default function Briefing() {
                 description in MUTED 12px. */}
             <div className="sim-rail-block">
               <div className="sim-rail-label">How You&apos;ll Be Scored</div>
-              {SCORING_DIMENSIONS.map((d, i) => (
+              {SCORING_DIMENSIONS.map((d, i) => {
+                // Weight from the REAL /assign scoring_weights (fractions ->
+                // percent); falls back to the static rubric weight if absent.
+                const rw = session?.scoringWeights?.[d.name.toLowerCase()];
+                const weightPct = typeof rw === 'number' ? Math.round(rw * 100) : d.weight;
+                return (
                 <div
                   key={d.name}
                   style={{
@@ -576,14 +590,15 @@ export default function Briefing() {
                       {d.name}
                     </span>
                     <span style={{ fontFamily: 'Consolas, Menlo, monospace', fontSize: 13, color: GOLD, fontVariantNumeric: 'tabular-nums' }}>
-                      {d.weight}%
+                      {weightPct}%
                     </span>
                   </div>
                   <div style={{ fontFamily: VAULT_BODY, fontSize: 12, color: MUTED, lineHeight: 1.45 }}>
                     {d.description}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <div
                 style={{
                   marginTop: 10,
@@ -941,16 +956,19 @@ export default function Briefing() {
         /* === Existing mic-check pulse (preserved from e04b95c) ========== */
         @keyframes sim-mic-pulse {
           0%, 100% {
-            box-shadow: 0 0 0 0 rgba(201,168,76,0.25);
-            border-color: rgba(201,168,76,0.45);
+            box-shadow: 0 0 0 0 rgba(239,192,60,0.25);
+            border-color: rgba(239,192,60,0.45);
           }
           50% {
-            box-shadow: 0 0 0 6px rgba(201,168,76,0);
+            box-shadow: 0 0 0 6px rgba(239,192,60,0);
             border-color: ${GOLD};
           }
         }
         .sim-mic-pulse {
           animation: sim-mic-pulse 1.8s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sim-mic-pulse { animation: none !important; }
         }
       `}</style>
     </div>
@@ -1035,18 +1053,11 @@ function formatDuration(min, max) {
 
 function primaryBtn(disabled) {
   return {
-    width: '100%',
-    background: disabled ? 'rgba(201,168,76,0.4)' : GOLD,
-    color: BG,
-    border: 'none',
-    borderRadius: 2,
-    padding: '13px 18px',
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
+    ...goldButton,
+    width: '100%', borderRadius: 8, padding: '13px 18px', fontSize: 11,
+    fontWeight: 700, letterSpacing: '0.18em',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: VAULT_BODY,
+    ...(disabled ? { background: 'rgba(239,192,60,0.4)', boxShadow: 'none' } : {}),
   };
 }
 
