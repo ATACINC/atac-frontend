@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useConsent } from '../hooks/useConsent';
 import API from '../api/client';
 import Header from '../components/chrome/Header';
+import ContactSalesModal from '../components/ContactSalesModal';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -122,6 +123,8 @@ export default function Payment() {
   const [plans,      setPlans]      = useState(null);
   const [plansError, setPlansError] = useState('');
   const [plansNonce, setPlansNonce] = useState(0);
+  // Team / contact-only plans open a lead form instead of Stripe checkout.
+  const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -552,11 +555,16 @@ export default function Payment() {
                 const pres   = TIER_PRESENTATION[plan.tier] || { color: GOLD, features: [] };
                 const color  = pres.color;
                 const isHighlighted = highlightedTier === plan.tier;
-                const price  = formatPrice(plan.unitAmount, plan.currency);
-                const suffix = priceSuffix(plan);
-                const cta    = plan.perSeat
-                  ? `${price} / seat (Min ${TEAM_MIN_SEATS} seats)`
-                  : `Start for ${price}`;
+                // Contact-only (Team, or any plan flagged contactOnly): no price,
+                // no seat selector, no Stripe checkout; never read unitAmount.
+                const isContact = plan.contactOnly === true || plan.tier === 'team';
+                const price  = isContact ? null : formatPrice(plan.unitAmount, plan.currency);
+                const suffix = isContact ? '' : priceSuffix(plan);
+                const cta    = isContact
+                  ? null
+                  : (plan.perSeat
+                      ? `${price} / seat (Min ${TEAM_MIN_SEATS} seats)`
+                      : `Start for ${price}`);
                 return (
                   <div
                     key={plan.tier}
@@ -587,14 +595,16 @@ export default function Payment() {
                       <div style={{ fontSize: 11, color: 'rgba(238,233,223,0.4)', lineHeight: 1.4, marginBottom: 12 }}>{plan.name}</div>
                     )}
 
-                    {/* Price */}
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                      <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 52, color, fontWeight: 300, lineHeight: 1 }}>{price}</span>
-                      {suffix && <span style={{ fontSize: 13, color: MUTED }}>{suffix}</span>}
-                    </div>
+                    {/* Price (omitted for contact-only plans) */}
+                    {!isContact && (
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
+                        <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 52, color, fontWeight: 300, lineHeight: 1 }}>{price}</span>
+                        {suffix && <span style={{ fontSize: 13, color: MUTED }}>{suffix}</span>}
+                      </div>
+                    )}
 
-                    {/* Seat selector (per-seat plans only; min enforced) */}
-                    {plan.perSeat && (
+                    {/* Seat selector (per-seat, non-contact plans only; min enforced) */}
+                    {plan.perSeat && !isContact && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '10px 0 16px', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '10px 12px', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, color: MUTED }}>Seats</span>
                         <input type="number" min={TEAM_MIN_SEATS} value={seats}
@@ -618,21 +628,36 @@ export default function Payment() {
                       ))}
                     </ul>
 
-                    {/* CTA (unchanged behavior: posts the tier string to checkout) */}
-                    <button
-                      onClick={() => handlePay(plan.tier)}
-                      disabled={!!loading}
-                      style={{
-                        width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
-                        fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
-                        letterSpacing: '0.16em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer',
-                        background: loading === plan.tier ? 'rgba(255,255,255,0.1)' : color,
-                        color: loading === plan.tier ? MUTED : BG,
-                        opacity: loading && loading !== plan.tier ? 0.4 : 1,
-                        transition: 'all 0.2s',
-                      }}>
-                      {loading === plan.tier ? 'Redirecting to Stripe…' : cta}
-                    </button>
+                    {/* CTA: contact-only opens the lead form; Standard/Pro keep the
+                        existing Stripe checkout (posts the tier string), unchanged. */}
+                    {isContact ? (
+                      <button
+                        type="button"
+                        onClick={() => setContactOpen(true)}
+                        style={{
+                          width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
+                          fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
+                          letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
+                          background: color, color: BG, transition: 'all 0.2s',
+                        }}>
+                        Contact sales
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handlePay(plan.tier)}
+                        disabled={!!loading}
+                        style={{
+                          width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
+                          fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
+                          letterSpacing: '0.16em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer',
+                          background: loading === plan.tier ? 'rgba(255,255,255,0.1)' : color,
+                          color: loading === plan.tier ? MUTED : BG,
+                          opacity: loading && loading !== plan.tier ? 0.4 : 1,
+                          transition: 'all 0.2s',
+                        }}>
+                        {loading === plan.tier ? 'Redirecting to Stripe…' : cta}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -646,6 +671,9 @@ export default function Payment() {
 
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
       {consent.modal}
+
+      {/* -- Team "Contact sales" lead form (built on ModalShell) -- */}
+      <ContactSalesModal open={contactOpen} onClose={() => setContactOpen(false)} />
 
     </div>
   );
