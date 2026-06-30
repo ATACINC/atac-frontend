@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import API from '../api/client';
-import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import VerifiedBadge from '../components/VerifiedBadge';
+import Header from '../components/chrome/Header';
 import { ipfsUriToGatewayUrl } from '../utils/ipfs';
 
 const BG      = '#080B12';
@@ -375,17 +375,17 @@ export default function Verify() {
   );
 }
 
-function VerifyHeader({ styles }) {
+function VerifyHeader() {
   return (
-    <header style={styles.header}>
-      <a href="https://atacglobalcx.com" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 62, width: 230, objectFit: 'contain', objectPosition: 'left center' }} />
-      </a>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-        <a className="verify-link" href="/verify" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Verify Another</a>
-        <a className="verify-link" href="https://atacglobalcx.com/employers" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>For Employers</a>
-      </div>
-    </header>
+    <Header
+      variant="lite"
+      right={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <a className="verify-link" href="/verify" style={{ color: MUTED, textDecoration: 'none', fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>Verify Another</a>
+          <a className="verify-link" href="https://atacglobalcx.com/employers" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase' }}>For Employers</a>
+        </div>
+      }
+    />
   );
 }
 

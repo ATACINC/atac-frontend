@@ -1,8 +1,7 @@
-import LanguageSelector from '../components/LanguageSelector';
+import Header from '../components/chrome/Header';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
-import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { useToast } from '../hooks/useToast';
 import { usePhotoVerification } from '../hooks/usePhotoVerification';
@@ -373,22 +372,8 @@ export default function Dashboard() {
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE }}>
 
-      {/* -- Topbar -- */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '18px 34px', minHeight: 84, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 62, width: 230, objectFit: 'contain', objectPosition: 'left center' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <div style={{ fontSize: 15, color: WHITE, fontWeight: 600 }}>{candidate.name}</div>
-          {paymentTier && (
-            <div style={{ fontSize: 11, background: 'rgba(201,168,76,0.08)', border: `1px solid ${BORDER}`, borderRadius: 2, padding: '5px 12px', color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-              {paymentTier}
-            </div>
-          )}
-          <LanguageSelector />
-          <button onClick={logout} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '9px 16px', fontSize: 14, cursor: 'pointer', fontFamily: VAULT_BODY }}>
-            Sign Out
-          </button>
-        </div>
-      </div>
+      {/* -- Topbar (shared chrome) -- */}
+      <Header variant="full" userName={candidate.name} tier={paymentTier} onSignOut={logout} />
 
       <div style={{ maxWidth: 1540, margin: '0 auto', padding: '52px 48px' }}>
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
 import CharterCounter from '../components/CharterCounter';
-import brandLogo from '../assets/atac-globalcx-logo-header.png';
+import Header from '../components/chrome/Header';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
 const BG    = '#080B12';
@@ -120,13 +120,12 @@ export default function Trial() {
   if (phase === 'intro') return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE, display: 'flex', flexDirection: 'column' }}>
 
-      {/* Topbar */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+      {/* Topbar (shared chrome) */}
+      <Header variant="lite" right={
         <button onClick={() => navigate('/login')} style={{ background: 'none', border: `1px solid ${BORDER2}`, color: MUTED, borderRadius: 2, padding: '6px 14px', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em' }}>
           Sign In
         </button>
-      </div>
+      } />
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 560, width: '100%' }} className="vault-up">
@@ -188,9 +187,8 @@ export default function Trial() {
   if (phase === 'questions' && q) return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE, display: 'flex', flexDirection: 'column' }}>
 
-      {/* Topbar */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
+      {/* Topbar (shared chrome) */}
+      <Header variant="lite" right={
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Progress dots */}
           <div style={{ display: 'flex', gap: 6 }}>
@@ -200,7 +198,7 @@ export default function Trial() {
           </div>
           <div style={{ fontSize: 11, color: MUTED }}>{answered}/5 answered</div>
         </div>
-      </div>
+      } />
 
       {/* Progress bar */}
       <div style={{ height: 2, background: BORDER2 }}>
@@ -284,10 +282,8 @@ export default function Trial() {
   if (phase === 'result' && result) return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE, display: 'flex', flexDirection: 'column' }}>
 
-      {/* Topbar */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '12px 28px' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
-      </div>
+      {/* Topbar (shared chrome) */}
+      <Header variant="lite" />
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 600, width: '100%' }} className="vault-up">
