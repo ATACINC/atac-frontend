@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import API from '../api/client';
+import CountUp from './CountUp';
+import { color as ds, font as dsFont, radius as dsRadius } from '../designSystem/tokens';
 
 // Charter Cohort live counter.
 //
@@ -67,28 +69,44 @@ export default function CharterCounter({ variant = 'full' }) {
   const isNearlyFull = !isComplete && issued >= NEARLY_FULL_THRESHOLD;
   const pct = Math.max(0, Math.min(100, Math.round((issued / total) * 100)));
 
+  // Reduced-motion-aware bar fill: start at 0 and transition to pct so the
+  // gold fill animates in (~850ms) once the real count lands; reduced motion
+  // (and the count-up) settle to the exact final value immediately.
+  const reducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Animated case only drives barW (from 0 -> pct) via rAF so the CSS width
+  // transition fires; reduced motion renders pct directly with no transition.
+  const [barW, setBarW] = useState(0);
+  useEffect(() => {
+    if (loading || endpointMissing || isComplete || reducedMotion) return undefined;
+    const id = requestAnimationFrame(() => setBarW(pct));
+    return () => cancelAnimationFrame(id);
+  }, [loading, endpointMissing, isComplete, pct, reducedMotion]);
+
   // ── Compact variant ─────────────────────────────────────────────
   if (variant === 'compact') {
     return (
       <div
         style={{
-          background: BG1,
-          border: `1px solid ${NAVY}`,
-          borderLeft: `3px solid ${GOLD}`,
-          borderRadius: 4,
+          background: ds.panel,
+          border: `1px solid ${ds.border}`,
+          borderLeft: `3px solid ${ds.gold}`,
+          borderRadius: dsRadius.card,
           padding: '14px 18px',
           marginBottom: 18,
           display: 'flex',
           alignItems: 'center',
           gap: 18,
           flexWrap: 'wrap',
-          fontFamily: VAULT_BODY,
+          fontFamily: dsFont.body,
         }}
       >
         <div
           style={{
             fontSize: 10,
-            color: GOLD,
+            color: ds.eyebrow,
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
             fontWeight: 700,
@@ -99,33 +117,34 @@ export default function CharterCounter({ variant = 'full' }) {
         </div>
         <div style={{ flex: 1, minWidth: 180, display: 'flex', alignItems: 'center', gap: 12 }}>
           {loading ? (
-            <span style={{ fontSize: 13, color: MUTED }}>Loading...</span>
+            <span style={{ fontSize: 13, color: ds.muted }}>Loading...</span>
           ) : endpointMissing ? (
-            <span style={{ fontSize: 13, color: MUTED }}>Charter Cohort opens soon</span>
+            <span style={{ fontSize: 13, color: ds.muted }}>Charter Cohort opens soon</span>
           ) : isComplete ? (
-            <span style={{ fontSize: 13, color: WHITE }}>
+            <span style={{ fontSize: 13, color: ds.heading }}>
               Charter Cohort complete. CRSA available at $39 for everyone.
             </span>
           ) : (
             <>
               <div
                 style={{
-                  fontFamily: VAULT_DISPLAY,
+                  fontFamily: dsFont.display,
                   fontSize: 22,
-                  color: isNearlyFull ? GOLD : WHITE,
-                  fontWeight: 400,
+                  color: isNearlyFull ? ds.gold : ds.heading,
+                  fontWeight: 500,
                   fontVariantNumeric: 'tabular-nums',
                   lineHeight: 1,
                 }}
               >
-                {issued}<span style={{ color: MUTED, fontSize: 14 }}> / {total}</span>
+                <CountUp value={issued} duration={850} />
+                <span style={{ color: ds.muted, fontSize: 14 }}> / {total}</span>
               </div>
               <div
                 aria-hidden="true"
                 style={{
                   flex: 1,
                   height: 3,
-                  background: BORDER2,
+                  background: ds.border,
                   borderRadius: 999,
                   overflow: 'hidden',
                   minWidth: 80,
@@ -133,14 +152,14 @@ export default function CharterCounter({ variant = 'full' }) {
               >
                 <div
                   style={{
-                    width: `${pct}%`,
+                    width: `${reducedMotion ? pct : barW}%`,
                     height: '100%',
-                    background: GOLD,
-                    transition: 'width 0.6s ease',
+                    background: ds.goldGrad,
+                    transition: reducedMotion ? 'none' : 'width 0.85s cubic-bezier(0.22,1,0.36,1)',
                   }}
                 />
               </div>
-              <span style={{ fontSize: 11, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: 11, color: ds.muted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 Charter credentials issued
               </span>
             </>
