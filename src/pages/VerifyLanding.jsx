@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { isValidEmail } from '../utils/validation';
 import CharterCounter from '../components/CharterCounter';
+import Header from '../components/chrome/Header';
+import Footer from '../components/chrome/Footer';
 import { useHcaptcha } from '../hooks/useHcaptcha';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://atac-backend-production.up.railway.app';
@@ -159,15 +160,15 @@ export default function VerifyLanding() {
 
   return (
     <div style={s.page}>
-      <header style={s.header}>
-        <a href="https://atacglobalcx.com" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <img src={brandLogo} alt="ATAC Global CX" style={{ height: 62, width: 230, objectFit: 'contain', objectPosition: 'left center' }} />
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <a className="verify-link" href="#verify-form" style={navLink}>Verify Credential</a>
-          <a className="verify-link" href="#employer-verification" style={{ ...navLink, color: GOLD }}>For Employers</a>
-        </div>
-      </header>
+      <Header
+        variant="lite"
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <a className="verify-link" href="#verify-form" style={navLink}>Verify Credential</a>
+            <a className="verify-link" href="#employer-verification" style={{ ...navLink, color: GOLD }}>For Employers</a>
+          </div>
+        }
+      />
 
       <main style={s.wrap}>
         <section className="verify-hero vault-up" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.08fr) 430px', gap: 30, alignItems: 'stretch' }}>
@@ -353,27 +354,14 @@ export default function VerifyLanding() {
         </section>
       </main>
 
-      {/* ═══ FOOTER ═══ */}
-      <footer style={{
-        maxWidth: 1280,
-        margin: '70px auto 0',
-        padding: '32px 32px 56px',
-        borderTop: `1px solid ${BORDER2}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 16,
-        fontSize: 12,
-        color: MUTED,
-        letterSpacing: '0.06em',
-      }}>
-        <div>© 2026 ATAC Anagenesis Inc. · ATAC Global CX™</div>
-        <div style={{ display: 'flex', gap: 28 }}>
-          <a href="https://atacglobalcx.com/privacy" style={footerLinkStyle}>Privacy</a>
-          <a href="https://atacglobalcx.com/terms" style={footerLinkStyle}>Terms</a>
-        </div>
-      </footer>
+      {/* ═══ FOOTER (shared chrome) ═══ */}
+      <Footer
+        copyright="© 2026 ATAC Anagenesis Inc. · ATAC Global CX™"
+        links={[
+          { label: 'Privacy', href: 'https://atacglobalcx.com/privacy', external: true },
+          { label: 'Terms', href: 'https://atacglobalcx.com/terms', external: true },
+        ]}
+      />
     </div>
   );
 }
@@ -430,10 +418,3 @@ const inputStyle = {
   outline: 'none',
 };
 
-const footerLinkStyle = {
-  color: MUTED,
-  textDecoration: 'none',
-  letterSpacing: '0.08em',
-  fontSize: 12,
-  transition: 'color 0.2s',
-};

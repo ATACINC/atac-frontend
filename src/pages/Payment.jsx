@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConsent } from '../hooks/useConsent';
 import API from '../api/client';
-import brandLogo from '../assets/atac-globalcx-logo-header.png';
+import Header from '../components/chrome/Header';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -361,13 +361,8 @@ export default function Payment() {
   return (
     <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE }}>
 
-      {/* -- Topbar -- */}
-      <div style={{ background: BG3, borderBottom: `1px solid ${BORDER2}`, padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <img src={brandLogo} alt="ATAC Global CX" style={{ height: 40, objectFit: 'contain' }} />
-        <div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
-          Blockchain-Verified CX Certification
-        </div>
-      </div>
+      {/* -- Topbar (shared chrome) -- */}
+      <Header variant="lite" right={<div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Blockchain-Verified CX Certification</div>} />
 
       {/* -- Hero -- */}
       <div className="vault-up" style={{ textAlign: 'center', padding: '56px 24px 40px' }}>
