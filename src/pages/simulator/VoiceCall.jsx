@@ -30,17 +30,20 @@ import i18n from '../../i18n';
 // default path below never imports/renders these, so its look is unchanged.
 import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
 import { T } from '../sandbox/sandboxTheme';
+import { color as ds, font as dsFont } from '../../designSystem/tokens';
 
-const BG    = '#080B12';
-const BG1   = '#0C1018';
-const BG3   = '#141B26';
-const GOLD  = '#C9A84C';
-const TEAL2 = '#22A67E';
-const RED   = '#C45C5C';
-const WHITE = '#EEE9DF';
-const MUTED = 'rgba(238,233,223,0.45)';
-const BORDER2 = 'rgba(238,233,223,0.07)';
-const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+// Candidate-path palette mapped to the redesign tokens (names kept). The
+// variant="sandbox" skin below uses its own sandbox theme and is untouched.
+const BG    = ds.bg;
+const BG1   = ds.panel;
+const BG3   = ds.bg;
+const GOLD  = ds.gold;
+const TEAL2 = ds.greenText;
+const RED   = ds.red;
+const WHITE = ds.heading;
+const MUTED = ds.muted;
+const BORDER2 = ds.border;
+const VAULT_BODY    = dsFont.body;
 
 // SDK mode tokens
 const MODE_LISTENING = 'listening';
@@ -494,7 +497,9 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: BG, color: WHITE, fontFamily: VAULT_BODY }}>
+      {/* 2px gold top hairline (ambient) */}
+      <div aria-hidden="true" style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, rgba(239,192,60,0.55), transparent)', zIndex: 60 }} />
       {/* Top status bar */}
       <div
         style={{
@@ -514,12 +519,12 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div
             aria-hidden="true"
+            className={connectionStatus === 'live' ? 'ds-anim-pulse' : undefined}
             style={{
               width: 7,
               height: 7,
               borderRadius: '50%',
               background: statusColor,
-              animation: connectionStatus === 'live' ? 'sim-pulse 1.2s infinite' : 'none',
             }}
           />
           <span style={{ fontSize: 11, color: statusColor, letterSpacing: '0.16em', textTransform: 'uppercase' }}>
@@ -574,12 +579,12 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         >
           <div
             aria-hidden="true"
+            className={connectionStatus === 'live' ? 'ds-anim-pulse' : undefined}
             style={{
               width: 10,
               height: 10,
               borderRadius: '50%',
               background: mode === MODE_SPEAKING ? RED : TEAL2,
-              animation: connectionStatus === 'live' ? 'sim-pulse 1.4s infinite' : 'none',
               flexShrink: 0,
             }}
           />
@@ -634,6 +639,26 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           </div>
         )}
 
+        {/* Animated waveform (ds-anim-wave; scaleY pulse, off under reduced motion) */}
+        {connectionStatus === 'live' && (
+          <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: 30, marginBottom: 18, opacity: 0.8 }}>
+            {Array.from({ length: 32 }).map((_, i) => (
+              <span
+                key={i}
+                className="ds-anim-wave"
+                style={{
+                  width: 3,
+                  height: 22,
+                  transformOrigin: 'bottom',
+                  background: 'linear-gradient(180deg, rgba(239,192,60,0), rgba(239,192,60,0.85))',
+                  borderRadius: 2,
+                  animationDelay: `${(i % 8) * 0.09}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+
         {/* End call CTA */}
         <button
           type="button"
@@ -643,11 +668,11 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
             width: '100%',
             background:
               connectionStatus === 'connecting' || connectionStatus === 'ending'
-                ? 'rgba(196,92,92,0.4)'
+                ? 'rgba(229,72,77,0.4)'
                 : RED,
             color: WHITE,
             border: 'none',
-            borderRadius: 2,
+            borderRadius: 8,
             padding: '14px 18px',
             fontSize: 11,
             fontWeight: 700,
@@ -663,8 +688,6 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           {connectionStatus === 'ending' ? 'Ending Call...' : 'End Call'}
         </button>
       </div>
-
-      <style>{`@keyframes sim-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.32; } }`}</style>
     </div>
   );
 }
