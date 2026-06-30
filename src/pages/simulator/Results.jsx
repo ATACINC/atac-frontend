@@ -34,19 +34,24 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import API, { getSimulatorStatus } from '../../api/client';
 import FeedbackPanel from '../../components/FeedbackPanel';
+import CountUp from '../../components/CountUp';
+import certificateSeal from '../../assets/agcx-certificate-seal-cropped.png';
+import { color as ds, font as dsFont, goldButton } from '../../designSystem/tokens';
 
-const BG    = '#080B12';
-const BG1   = '#0C1018';
-const GOLD  = '#C9A84C';
-const TEAL2 = '#22A67E';
-const RED   = '#C45C5C';
+/* Palette mapped to the redesign tokens (names kept; the module style objects
+   below reference these, so the loader + debrief re-skin without churn). */
+const BG    = ds.bg;
+const BG1   = ds.panel;
+const GOLD  = ds.gold;
+const TEAL2 = ds.greenText;
+const RED   = ds.red;
 const AMBER = '#C48A2A';
-const WHITE = '#EEE9DF';
-const MUTED = 'rgba(238,233,223,0.45)';
-const BORDER  = 'rgba(201,168,76,0.15)';
-const BORDER2 = 'rgba(238,233,223,0.07)';
-const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
-const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+const WHITE = ds.heading;
+const MUTED = ds.muted;
+const BORDER  = 'rgba(239,192,60,0.18)';
+const BORDER2 = ds.border;
+const VAULT_DISPLAY = dsFont.display;
+const VAULT_BODY    = dsFont.body;
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_COUNT   = 100;  // 100 * 3s = 5 minutes
@@ -194,6 +199,20 @@ export default function Results() {
     return () => { cancelled = true; };
   }, [statusData?.status]);
 
+  // Loader-only: the five dimensions light up sequentially while the backend
+  // lifecycle is still scoring, settling to all-lit when status === 'scored'.
+  // Purely presentational — it does not touch the polling. Reduced motion
+  // shows all five lit immediately.
+  const reducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [litDims, setLitDims] = useState(0);
+  useEffect(() => {
+    if (statusData?.status === 'scored' || reducedMotion) return undefined;
+    const id = setInterval(() => setLitDims((n) => (n >= 5 ? 1 : n + 1)), 700);
+    return () => clearInterval(id);
+  }, [statusData?.status, reducedMotion]);
+  const shownLit = (statusData?.status === 'scored' || reducedMotion) ? 5 : litDims;
+
   // ---------- Loading / interim ----------
   if (!statusData || statusData.status !== 'scored') {
     return (
@@ -205,18 +224,44 @@ export default function Results() {
             Our scoring system is reviewing the conversation across five dimensions: greeting, empathy, resolution, tone, and close. This usually takes under a minute.
           </p>
 
-          <div
-            aria-hidden="true"
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              border: `2px solid rgba(201,168,76,0.18)`,
-              borderTopColor: GOLD,
-              margin: '0 auto 18px',
-              animation: 'sim-spin 0.9s linear infinite',
-            }}
-          />
+          {/* Spinning ring + slowly rotating atac-seal (ds-anim-spin / -seal;
+              both stop under prefers-reduced-motion). */}
+          <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto 18px' }}>
+            <div
+              aria-hidden="true"
+              className="ds-anim-spin"
+              style={{
+                position: 'absolute', inset: 0,
+                borderRadius: '50%',
+                border: '2px solid rgba(239,192,60,0.18)',
+                borderTopColor: GOLD,
+              }}
+            />
+            <img
+              src={certificateSeal}
+              alt=""
+              aria-hidden="true"
+              className="ds-anim-seal"
+              style={{ position: 'absolute', inset: 14, width: 68, height: 68, objectFit: 'cover', borderRadius: '50%', opacity: 0.85 }}
+            />
+          </div>
+
+          {/* Five dimensions lighting up as the lifecycle advances */}
+          <div aria-hidden="true" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+            {DIMENSION_KEYS.map((k, i) => {
+              const lit = i < shownLit;
+              return (
+                <span key={k} style={{
+                  fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700,
+                  padding: '6px 11px', borderRadius: 999,
+                  border: `1px solid ${lit ? 'rgba(239,192,60,0.5)' : BORDER2}`,
+                  color: lit ? GOLD : MUTED,
+                  background: lit ? 'rgba(239,192,60,0.08)' : 'transparent',
+                  transition: reducedMotion ? 'none' : 'color 0.3s, border-color 0.3s, background 0.3s',
+                }}>{DIMENSION_LABEL[k]}</span>
+              );
+            })}
+          </div>
 
           {statusData && (
             <div style={{ fontSize: 11, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase', textAlign: 'center' }}>
@@ -264,7 +309,6 @@ export default function Results() {
             </div>
           )}
         </div>
-        <style>{`@keyframes sim-spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -352,7 +396,7 @@ export default function Results() {
           }}
         >
           <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 48, color: AMBER, fontWeight: 600, lineHeight: 1 }}>
-            {overallNum != null ? overallNum : '--'}
+            {overallNum != null ? <CountUp value={overallNum} duration={850} /> : '--'}
           </div>
           <div style={{ fontFamily: VAULT_BODY, fontSize: 14, color: MUTED, marginTop: 6, fontVariantNumeric: 'tabular-nums' }}>
             / {passThreshold}
@@ -467,6 +511,16 @@ function DimensionRow({ label, score, feedback, weight }) {
     ? Math.max(0, Math.min(100, score))
     : 0;
   const has = score != null;
+  // Animate the meter from 0 -> the REAL score on mount; reduced motion
+  // renders the final width directly with no transition.
+  const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [barW, setBarW] = useState(0);
+  useEffect(() => {
+    if (reduced) return undefined;
+    const id = requestAnimationFrame(() => setBarW(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct, reduced]);
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
@@ -482,10 +536,10 @@ function DimensionRow({ label, score, feedback, weight }) {
           <div
             style={{
               height: 4,
-              width: `${pct}%`,
+              width: `${reduced ? pct : barW}%`,
               background: pct >= 70 ? TEAL2 : pct >= 50 ? GOLD : RED,
               borderRadius: 2,
-              transition: 'width 0.6s ease',
+              transition: reduced ? 'none' : 'width 0.85s cubic-bezier(0.22,1,0.36,1)',
             }}
           />
         </div>
@@ -537,7 +591,7 @@ function OutcomeBlock({ passed, isPioneer, credentialId }) {
       <div
         style={{
           padding: '14px 16px',
-          background: 'rgba(201,168,76,0.06)',
+          background: 'rgba(239,192,60,0.06)',
           border: `1px solid ${BORDER}`,
           borderRadius: 3,
         }}
@@ -606,11 +660,16 @@ function pluralize(count, word) {
 
 // ---------- Shared styles ----------
 const containerStyle = {
+  position: 'relative',
   minHeight: '100vh',
-  background: BG,
   color: WHITE,
   fontFamily: VAULT_BODY,
+  overflowX: 'hidden',
   padding: '48px 24px 60px',
+  background: 'radial-gradient(1100px 720px at 78% 0%, rgba(239,192,60,0.10), rgba(239,192,60,0) 60%), '
+    + 'radial-gradient(900px 640px at 4% 100%, rgba(20,52,96,0.28), rgba(20,52,96,0) 62%), '
+    + 'repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 96px), '
+    + ds.bg,
 };
 
 const cardStyle = {
@@ -642,18 +701,11 @@ const titleStyle = {
 
 function primaryBtn(disabled) {
   return {
-    width: '100%',
-    background: disabled ? 'rgba(201,168,76,0.4)' : GOLD,
-    color: BG,
-    border: 'none',
-    borderRadius: 2,
-    padding: '12px 18px',
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: '0.18em',
-    textTransform: 'uppercase',
+    ...goldButton,
+    width: '100%', borderRadius: 8, padding: '12px 18px', fontSize: 11,
+    fontWeight: 700, letterSpacing: '0.18em',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: VAULT_BODY,
+    ...(disabled ? { background: 'rgba(239,192,60,0.4)', boxShadow: 'none' } : {}),
   };
 }
 
@@ -840,7 +892,7 @@ function PassedCelebration({
             aria-label={`Score ${overallNum != null ? overallNum : 'unknown'} out of ${passThreshold}`}
           >
             <div className="sim-passed-circle-number">
-              {overallNum != null ? overallNum : '--'}
+              {overallNum != null ? <CountUp value={overallNum} duration={850} /> : '--'}
             </div>
             <div className="sim-passed-circle-denominator">/ {passThreshold}</div>
           </div>
@@ -880,8 +932,9 @@ function PassedCelebration({
         {/* === Section 3: Credential card === */}
         <section className="sim-passed-section">
           <div className="sim-passed-section-label sim-passed-section-label-teal">Your Credential</div>
-          <div className="sim-passed-card sim-passed-card-teal">
-            <h2 className="sim-passed-credential-headline">
+          <div className="sim-passed-card sim-passed-card-teal" style={{ position: 'relative', overflow: 'hidden' }}>
+            <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', bottom: -40, right: -40, width: 200, height: 200, objectFit: 'cover', borderRadius: '50%', opacity: 0.06, pointerEvents: 'none' }} />
+            <h2 className="sim-passed-credential-headline" style={{ position: 'relative' }}>
               Your blockchain-verified CRSA credential is being minted.
             </h2>
             <div className="sim-passed-credential-row">
@@ -1168,14 +1221,14 @@ function PassedCelebration({
           .sim-passed-card { padding: 32px; }
         }
         .sim-passed-card-gold {
-          border: 1px solid rgba(201,168,76,0.2);
+          border: 1px solid rgba(239,192,60,0.2);
         }
         .sim-passed-card-teal {
           background: rgba(26,143,105,0.06);
           border: 1px solid rgba(26,143,105,0.3);
         }
         .sim-passed-card-share {
-          border: 1px solid rgba(201,168,76,0.2);
+          border: 1px solid rgba(239,192,60,0.2);
           text-align: center;
         }
 
@@ -1304,7 +1357,7 @@ function PassedCelebration({
           transition: background 0.15s, border-color 0.15s;
         }
         .sim-passed-copy-btn:hover {
-          background: rgba(201,168,76,0.08);
+          background: rgba(239,192,60,0.08);
         }
         .sim-passed-verify-link {
           font-family: ${VAULT_BODY};
@@ -1357,7 +1410,7 @@ function PassedCelebration({
           transition: background 0.15s, border-color 0.15s;
         }
         .sim-passed-refresh-btn:hover {
-          background: rgba(201,168,76,0.08);
+          background: rgba(239,192,60,0.08);
         }
 
         /* === Section 4: LinkedIn share =============================== */
@@ -1405,7 +1458,7 @@ function PassedCelebration({
         }
         .sim-passed-linkedin-cta:hover {
           transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(201,168,76,0.25);
+          box-shadow: 0 6px 20px rgba(239,192,60,0.25);
         }
         .sim-passed-linkedin-cta[aria-disabled="true"] {
           opacity: 0.55;
@@ -1530,6 +1583,9 @@ function PassedCelebration({
             transform: translate3d(var(--sim-drift, 0px), 110vh, 0) rotate(720deg);
           }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .sim-mint-pulse, .sim-confetti-particle, .sim-confetti-container { animation: none !important; }
+        }
       `}</style>
     </div>
   );
@@ -1538,6 +1594,16 @@ function PassedCelebration({
 function CelebrationDimensionRow({ label, score, weight }) {
   const has = typeof score === 'number';
   const pct = has ? Math.max(0, Math.min(100, score)) : 0;
+  // Animate the meter from 0 -> the REAL score on mount; reduced motion
+  // renders the final width directly with no transition.
+  const reduced = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [barW, setBarW] = useState(0);
+  useEffect(() => {
+    if (reduced) return undefined;
+    const id = requestAnimationFrame(() => setBarW(pct));
+    return () => cancelAnimationFrame(id);
+  }, [pct, reduced]);
   return (
     <div className="sim-passed-dim-row">
       <div className="sim-passed-dim-label">
@@ -1549,7 +1615,7 @@ function CelebrationDimensionRow({ label, score, weight }) {
       <div className="sim-passed-dim-bar-track">
         <div
           className="sim-passed-dim-bar-fill"
-          style={{ width: `${pct}%` }}
+          style={{ width: `${reduced ? pct : barW}%`, transition: reduced ? 'none' : 'width 0.85s cubic-bezier(0.22,1,0.36,1)' }}
           aria-hidden="true"
         />
       </div>
