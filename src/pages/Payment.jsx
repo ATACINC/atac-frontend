@@ -4,6 +4,7 @@ import { useConsent } from '../hooks/useConsent';
 import API from '../api/client';
 import Header from '../components/chrome/Header';
 import ContactSalesModal from '../components/ContactSalesModal';
+import { color as ds, font as dsFont, radius as dsRadius, goldButton } from '../designSystem/tokens';
 
 /* -- Vault Design Tokens ---------------------------------------------- */
 const BG    = '#080B12';
@@ -99,12 +100,15 @@ const injectKF = () => {
     @keyframes vault-up { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
     @keyframes tier-pulse { 0% { box-shadow: 0 0 0 0 rgba(201,168,76,0.45); } 70% { box-shadow: 0 0 0 14px rgba(201,168,76,0); } 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); } }
     .vault-up { animation: vault-up 0.45s ease both; }
-    .tier-card { transition: border-color 0.2s, transform 0.3s, box-shadow 0.3s; }
-    .tier-card:hover { border-color: rgba(201,168,76,0.2) !important; }
-    .tier-card-highlighted { border-color: rgba(201,168,76,0.75) !important; transform: translateY(-4px); animation: tier-pulse 1.6s ease-out 2; box-shadow: 0 8px 32px rgba(201,168,76,0.18); }
+    .tier-card { transition: border-color 0.18s, transform 0.16s, box-shadow 0.16s; }
+    .tier-card:hover { border-color: rgba(239,192,60,0.28) !important; transform: translateY(-3px); }
+    .tier-card-highlighted { border-color: rgba(239,192,60,0.55) !important; transform: translateY(-4px); box-shadow: 0 18px 40px -22px rgba(239,192,60,0.4); }
+    .ds-cta-btn:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
     @keyframes tier-shimmer { 0%,100% { opacity: 0.35; } 50% { opacity: 0.7; } }
-    .tier-skel-bar { background: rgba(238,233,223,0.08); border-radius: 3px; animation: tier-shimmer 1.4s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce) { .tier-skel-bar { animation: none; } }
+    .tier-skel-bar { background: rgba(255,255,255,0.06); border-radius: 6px; animation: tier-shimmer 1.4s ease-in-out infinite; }
+    @media (max-width: 980px) { .pricing-grid { grid-template-columns: 1fr !important; max-width: 420px; margin-left: auto; margin-right: auto; } }
+    @media (prefers-reduced-motion: reduce) { .tier-skel-bar { animation: none; } .tier-card { transition: none !important; } .tier-card:hover { transform: none !important; } .tier-card-highlighted { transform: none !important; } .ds-cta-btn { transition: none !important; } .ds-cta-btn:hover:not(:disabled) { transform: none !important; } }
     ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.15); }
   `;
   document.head.appendChild(s);
@@ -362,21 +366,28 @@ export default function Payment() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, fontFamily: VAULT_BODY, color: WHITE }}>
+    <div style={{ position: 'relative', minHeight: '100vh', fontFamily: dsFont.body, color: ds.body, overflowX: 'hidden',
+      background: 'radial-gradient(1100px 720px at 78% 0%, rgba(239,192,60,0.10), rgba(239,192,60,0) 60%), '
+        + 'radial-gradient(900px 640px at 4% 100%, rgba(20,52,96,0.28), rgba(20,52,96,0) 62%), '
+        + 'repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 96px), '
+        + ds.bg }}>
+
+      {/* 2px gold top hairline (ambient) */}
+      <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, transparent, rgba(239,192,60,0.55), transparent)', zIndex: 30 }} />
 
       {/* -- Topbar (shared chrome) -- */}
-      <Header variant="lite" right={<div style={{ fontSize: 10, color: MUTED, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Blockchain-Verified CX Certification</div>} />
+      <Header variant="lite" right={<div style={{ fontSize: 10, color: ds.muted, letterSpacing: '0.18em', textTransform: 'uppercase' }}>Blockchain-Verified CX Certification</div>} />
 
       {/* -- Hero -- */}
-      <div className="vault-up" style={{ textAlign: 'center', padding: '56px 24px 40px' }}>
-        <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 16 }}>
+      <div className="vault-up" style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '64px 24px 40px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: ds.eyebrow, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 16 }}>
           {needsVerification ? 'Almost There' : 'Choose Your Path'}
         </div>
-        <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 44, fontWeight: 300, color: WHITE, lineHeight: 1.1, marginBottom: 14 }}>
+        <h1 style={{ fontFamily: dsFont.display, fontSize: 'clamp(34px, 4.4vw, 52px)', fontWeight: 500, color: ds.heading, lineHeight: 1.08, letterSpacing: '-0.01em', margin: '0 0 14px' }}>
           {needsVerification ? 'Verify your email' : 'Begin Your Certification'}
-        </div>
-        <div style={{ width: 40, height: 1, background: GOLD, opacity: 0.3, margin: '0 auto 20px' }} />
-        <div style={{ fontSize: 14, color: MUTED, maxWidth: 520, margin: '0 auto', lineHeight: 1.8 }}>
+        </h1>
+        <div style={{ width: 40, height: 1, background: ds.gold, opacity: 0.4, margin: '0 auto 20px' }} />
+        <div style={{ fontSize: 15, color: ds.body, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
           {needsVerification
             ? 'Enter the 6-digit code we just sent to your inbox to continue to secure payment.'
             : 'Complete your 40-question assessment and ATAC Call Readiness Simulator™ session. Pass and earn a blockchain-verified credential.'}
@@ -548,12 +559,11 @@ export default function Payment() {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', padding: '0 24px', maxWidth: 1060, margin: '0 auto 48px' }}>
+        <div className="pricing-grid" style={{ position: 'relative', zIndex: 1, padding: '0 24px', maxWidth: 1060, margin: '0 auto 48px' }}>
           {plans === null
             ? [0, 1, 2].map((i) => <PlanSkeleton key={i} delay={i * 80} />)
             : plans.map((plan, i) => {
                 const pres   = TIER_PRESENTATION[plan.tier] || { color: GOLD, features: [] };
-                const color  = pres.color;
                 const isHighlighted = highlightedTier === plan.tier;
                 // Contact-only (Team, or any plan flagged contactOnly): no price,
                 // no seat selector, no Stripe checkout; never read unitAmount.
@@ -571,35 +581,36 @@ export default function Payment() {
                     ref={el => { tierRefs.current[plan.tier] = el; }}
                     className={`tier-card vault-up${isHighlighted ? ' tier-card-highlighted' : ''}`}
                     style={{
-                      background: BG1,
-                      border: `1px solid ${plan.popular ? color + '35' : BORDER2}`,
-                      borderRadius: 3,
-                      padding: '32px 28px',
-                      width: 310,
+                      background: ds.panel,
+                      border: `1px solid ${plan.popular ? 'rgba(111,163,224,0.45)' : ds.border}`,
+                      borderRadius: dsRadius.card,
+                      padding: '30px 26px',
+                      width: '100%',
                       position: 'relative',
                       display: 'flex',
                       flexDirection: 'column',
+                      boxShadow: plan.popular ? '0 0 0 1px rgba(111,163,224,0.12), 0 30px 70px -42px rgba(0,0,0,0.85)' : 'none',
                       animationDelay: `${i * 80}ms`,
                     }}>
 
-                    {/* Most Popular badge */}
+                    {/* Most Popular badge (blue token) */}
                     {plan.popular && (
-                      <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: color, color: BG, padding: '4px 16px', borderRadius: 1, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      <div style={{ position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)', background: ds.popular, color: '#08121E', padding: '4px 16px', borderRadius: dsRadius.pill, fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                         Most Popular
                       </div>
                     )}
 
                     {/* Heading (capitalized tier) + full Stripe name as descriptor */}
-                    <div style={{ fontSize: 9, color: MUTED, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>{tierHeading(plan.tier)}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: ds.eyebrow, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>{tierHeading(plan.tier)}</div>
                     {plan.name && (
-                      <div style={{ fontSize: 11, color: 'rgba(238,233,223,0.4)', lineHeight: 1.4, marginBottom: 12 }}>{plan.name}</div>
+                      <div style={{ fontSize: 11, color: ds.secondary2, lineHeight: 1.4, marginBottom: 12 }}>{plan.name}</div>
                     )}
 
                     {/* Price (omitted for contact-only plans) */}
                     {!isContact && (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 6 }}>
-                        <span style={{ fontFamily: VAULT_DISPLAY, fontSize: 52, color, fontWeight: 300, lineHeight: 1 }}>{price}</span>
-                        {suffix && <span style={{ fontSize: 13, color: MUTED }}>{suffix}</span>}
+                        <span style={{ fontFamily: dsFont.display, fontSize: 52, color: ds.gold, fontWeight: 500, lineHeight: 1 }}>{price}</span>
+                        {suffix && <span style={{ fontSize: 13, color: ds.body }}>{suffix}</span>}
                       </div>
                     )}
 
@@ -616,13 +627,13 @@ export default function Payment() {
                     )}
 
                     {/* Divider */}
-                    <div style={{ height: 1, background: BORDER2, margin: '16px 0' }} />
+                    <div style={{ height: 1, background: ds.border, margin: '16px 0' }} />
 
                     {/* Features (presentation-only; not carried by the API) */}
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 10, flexGrow: 1 }}>
                       {pres.features.map((f, fi) => (
-                        <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, color: 'rgba(238,233,223,0.75)', lineHeight: 1.5 }}>
-                          <span style={{ color, flexShrink: 0, marginTop: 1 }}>◆</span>
+                        <li key={fi} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13.5, color: ds.body, lineHeight: 1.55 }}>
+                          <span style={{ color: ds.gold, flexShrink: 0, marginTop: 1 }}>◆</span>
                           {f}
                         </li>
                       ))}
@@ -634,26 +645,20 @@ export default function Payment() {
                       <button
                         type="button"
                         onClick={() => setContactOpen(true)}
-                        style={{
-                          width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
-                          fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
-                          letterSpacing: '0.16em', textTransform: 'uppercase', cursor: 'pointer',
-                          background: color, color: BG, transition: 'all 0.2s',
-                        }}>
+                        className="ds-cta-btn"
+                        style={{ ...goldButton, width: '100%', padding: '14px 0', borderRadius: dsRadius.sm }}>
                         Contact sales
                       </button>
                     ) : (
                       <button
                         onClick={() => handlePay(plan.tier)}
                         disabled={!!loading}
+                        className="ds-cta-btn"
                         style={{
-                          width: '100%', padding: '14px 0', border: 'none', borderRadius: 2,
-                          fontFamily: VAULT_BODY, fontSize: 11, fontWeight: 600,
-                          letterSpacing: '0.16em', textTransform: 'uppercase', cursor: loading ? 'not-allowed' : 'pointer',
-                          background: loading === plan.tier ? 'rgba(255,255,255,0.1)' : color,
-                          color: loading === plan.tier ? MUTED : BG,
+                          ...goldButton, width: '100%', padding: '14px 0', borderRadius: dsRadius.sm,
+                          cursor: loading ? 'not-allowed' : 'pointer',
                           opacity: loading && loading !== plan.tier ? 0.4 : 1,
-                          transition: 'all 0.2s',
+                          ...(loading === plan.tier ? { background: 'rgba(255,255,255,0.1)', color: ds.muted, boxShadow: 'none' } : {}),
                         }}>
                         {loading === plan.tier ? 'Redirecting to Stripe…' : cta}
                       </button>
@@ -664,9 +669,9 @@ export default function Payment() {
         </div>
       )}
 
-      {/* -- Trust line -- */}
-      <div style={{ textAlign: 'center', fontSize: 11, color: 'rgba(238,233,223,0.25)', paddingBottom: 48, letterSpacing: '0.06em' }}>
-        {'\uD83D\uDD12'} Secured by Stripe &nbsp;·&nbsp; Blockchain-verified credential &nbsp;·&nbsp; No subscription
+      {/* -- Trust strip -- */}
+      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', fontSize: 11, color: ds.muted2, paddingBottom: 48, letterSpacing: '0.08em' }}>
+        Secured by Stripe &nbsp;·&nbsp; Blockchain-verified &nbsp;·&nbsp; No subscription
       </div>
 
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
@@ -688,12 +693,12 @@ function PlanSkeleton({ delay = 0 }) {
   return (
     <div
       className="tier-card vault-up"
-      style={{ background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '32px 28px', width: 310, display: 'flex', flexDirection: 'column', animationDelay: `${delay}ms` }}
+      style={{ background: ds.panel, border: `1px solid ${ds.border}`, borderRadius: dsRadius.card, padding: '30px 26px', width: '100%', display: 'flex', flexDirection: 'column', animationDelay: `${delay}ms` }}
       aria-hidden="true"
     >
       {bar('40%', 10, 16)}
       {bar('55%', 44, 18)}
-      <div style={{ height: 1, background: BORDER2, margin: '16px 0' }} />
+      <div style={{ height: 1, background: ds.border, margin: '16px 0' }} />
       {bar('90%', 12, 12)}
       {bar('80%', 12, 12)}
       {bar('85%', 12, 12)}
