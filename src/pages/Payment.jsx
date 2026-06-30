@@ -103,12 +103,14 @@ const injectKF = () => {
     .tier-card { transition: border-color 0.18s, transform 0.16s, box-shadow 0.16s; }
     .tier-card:hover { border-color: rgba(239,192,60,0.28) !important; transform: translateY(-3px); }
     .tier-card-highlighted { border-color: rgba(239,192,60,0.55) !important; transform: translateY(-4px); box-shadow: 0 18px 40px -22px rgba(239,192,60,0.4); }
+    .otp-box { transition: border-color 0.18s, box-shadow 0.18s; }
+    .otp-box:focus { border-color: rgba(239,192,60,0.6) !important; box-shadow: 0 0 0 3px rgba(239,192,60,0.18); }
     .ds-cta-btn:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
     .pricing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: stretch; }
     @keyframes tier-shimmer { 0%,100% { opacity: 0.35; } 50% { opacity: 0.7; } }
     .tier-skel-bar { background: rgba(255,255,255,0.06); border-radius: 6px; animation: tier-shimmer 1.4s ease-in-out infinite; }
     @media (max-width: 980px) { .pricing-grid { grid-template-columns: 1fr !important; max-width: 420px; margin-left: auto; margin-right: auto; } }
-    @media (prefers-reduced-motion: reduce) { .tier-skel-bar { animation: none; } .tier-card { transition: none !important; } .tier-card:hover { transform: none !important; } .tier-card-highlighted { transform: none !important; } .ds-cta-btn { transition: none !important; } .ds-cta-btn:hover:not(:disabled) { transform: none !important; } }
+    @media (prefers-reduced-motion: reduce) { .tier-skel-bar { animation: none; } .tier-card { transition: none !important; } .tier-card:hover { transform: none !important; } .tier-card-highlighted { transform: none !important; } .otp-box { transition: none !important; } .ds-cta-btn { transition: none !important; } .ds-cta-btn:hover:not(:disabled) { transform: none !important; } }
     ::-webkit-scrollbar { width:3px; } ::-webkit-scrollbar-thumb { background:rgba(201,168,76,0.15); }
   `;
   document.head.appendChild(s);
@@ -163,6 +165,9 @@ export default function Payment() {
   const [highlightedTier, setHighlightedTier] = useState(null);
   const tierRefs = useRef({ standard: null, pro: null, team: null });
   const autoTriggeredRef = useRef(false);
+  // Per-box refs for the 6-digit verification code, so typing/backspace/paste
+  // can move focus between boxes. Backed by the same verificationCode string.
+  const otpRefs = useRef([]);
 
   // Countdown timer for resend cooldown
   useEffect(() => {
@@ -410,56 +415,90 @@ export default function Payment() {
 
       {/* -- Fix #3: Verification panel OR Tier cards -- */}
       {needsVerification ? (
-        <div className="vault-up" style={{ maxWidth: 520, margin: '0 auto 48px', padding: '0 24px' }}>
-          <div style={{ background: BG1, border: `1px solid ${GOLD}35`, borderRadius: 3, padding: '40px 32px' }}>
+        <div className="vault-up" style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto 48px', padding: '0 24px' }}>
+          <div style={{ background: ds.panel, border: `1px solid ${ds.border}`, borderRadius: dsRadius.card, padding: '40px 36px', boxShadow: '0 30px 70px -42px rgba(0,0,0,0.85)' }}>
 
             <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ fontSize: 10, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ds.eyebrow, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>
                 Enter Verification Code
               </div>
-              <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.6 }}>
+              <div style={{ fontSize: 14, color: ds.body, lineHeight: 1.6 }}>
                 Code sent to<br/>
-                <span style={{ color: GOLD, fontFamily: 'Consolas, monospace', fontSize: 13 }}>{candidateObj.email || 'your email'}</span>
+                <span style={{ color: ds.gold, fontFamily: 'Consolas, monospace', fontSize: 13 }}>{candidateObj.email || 'your email'}</span>
               </div>
             </div>
 
-            {/* Code input */}
+            {/* Code input: six single-digit boxes, all backed by the same
+                verificationCode string. The verify submit logic, the 6-digit
+                format, and the verifyError gate are unchanged. */}
             <div style={{ marginBottom: 20 }}>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                value={verificationCode}
-                maxLength={6}
-                autoFocus
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
-                  setVerificationCode(digits);
-                  if (verifyError) setVerifyError('');
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && verificationCode.length === 6) handleVerifyEmail();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '18px 16px',
-                  background: 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${verifyError ? RED : BORDER2}`,
-                  borderRadius: 2,
-                  color: WHITE,
-                  fontSize: 28,
-                  fontFamily: 'Consolas, monospace',
-                  fontWeight: 600,
-                  letterSpacing: '0.4em',
-                  textAlign: 'center',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                  boxSizing: 'border-box',
-                }}
-              />
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                    aria-label={`Verification code digit ${i + 1}`}
+                    maxLength={1}
+                    autoFocus={i === 0}
+                    value={verificationCode[i] || ''}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => {
+                      const d = e.target.value.replace(/\D/g, '');
+                      if (!d) return;
+                      const next = (verificationCode.slice(0, i) + d.slice(-1) + verificationCode.slice(i + 1)).slice(0, 6);
+                      setVerificationCode(next);
+                      if (verifyError) setVerifyError('');
+                      if (i < 5) otpRefs.current[i + 1]?.focus();
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Backspace') {
+                        e.preventDefault();
+                        if (verificationCode[i]) {
+                          setVerificationCode(verificationCode.slice(0, i) + verificationCode.slice(i + 1));
+                          if (verifyError) setVerifyError('');
+                        } else if (i > 0) {
+                          setVerificationCode(verificationCode.slice(0, i - 1) + verificationCode.slice(i));
+                          otpRefs.current[i - 1]?.focus();
+                        }
+                      } else if (e.key === 'ArrowLeft' && i > 0) {
+                        otpRefs.current[i - 1]?.focus();
+                      } else if (e.key === 'ArrowRight' && i < 5) {
+                        otpRefs.current[i + 1]?.focus();
+                      } else if (e.key === 'Enter' && verificationCode.length === 6) {
+                        handleVerifyEmail();
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pasted = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+                      if (!pasted) return;
+                      setVerificationCode(pasted);
+                      if (verifyError) setVerifyError('');
+                      otpRefs.current[Math.min(pasted.length, 5)]?.focus();
+                    }}
+                    className="otp-box"
+                    style={{
+                      width: 48,
+                      height: 58,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${verifyError ? RED : ds.border}`,
+                      borderRadius: dsRadius.sm,
+                      color: ds.heading,
+                      fontSize: 26,
+                      fontFamily: 'Consolas, monospace',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                ))}
+              </div>
               {verifyError && (
-                <div style={{ fontSize: 12, color: RED, marginTop: 8, textAlign: 'center' }}>
+                <div style={{ fontSize: 12, color: RED, marginTop: 12, textAlign: 'center' }}>
                   {verifyError}
                 </div>
               )}
@@ -469,21 +508,15 @@ export default function Payment() {
             <button
               onClick={handleVerifyEmail}
               disabled={verificationCode.length !== 6 || verifying}
+              className="ds-cta-btn"
               style={{
+                ...goldButton,
                 width: '100%',
-                padding: '14px 0',
-                border: 'none',
-                borderRadius: 2,
-                fontFamily: VAULT_BODY,
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                cursor: (verificationCode.length !== 6 || verifying) ? 'not-allowed' : 'pointer',
-                background: (verificationCode.length !== 6 || verifying) ? 'rgba(255,255,255,0.1)' : GOLD,
-                color: (verificationCode.length !== 6 || verifying) ? MUTED : BG,
-                transition: 'all 0.2s',
+                padding: '15px 0',
+                borderRadius: dsRadius.sm,
                 marginBottom: 20,
+                cursor: (verificationCode.length !== 6 || verifying) ? 'not-allowed' : 'pointer',
+                ...((verificationCode.length !== 6 || verifying) ? { background: 'rgba(255,255,255,0.08)', color: ds.muted, boxShadow: 'none' } : {}),
               }}>
               {verifying ? 'Verifying…' : 'Verify & Continue to Payment'}
             </button>
@@ -495,12 +528,12 @@ export default function Payment() {
                   screen readers. Kept always-mounted so content changes fire. */}
               <div role="status" aria-live="polite">
                 {resendStatus && (
-                  <div style={{ fontSize: 12, color: resendStatus.includes('sent') ? TEAL2 : MUTED, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: resendStatus.includes('sent') ? ds.greenText : ds.muted, marginBottom: 10 }}>
                     {resendStatus}
                   </div>
                 )}
               </div>
-              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.6, margin: '0 0 8px' }}>
+              <p style={{ fontSize: 12, color: ds.muted, lineHeight: 1.6, margin: '0 0 8px' }}>
                 Didn't get the email? Check your spam folder, it may be there. Still nothing?
               </p>
               <button
@@ -510,9 +543,9 @@ export default function Payment() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: resendCooldown > 0 ? MUTED : GOLD,
+                  color: resendCooldown > 0 ? ds.muted : ds.gold,
                   fontSize: 12,
-                  fontFamily: VAULT_BODY,
+                  fontFamily: dsFont.body,
                   cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
                   padding: 0,
                   textDecoration: resendCooldown > 0 ? 'none' : 'underline',
@@ -523,7 +556,7 @@ export default function Payment() {
             </div>
 
             {/* Back */}
-            <div style={{ textAlign: 'center', borderTop: `1px solid ${BORDER2}`, paddingTop: 18 }}>
+            <div style={{ textAlign: 'center', borderTop: `1px solid ${ds.border}`, paddingTop: 18 }}>
               <button
                 onClick={() => {
                   setNeedsVerification(false);
@@ -535,9 +568,9 @@ export default function Payment() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: MUTED,
+                  color: ds.muted,
                   fontSize: 12,
-                  fontFamily: VAULT_BODY,
+                  fontFamily: dsFont.body,
                   cursor: 'pointer',
                   padding: 0,
                 }}>
