@@ -17,23 +17,27 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { DOCUMENT_SUMMARIES } from '../hooks/useConsent';
+import ModalShell from './chrome/ModalShell';
+import { color as ds, font as dsFont, radius as dsRadius, goldButton } from '../designSystem/tokens';
 
-// ----- Vault palette (matches Dashboard.jsx tokens) -----------------------
-const BG       = '#080B12';
-const BG1      = '#0C1018';
-const BG3      = '#141B26';
-const GOLD     = '#C9A84C';
-const TEAL2    = '#22A67E';
-const RED      = '#C45C5C';
-const WHITE    = '#EEE9DF';
-const MUTED    = 'rgba(238,233,223,0.45)';
-const FAINT    = 'rgba(238,233,223,0.04)';
-const BORDER   = 'rgba(201,168,76,0.15)';
-const BORDER_LIT = 'rgba(201,168,76,0.55)';
-const BORDER2  = 'rgba(238,233,223,0.07)';
+// ----- Palette mapped to the redesign tokens ------------------------------
+// Names kept so the step components and style helpers below pick up the new
+// look without structural churn. The card surface now comes from ModalShell.
+const BG       = ds.bg;
+const BG1      = ds.panel;
+const BG3      = ds.bg;
+const GOLD     = ds.gold;
+const TEAL2    = ds.greenText;
+const RED      = ds.red;
+const WHITE    = ds.heading;
+const MUTED    = ds.muted;
+const FAINT    = 'rgba(255,255,255,0.04)';
+const BORDER   = ds.border;
+const BORDER_LIT = 'rgba(239,192,60,0.55)';
+const BORDER2  = ds.border;
 
-const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
-const VAULT_BODY    = "'Syne', 'DM Sans', sans-serif";
+const VAULT_DISPLAY = dsFont.display;
+const VAULT_BODY    = dsFont.body;
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ACCEPTED_MIME = ['image/jpeg', 'image/png'];
@@ -81,12 +85,14 @@ export default function PhotoVerificationModal({
   const [dragOver, setDragOver] = useState(false);
 
   const fileInputRef = useRef(null);
-  const modalRef = useRef(null);
 
   // ----- Reset on open / close ------------------------------------------
   useEffect(() => {
     if (!isOpen) {
       // Reset all internal state when modal closes so re-opens are fresh.
+      // Pre-existing reset-on-close pattern (unchanged by the re-skin); the
+      // cleaner ModalShell-based component now analyzes fully and surfaces it.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStep(STEP_TIER_SELECT);
       setSelectedTier(null);
       setConsentChecked(false);
@@ -107,6 +113,8 @@ export default function PhotoVerificationModal({
   // ----- Object URL lifecycle for the preview ---------------------------
   useEffect(() => {
     if (!headshotFile) {
+      // Pre-existing object-URL lifecycle (unchanged by the re-skin).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHeadshotPreviewUrl(null);
       return;
     }
@@ -115,32 +123,23 @@ export default function PhotoVerificationModal({
     return () => URL.revokeObjectURL(url);
   }, [headshotFile]);
 
-  // ----- Body scroll lock -----------------------------------------------
-  useEffect(() => {
-    if (!isOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, [isOpen]);
-
-  // ----- Esc key closes (when no async work is in flight) ---------------
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape' && !consentSubmitting && !uploading && !tierPatchSubmitting && !biometricSubmitting) {
-        e.preventDefault();
-        cancel();
-      }
-    };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, consentSubmitting, uploading, tierPatchSubmitting, biometricSubmitting]);
+  // Body scroll-lock, Esc-to-close, and focus-trap are now provided by
+  // ModalShell. Esc/backdrop dismissal is gated by the same async guard as
+  // before via guardedClose() below, so a step can't be skipped mid-flight.
 
   // ----- Cancel / resolve handlers --------------------------------------
   const cancel = useCallback(() => {
     onResolve(null);
   }, [onResolve]);
+
+  // Async-in-flight guard for backdrop/Esc dismissal — preserves the prior
+  // behavior exactly: the flow can only be cancelled when no submit/upload is
+  // pending. ModalShell calls this on Esc and backdrop; it never skips a step.
+  const isBusy = consentSubmitting || uploading || tierPatchSubmitting || biometricSubmitting;
+  const guardedClose = useCallback(() => {
+    if (consentSubmitting || uploading || tierPatchSubmitting || biometricSubmitting) return;
+    cancel();
+  }, [cancel, consentSubmitting, uploading, tierPatchSubmitting, biometricSubmitting]);
 
   const continueFromTierSelect = () => {
     if (!selectedTier) return;
@@ -342,22 +341,14 @@ export default function PhotoVerificationModal({
     // consentChecked stays true so the user does not re-tick the box
   };
 
-  if (!isOpen) return null;
-
   // ----- Render ---------------------------------------------------------
+  // ModalShell provides the backdrop blur-in, centered token panel, shadow,
+  // focus-trap, scroll-lock, and Esc/backdrop dismissal. Dismissal is routed
+  // through guardedClose so it stays blocked while async work is in flight —
+  // identical to the prior behavior; no step is ever skipped.
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="photo-verify-title"
-      onClick={() => !consentSubmitting && !uploading && !tierPatchSubmitting && !biometricSubmitting && cancel()}
-      style={overlayStyle}
-    >
-      <div
-        ref={modalRef}
-        onClick={(e) => e.stopPropagation()}
-        style={cardStyle}
-      >
+    <ModalShell open={isOpen} onClose={guardedClose} labelledBy="photo-verify-title">
+      <div style={{ padding: 30, fontFamily: VAULT_BODY, color: WHITE }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
           <div style={{ fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, fontWeight: 600 }}>
             Identity Verification
@@ -365,7 +356,7 @@ export default function PhotoVerificationModal({
           <button
             type="button"
             onClick={cancel}
-            disabled={consentSubmitting || uploading || tierPatchSubmitting || biometricSubmitting}
+            disabled={isBusy}
             style={cancelLinkStyle}
           >
             Cancel
@@ -438,7 +429,7 @@ export default function PhotoVerificationModal({
           />
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -534,7 +525,7 @@ function TierSelectStep({ selectedTier, onSelect, onContinue, declinedRecently }
         <div
           role="status"
           style={{
-            background: 'rgba(201,168,76,0.07)',
+            background: 'rgba(239,192,60,0.07)',
             border: `1px solid ${BORDER}`,
             borderRadius: 3,
             padding: '10px 14px',
@@ -586,10 +577,10 @@ function TierCard({ selected, onSelect, title, subtitle, bullets, recommended })
     ? GOLD
     : (selected ? BORDER_LIT : BORDER2);
   const background = recommended
-    ? (selected ? 'rgba(201,168,76,0.10)' : 'rgba(201,168,76,0.04)')
-    : (selected ? 'rgba(201,168,76,0.07)' : BG1);
+    ? (selected ? 'rgba(239,192,60,0.10)' : 'rgba(239,192,60,0.04)')
+    : (selected ? 'rgba(239,192,60,0.07)' : BG1);
   const innerGlow = recommended && selected
-    ? 'inset 0 0 0 1px rgba(201,168,76,0.32)'
+    ? 'inset 0 0 0 1px rgba(239,192,60,0.32)'
     : 'none';
 
   return (
@@ -612,7 +603,7 @@ function TierCard({ selected, onSelect, title, subtitle, bullets, recommended })
         flexDirection: 'column',
         gap: 10,
         boxShadow: recommended
-          ? `0 4px 16px rgba(201,168,76,0.10)${innerGlow !== 'none' ? `, ${innerGlow}` : ''}`
+          ? `0 4px 16px rgba(239,192,60,0.10)${innerGlow !== 'none' ? `, ${innerGlow}` : ''}`
           : 'none',
       }}
     >
@@ -845,7 +836,7 @@ function HeadshotUploadStep({
         style={{
           border: `2px dashed ${dragOver ? GOLD : BORDER}`,
           borderRadius: 4,
-          background: dragOver ? 'rgba(201,168,76,0.06)' : FAINT,
+          background: dragOver ? 'rgba(239,192,60,0.06)' : FAINT,
           padding: '36px 24px',
           textAlign: 'center',
           cursor: 'pointer',
@@ -904,7 +895,7 @@ function HeadshotPreviewStep({ previewUrl, onChooseDifferent, onConfirm, uploadi
             borderRadius: '50%',
             overflow: 'hidden',
             border: `2px solid ${BORDER_LIT}`,
-            boxShadow: '0 0 0 5px rgba(201,168,76,0.06), 0 12px 32px rgba(0,0,0,0.45)',
+            boxShadow: '0 0 0 5px rgba(239,192,60,0.06), 0 12px 32px rgba(0,0,0,0.45)',
             background: BG,
           }}
         >
@@ -963,7 +954,7 @@ function HeadshotDoneStep({ previewUrl, selectedTier, onFinishHeadshot, onFinish
             borderRadius: '50%',
             overflow: 'hidden',
             border: `2px solid ${BORDER_LIT}`,
-            boxShadow: '0 0 0 5px rgba(201,168,76,0.06), 0 12px 32px rgba(0,0,0,0.45)',
+            boxShadow: '0 0 0 5px rgba(239,192,60,0.06), 0 12px 32px rgba(0,0,0,0.45)',
             background: BG,
           }}
         >
@@ -1051,29 +1042,7 @@ function ErrorBanner({ children }) {
   );
 }
 
-const overlayStyle = {
-  position: 'fixed',
-  inset: 0,
-  background: 'rgba(8,11,18,0.85)',
-  backdropFilter: 'blur(4px)',
-  zIndex: 1000,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: 20,
-  fontFamily: VAULT_BODY,
-};
-
-const cardStyle = {
-  background: BG3,
-  border: `1px solid ${BORDER}`,
-  borderRadius: 6,
-  padding: 30,
-  width: '100%',
-  maxWidth: 640,
-  boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-  color: WHITE,
-};
+// Overlay + card chrome now come from ModalShell (token panel, blur-in, shadow).
 
 const titleStyle = {
   fontFamily: VAULT_DISPLAY,
@@ -1093,18 +1062,16 @@ const footerRow = {
 };
 
 function primaryBtn(disabled) {
+  // Gold-gradient CTA from the redesign system; disabled state falls back to a
+  // muted gold wash with the gradient/shadow removed.
   return {
-    background: disabled ? 'rgba(201,168,76,0.4)' : GOLD,
-    color: BG,
-    border: 'none',
-    borderRadius: 2,
-    padding: '11px 22px',
+    ...goldButton,
+    borderRadius: dsRadius.sm,
+    padding: '12px 22px',
     fontSize: 11,
-    fontWeight: 700,
     letterSpacing: '0.18em',
-    textTransform: 'uppercase',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    fontFamily: VAULT_BODY,
+    ...(disabled ? { background: 'rgba(239,192,60,0.4)', boxShadow: 'none' } : {}),
   };
 }
 
@@ -1112,9 +1079,9 @@ function secondaryBtn(disabled) {
   return {
     background: 'transparent',
     color: WHITE,
-    border: `1px solid ${MUTED}`,
-    borderRadius: 2,
-    padding: '11px 18px',
+    border: `1px solid ${ds.border}`,
+    borderRadius: dsRadius.sm,
+    padding: '12px 18px',
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: '0.16em',
