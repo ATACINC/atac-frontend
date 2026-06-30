@@ -6,10 +6,12 @@
  * backdrop that fades/pops in, a centered container, focus-trap, Esc-to-close,
  * and click-outside-to-close. Honors prefers-reduced-motion (no blur-in/pop).
  *
- * Props: { open, onClose, labelledBy, children }
+ * Props: { open, onClose, labelledBy, children, closeOnEsc, closeOnBackdrop }
  *
- * This is a PRIMITIVE for a later group to adopt. It is intentionally NOT wired
- * into ConsentModal or PhotoVerificationModal in this PR.
+ * closeOnEsc / closeOnBackdrop default to true (the original behavior). Set
+ * either to false for a required/gated modal that must NOT be dismissable by
+ * that path — focus-trap, scroll-lock, and the blur-in still apply, but the
+ * corresponding dismissal is suppressed so no new bypass is introduced.
  */
 
 import { useEffect, useRef } from 'react';
@@ -18,7 +20,7 @@ import { color, radius, shadow } from '../../designSystem/tokens';
 const FOCUSABLE =
   'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-export default function ModalShell({ open, onClose, labelledBy, children }) {
+export default function ModalShell({ open, onClose, labelledBy, children, closeOnEsc = true, closeOnBackdrop = true }) {
   const containerRef = useRef(null);
   const lastFocusedRef = useRef(null);
 
@@ -33,8 +35,10 @@ export default function ModalShell({ open, onClose, labelledBy, children }) {
 
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose?.();
+        if (closeOnEsc) {
+          e.stopPropagation();
+          onClose?.();
+        }
         return;
       }
       if (e.key === 'Tab' && node) {
@@ -56,14 +60,14 @@ export default function ModalShell({ open, onClose, labelledBy, children }) {
       document.body.style.overflow = prevOverflow;
       lastFocusedRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEsc]);
 
   if (!open) return null;
 
   return (
     <div
       className="ds-modal-backdrop"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      onMouseDown={(e) => { if (closeOnBackdrop && e.target === e.currentTarget) onClose?.(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 10000,
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
