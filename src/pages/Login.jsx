@@ -27,6 +27,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isValidEmail } from '../utils/validation';
+import { dialPrefix, normalizeToE164, isValidPhone, getPhoneError } from '../utils/phone';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import COUNTRIES from '../data/countries';
@@ -41,6 +42,11 @@ const TERMS_COPY =
   'I certify that I am the individual named above. I will personally complete all assessments. ' +
   'I understand that credential fraud voids my certification permanently and may result in public ' +
   'revocation on the blockchain.';
+
+const SMS_CONSENT_VERSION = '1.0';
+const SMS_CONSENT_COPY =
+  'Text me about my ATAC credential, deadlines, and offers at this number. ' +
+  'Msg & data rates may apply. Reply STOP to opt out. Consent is not a condition of registration.';
 
 /* ── Vault Design Tokens ─────────────────────────────────────────────── */
 const BG       = '#080B12';
@@ -225,6 +231,10 @@ export default function Login({ defaultAction }) {
   const [regPassword, setRegPassword]     = useState('');
   const [regConfirm, setRegConfirm]       = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  // Optional SMS-marketing capture (register view only; never gates submit).
+  const [phone, setPhone]           = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
 
   // Shared state
   const [loading, setLoading] = useState(false);
@@ -382,6 +392,13 @@ export default function Login({ defaultAction }) {
     setLoading(true);
     const termsAcceptedAt = new Date().toISOString();
 
+    // Optional SMS-marketing capture. Consent is only recorded when a valid
+    // number is present AND the box is checked; none of this gates submit.
+    const phoneE164 = normalizeToE164(phone, country);
+    const phoneOk = Boolean(phoneE164 && isValidPhone(phoneE164, country));
+    const smsConsentGranted = Boolean(phoneOk && smsConsent);
+    const smsConsentAt = smsConsentGranted ? new Date().toISOString() : null;
+
     try {
       // NOTE: regConfirm is intentionally NOT sent to the API.
       const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -396,6 +413,10 @@ export default function Login({ defaultAction }) {
           termsAccepted: true,
           termsAcceptedAt,
           termsVersion: TERMS_VERSION,
+          phone: phoneOk ? phoneE164 : null,
+          smsConsent: smsConsentGranted,
+          smsConsentAt,
+          smsConsentTextVersion: smsConsentGranted ? SMS_CONSENT_VERSION : null,
           ref: localStorage.getItem('atac_ref') || null,
           hcaptchaToken: captchaToken,
         }),
@@ -791,7 +812,17 @@ export default function Login({ defaultAction }) {
                 <select
                   className="atac-input"
                   value={country}
-                  onChange={(e) => setCountry(e.target.value)}
+                  onChange={(e) => {
+                    const newIso = e.target.value;
+                    // Prefill the dial prefix when the phone field is empty or
+                    // still holds the previous country's auto-prefix; never
+                    // clobber a number the candidate has actually typed.
+                    if (phone === '' || phone === dialPrefix(country)) {
+                      setPhone(dialPrefix(newIso));
+                    }
+                    setPhoneError('');
+                    setCountry(newIso);
+                  }}
                   required
                   style={{
                     appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
@@ -809,6 +840,65 @@ export default function Login({ defaultAction }) {
                   ))}
                 </select>
               </Field>
+
+              {/* Optional mobile number + CASL SMS consent. Neither field ever
+                  blocks account creation; the payload records consent only when
+                  a valid number is present AND the box is checked. */}
+              <Field label="Mobile Number (optional)">
+                <input
+                  type="tel"
+                  className="atac-input"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={20}
+                  placeholder="+1 555 123 4567"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
+                  onBlur={() => {
+                    const e164 = normalizeToE164(phone, country);
+                    if (e164) setPhone(e164);
+                    setPhoneError(getPhoneError(e164, country));
+                    if (!isValidPhone(e164, country)) setSmsConsent(false);
+                  }}
+                />
+                {phoneError && (
+                  <div style={{ fontSize: 12, color: RED, marginTop: 6 }}>{phoneError}</div>
+                )}
+              </Field>
+
+              {(() => {
+                const smsAllowed = isValidPhone(normalizeToE164(phone, country), country);
+                return (
+                  <label
+                    style={{
+                      display: 'flex',
+                      gap: 12,
+                      alignItems: 'flex-start',
+                      margin: '2px 0 18px',
+                      cursor: smsAllowed ? 'pointer' : 'not-allowed',
+                      opacity: smsAllowed ? 1 : 0.5,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={smsConsent}
+                      disabled={!smsAllowed}
+                      onChange={(e) => setSmsConsent(e.target.checked)}
+                      style={{
+                        marginTop: 3,
+                        width: 16,
+                        height: 16,
+                        accentColor: GOLD,
+                        cursor: smsAllowed ? 'pointer' : 'not-allowed',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: 13, lineHeight: 1.55, color: MUTED }}>
+                      {SMS_CONSENT_COPY}
+                    </span>
+                  </label>
+                );
+              })()}
 
               <Field label="Email Address">
                 <input
