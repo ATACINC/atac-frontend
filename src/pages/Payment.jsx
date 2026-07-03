@@ -152,22 +152,6 @@ export default function Payment() {
     return () => { cancelled = true; };
   }, [plansNonce]);
 
-  // ⚠️ TEMP PREVIEW TOGGLE — REMOVE BEFORE MERGE. Lets us eyeball the covered
-  // panel + "Continue, no payment needed" CTA without an entitled login.
-  // Hostname-gated to *.vercel.app / localhost so it can NEVER activate on
-  // production (app.atacglobalcx.com). Starts no checkout — the CTA url is a
-  // harmless '#' no-op, and handlePay / the real charterCovered path are
-  // untouched.
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    if (new URLSearchParams(window.location.search).get('charterPreview') !== '1') return undefined;
-    const host = window.location.hostname;
-    const previewHost = host.endsWith('.vercel.app') || host === 'localhost' || host === '127.0.0.1';
-    if (!previewHost) return undefined;
-    const raf = requestAnimationFrame(() => { setCharterCovered(true); setCharterUrl('#'); });
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
   // -- Consent gate hook (B2C: 4 docs required at checkout) -------------
   const consent = useConsent({
     required: ['tos', 'privacy', 'refund', 'blockchain'],
