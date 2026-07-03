@@ -121,6 +121,10 @@ export default function Payment() {
   const [loading,  setLoading]  = useState(null);
   const [error,    setError]    = useState('');
   const [seats,    setSeats]    = useState(10);
+  // Charter entitlement: the /api/stripe/checkout response flags pre-June-30
+  // Charter accounts whose seat is already covered ($0, no card). When true we
+  // show a covered state instead of the price/CTA UI, then continue the flow.
+  const [charterCovered, setCharterCovered] = useState(false);
 
   // -- Live pricing from GET /api/stripe/plans (via the shared axios client) --
   // plans === null while loading; [] or array once resolved; plansError set on
@@ -279,6 +283,19 @@ export default function Payment() {
       }
 
       if (!res.ok) throw new Error(data.error || 'Payment failed');
+
+      // Charter entitlement: the seat is already covered ($0, no card). Show a
+      // clear covered state on our step BEFORE redirecting, so the user isn't
+      // surprised by a checkout page — then continue the flow as usual (the
+      // hosted $0 Stripe checkout skips card entry on its own). When the flag
+      // is absent/false this branch is skipped and the paid flow is unchanged.
+      if (data.charterCovered === true) {
+        setCharterCovered(true);
+        setLoading(null);
+        setTimeout(() => { window.location.href = data.url; }, 1800);
+        return;
+      }
+
       window.location.href = data.url;
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -413,8 +430,39 @@ export default function Payment() {
         </div>
       )}
 
-      {/* -- Fix #3: Verification panel OR Tier cards -- */}
-      {needsVerification ? (
+      {/* -- Charter-covered state (entitled $0 seat) OR verification OR tiers -- */}
+      {charterCovered ? (
+        <div className="vault-up" style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto 48px', padding: '0 24px' }}>
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: ds.panel,
+              border: '1px solid rgba(127,203,166,0.4)',
+              borderRadius: dsRadius.card,
+              padding: '40px 36px',
+              textAlign: 'center',
+              boxShadow: '0 30px 70px -42px rgba(0,0,0,0.85)',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: ds.greenText, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>
+              Charter Cohort · Covered
+            </div>
+            <div style={{ fontFamily: dsFont.display, fontSize: 'clamp(30px, 4vw, 44px)', fontWeight: 500, color: ds.heading, lineHeight: 1.1, marginBottom: 10 }}>
+              Charter seat covered
+            </div>
+            <div style={{ fontFamily: dsFont.display, fontSize: 52, color: ds.greenText, fontWeight: 500, lineHeight: 1, marginBottom: 16 }}>
+              $0.00
+            </div>
+            <div style={{ fontSize: 15, color: ds.body, lineHeight: 1.7, marginBottom: 10 }}>
+              No payment needed — your Charter entitlement covers this seat. You won't be asked for a card.
+            </div>
+            <div style={{ fontSize: 12, color: ds.muted, letterSpacing: '0.08em' }}>
+              Continuing…
+            </div>
+          </div>
+        </div>
+      ) : needsVerification ? (
         <div className="vault-up" style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto 48px', padding: '0 24px' }}>
           <div style={{ background: ds.panel, border: `1px solid ${ds.border}`, borderRadius: dsRadius.card, padding: '40px 36px', boxShadow: '0 30px 70px -42px rgba(0,0,0,0.85)' }}>
 
@@ -702,10 +750,12 @@ export default function Payment() {
         </div>
       )}
 
-      {/* -- Trust strip -- */}
-      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', fontSize: 11, color: ds.muted2, paddingBottom: 48, letterSpacing: '0.08em' }}>
-        Secured by Stripe &nbsp;·&nbsp; Blockchain-verified &nbsp;·&nbsp; No subscription
-      </div>
+      {/* -- Trust strip (hidden for covered Charter seats — no payment context) -- */}
+      {!charterCovered && (
+        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', fontSize: 11, color: ds.muted2, paddingBottom: 48, letterSpacing: '0.08em' }}>
+          Secured by Stripe &nbsp;·&nbsp; Blockchain-verified &nbsp;·&nbsp; No subscription
+        </div>
+      )}
 
       {/* -- Consent modal (renders when consent.ensure() is pending) -- */}
       {consent.modal}
