@@ -125,6 +125,7 @@ export default function Payment() {
   // Charter accounts whose seat is already covered ($0, no card). When true we
   // show a covered state instead of the price/CTA UI, then continue the flow.
   const [charterCovered, setCharterCovered] = useState(false);
+  const [charterUrl, setCharterUrl] = useState(null); // $0 Stripe checkout URL, redirected on the covered CTA click
 
   // -- Live pricing from GET /api/stripe/plans (via the shared axios client) --
   // plans === null while loading; [] or array once resolved; plansError set on
@@ -285,14 +286,15 @@ export default function Payment() {
       if (!res.ok) throw new Error(data.error || 'Payment failed');
 
       // Charter entitlement: the seat is already covered ($0, no card). Show a
-      // clear covered state on our step BEFORE redirecting, so the user isn't
-      // surprised by a checkout page — then continue the flow as usual (the
-      // hosted $0 Stripe checkout skips card entry on its own). When the flag
-      // is absent/false this branch is skipped and the paid flow is unchanged.
+      // clear covered state on our step and let the user proceed on their own
+      // terms via an explicit button (see the covered panel) — no auto-redirect,
+      // so they can read it and defuse any payment anxiety. The hosted $0 Stripe
+      // checkout then skips card entry on its own. When the flag is absent/false
+      // this branch is skipped and the paid flow + redirect are unchanged.
       if (data.charterCovered === true) {
         setCharterCovered(true);
+        setCharterUrl(data.url);
         setLoading(null);
-        setTimeout(() => { window.location.href = data.url; }, 1800);
         return;
       }
 
@@ -454,12 +456,17 @@ export default function Payment() {
             <div style={{ fontFamily: dsFont.display, fontSize: 52, color: ds.greenText, fontWeight: 500, lineHeight: 1, marginBottom: 16 }}>
               $0.00
             </div>
-            <div style={{ fontSize: 15, color: ds.body, lineHeight: 1.7, marginBottom: 10 }}>
+            <div style={{ fontSize: 15, color: ds.body, lineHeight: 1.7, marginBottom: 24 }}>
               No payment needed — your Charter entitlement covers this seat. You won't be asked for a card.
             </div>
-            <div style={{ fontSize: 12, color: ds.muted, letterSpacing: '0.08em' }}>
-              Continuing…
-            </div>
+            <button
+              type="button"
+              onClick={() => { if (charterUrl) window.location.href = charterUrl; }}
+              disabled={!charterUrl}
+              style={{ ...goldButton, width: '100%', padding: '15px 0', borderRadius: dsRadius.sm }}
+            >
+              Continue, no payment needed
+            </button>
           </div>
         </div>
       ) : needsVerification ? (
