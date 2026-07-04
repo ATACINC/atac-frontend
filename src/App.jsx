@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login      from './pages/Login';
 import SignupPage from './pages/SignupPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword  from './pages/ResetPassword';
 import Assessment from './pages/Assessment';
 import Dashboard  from './pages/Dashboard';
 import Payment    from './pages/Payment';
@@ -55,6 +57,8 @@ export default function App() {
         <Routes>
           <Route path="/login"      element={<Login />} />
           <Route path="/signup"     element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/payment"    element={<PrivateRoute><Payment /></PrivateRoute>} />
           <Route path="/assessment" element={<PrivateRoute><Assessment /></PrivateRoute>} />
           {/* /simulator/* - lazy-loaded sub-tree, single Suspense boundary */}

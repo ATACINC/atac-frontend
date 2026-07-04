@@ -25,7 +25,7 @@
 //   - Confirm Password is FRONTEND-ONLY, never sent to API
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { isValidEmail } from '../utils/validation';
 import { dialPrefix, normalizeToE164, isValidPhone, getPhoneError } from '../utils/phone';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
@@ -67,6 +67,10 @@ const VAULT_DISPLAY = "'Cormorant Garamond', Georgia, serif";
 const VAULT_BODY    = "'Syne', 'DM Sans', system-ui, sans-serif";
 
 /* ── Inject fonts + keyframes once ───────────────────────────────────── */
+// NOTE: Auth tokens duplicated here, keep in sync — the token values and the
+// .atac-input / .atac-cta / .atac-link / .vault-up-* rules below are mirrored
+// verbatim in src/pages/auth/authStyles.js (used by the standalone
+// /forgot-password and /reset-password pages). Change both together.
 function injectStyles() {
   if (typeof document === 'undefined') return;
   if (document.getElementById('atac-login-styles-v4')) return;
@@ -207,7 +211,22 @@ function injectStyles() {
 /* ── Component ───────────────────────────────────────────────────────── */
 export default function Login({ defaultAction }) {
   const navigate = useNavigate();
+  const location = useLocation();
   injectStyles();
+
+  // One-time flash banner passed via router state (e.g. after a password reset).
+  // Read it into local state, then clear the router state so a refresh or back
+  // navigation doesn't re-show it. Rendered as plain text only.
+  const [flash] = useState(
+    typeof location.state?.flash === 'string' ? location.state.flash : ''
+  );
+  useEffect(() => {
+    if (location.state?.flash) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // Run once on mount; the redirect clears the state so this won't re-fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Determine starting tab: prop > query string > default 'login'
   const queryAction =
@@ -722,6 +741,26 @@ export default function Login({ defaultAction }) {
               : 'Sign in to continue your certification journey.'}
           </p>
 
+          {/* One-time flash (e.g. "Password updated. Please sign in."). Plain
+              text only — never dangerouslySetInnerHTML. */}
+          {tab === 'login' && flash && (
+            <div
+              role="status"
+              style={{
+                margin: '0 0 20px',
+                padding: '12px 14px',
+                background: 'rgba(26,143,105,0.10)',
+                border: '1px solid rgba(26,143,105,0.35)',
+                borderRadius: 3,
+                color: WHITE,
+                fontSize: 13,
+                lineHeight: 1.5,
+              }}
+            >
+              {flash}
+            </div>
+          )}
+
           {/* Forms */}
           {tab === 'login' ? (
             <form onSubmit={handleLogin} noValidate>
@@ -760,15 +799,9 @@ export default function Login({ defaultAction }) {
               </button>
 
               <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: '14px 0 0' }}>
-                Forgot your password? Email{' '}
-                <a
-                  href="mailto:tugs@atacglobalcx.com?subject=Password%20reset%20request%3A%20ATAC%20Global%20CX"
-                  className="atac-link"
-                  style={{ textDecoration: 'none' }}
-                >
-                  tugs@atacglobalcx.com
-                </a>
-                {' '}for help.
+                <Link to="/forgot-password" className="atac-link" style={{ textDecoration: 'none' }}>
+                  Forgot password?
+                </Link>
               </p>
 
               <Divider />
