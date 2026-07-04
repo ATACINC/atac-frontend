@@ -25,6 +25,8 @@ const ROUTE_TITLES = [
   },
   { match: (p) => p === '/login',      title: `Sign in · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/signup',     title: `Create account · ${BRAND_SUFFIX}` },
+  { match: (p) => p === '/forgot-password', title: `Reset password · ${BRAND_SUFFIX}` },
+  { match: (p) => p === '/reset-password',  title: `Set a new password · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/payment',    title: `Verify your email · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/assessment', title: `Readiness Assessment · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/dashboard',  title: `Dashboard · ${BRAND_SUFFIX}` },
