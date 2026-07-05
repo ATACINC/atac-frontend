@@ -190,7 +190,7 @@ export default function VerifyLanding() {
 
             <div className="verify-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
               <TrustMetric value="Live" label="Status Check" />
-              <TrustMetric value="ERC-721" label="Blockchain Standard" />
+              <TrustMetric value="On-Chain" label="Blockchain Standard" />
               <TrustMetric value="Instant" label="Verification Result" />
             </div>
           </div>

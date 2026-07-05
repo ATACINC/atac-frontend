@@ -236,7 +236,7 @@ const HERO_CONFIG = {
     accent: GOLD,
   },
   pioneer_revalidate: {
-    heading: 'Validate your Pioneer credential',
+    heading: 'Validate your credential',
     ctaLabel: 'Run the Simulator',
     handler: 'navigate',
     fallbackUrl: '/simulator',
