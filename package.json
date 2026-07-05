@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "bash scripts/brand-guard.sh",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

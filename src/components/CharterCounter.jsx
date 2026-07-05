@@ -85,6 +85,12 @@ export default function CharterCounter({ variant = 'full' }) {
     return () => cancelAnimationFrame(id);
   }, [loading, endpointMissing, isComplete, pct, reducedMotion]);
 
+  // A 404 from /api/cohort/charter/count is a transient backend condition
+  // (e.g. a brief deploy gap). Hide the widget entirely rather than assert a
+  // forward-looking state; the 60s poll keeps retrying and the counter
+  // reappears the moment the endpoint answers again.
+  if (endpointMissing) return null;
+
   // ── Compact variant ─────────────────────────────────────────────
   if (variant === 'compact') {
     return (
@@ -118,8 +124,6 @@ export default function CharterCounter({ variant = 'full' }) {
         <div style={{ flex: 1, minWidth: 180, display: 'flex', alignItems: 'center', gap: 12 }}>
           {loading ? (
             <span style={{ fontSize: 13, color: ds.muted }}>Loading...</span>
-          ) : endpointMissing ? (
-            <span style={{ fontSize: 13, color: ds.muted }}>Charter Cohort opens soon</span>
           ) : isComplete ? (
             <span style={{ fontSize: 13, color: ds.heading }}>
               Charter Cohort complete. CRSA available at $39 for everyone.
@@ -199,10 +203,6 @@ export default function CharterCounter({ variant = 'full' }) {
       {loading ? (
         <div style={{ fontSize: 14, color: MUTED, padding: '14px 0' }}>
           Charter Cohort: loading...
-        </div>
-      ) : endpointMissing ? (
-        <div style={{ fontSize: 14, color: MUTED, padding: '14px 0' }}>
-          Charter Cohort opens soon
         </div>
       ) : isComplete ? (
         <div style={{ fontSize: 15, color: WHITE, lineHeight: 1.55, padding: '12px 0' }}>
