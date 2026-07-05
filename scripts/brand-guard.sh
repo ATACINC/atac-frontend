@@ -11,6 +11,11 @@
 
 set -e
 
+if [ "$SKIP_BRAND_GUARD" = "1" ]; then
+  echo "Brand guard SKIPPED (SKIP_BRAND_GUARD=1) — hotfix bypass"
+  exit 0
+fi
+
 # Strip /* ... */ block comments (including JSX {/* ... */}) from each file
 # before matching -- terms inside comments are never rendered to a user. The
 # tr/\n//cd keeps the newlines so grep still reports accurate line numbers.
