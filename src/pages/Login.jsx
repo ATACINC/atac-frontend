@@ -578,10 +578,10 @@ export default function Login({ defaultAction }) {
             maxWidth: 720,
           }}
         >
-          <StatCard num="40"      label="Questions" />
-          <StatCard num="70%"     label={<>Pass<br />Threshold</>} />
-          <StatCard num="ERC-721" label="Credential" small />
-          <StatCard num="2026"    label={<>Cohort<br />Open</>} />
+          <StatCard num="40"       label="Questions" />
+          <StatCard num="Live"     label={<>Voice<br />Simulation</>} />
+          <StatCard num="On-Chain" label="Credential" small />
+          <StatCard num="Global"   label={<>Remote<br />CX</>} />
         </div>
 
         {/* Journey cards */}

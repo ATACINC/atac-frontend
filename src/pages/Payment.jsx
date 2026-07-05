@@ -33,7 +33,7 @@ const TIER_PRESENTATION = {
     features: [
       '40-question knowledge assessment',
       'ATAC Call Readiness Simulator™ (1 session)',
-      'ERC-721 blockchain credential on pass',
+      'Blockchain-verified credential on pass',
       'PDF score report',
       'LinkedIn shareable badge',
     ],
@@ -43,7 +43,7 @@ const TIER_PRESENTATION = {
     features: [
       '40-question knowledge assessment',
       'ATAC Call Readiness Simulator™ (1 session)',
-      'ERC-721 blockchain credential on pass',
+      'Blockchain-verified credential on pass',
       'PDF score report',
       'LinkedIn shareable badge',
       'Personalized gap analysis',

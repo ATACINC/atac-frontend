@@ -609,7 +609,7 @@ export default function Dashboard() {
                       }}
                     >
                       <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: 10 }}>
-                        Pioneer testers, validate your credential
+                        Credential validation
                       </div>
                       <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 24, color: WHITE, fontWeight: 400, lineHeight: 1.2, marginBottom: 10 }}>
                         Validate your credential with the Call Readiness Simulator
@@ -729,7 +729,7 @@ export default function Dashboard() {
 
               <div style={{ background: 'radial-gradient(circle at 50% 42%, rgba(239,192,60,0.08), rgba(4,4,10,0) 34%), #04040A', border: '1px solid rgba(239,192,60,0.22)', borderRadius: 4, padding: '46px 54px', minHeight: 430, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', inset: 18, border: '1px solid rgba(239,192,60,0.10)', borderRadius: 3, pointerEvents: 'none' }} />
-                <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ATAC Global CX - Verified Credential - ERC-721 - Blockchain Verified</div>
+                <div style={{ fontSize: 11, color: GOLD, letterSpacing: '0.18em', textTransform: 'uppercase' }}>ATAC Global CX - Verified Credential - Blockchain Verified</div>
                 <div style={{ fontFamily: VAULT_DISPLAY, fontStyle: 'italic', fontSize: 58, color: WHITE, marginTop: 8 }}>{candidate.name}</div>
                 <div style={{ fontSize: 16, color: TEAL2, fontWeight: 700, letterSpacing: '0.08em' }}>{programLabel}</div>
                 <img src={certificateSeal} alt="ATAC Global CX Certification Authority" style={{ width: 180, height: 180, borderRadius: '50%', objectFit: 'cover', border: '2px solid #C9A84C', margin: '14px 0', boxShadow: '0 0 0 5px rgba(239,192,60,0.08), 0 0 56px rgba(239,192,60,0.34)' }} />
@@ -751,7 +751,7 @@ export default function Dashboard() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
                   <div style={{ width: 7, height: 7, borderRadius: '50%', background: TEAL2 }} />
-                  <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified - ERC-721 - Mainnet</span>
+                  <span style={{ fontSize: 10, color: MUTED, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Blockchain-Verified - On-Chain</span>
                 </div>
               </div>
             </section>
