@@ -43,6 +43,11 @@ const normalizeDomainKey = (domain) => {
 const VAULT_FONT_DISPLAY = dsFont.display;
 const VAULT_FONT_BODY    = dsFont.body;
 
+/* Pre-assessment identity/fraud acknowledgment. documentKey and version MUST
+   match the seeded consent document exactly. Version is pinned to '1.0.0'. */
+const INTEGRITY_ACK_KEY     = 'assessment_integrity_ack';
+const INTEGRITY_ACK_VERSION = '1.0.0';
+
 /* Stage labels for the processing screen */
 const STAGE_LABELS = {
   starting:            'Initializing credential',
@@ -115,7 +120,7 @@ export default function Assessment() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  // Phase: 'loading' | 'locked' | 'selfie' | 'intro' | 'active' | 'processing' | 'result'
+  // Phase: 'loading' | 'locked' | 'selfie' | 'integrity_ack' | 'intro' | 'active' | 'processing' | 'result'
   const [phase, setPhase]           = useState('loading');
   const [questions, setQuestions]   = useState([]);
   const [current, setCurrent]       = useState(0);
@@ -129,6 +134,11 @@ export default function Assessment() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState('');
   const [animKey, setAnimKey]       = useState(0);
+  // Pre-assessment identity/fraud gate: the required checkbox state.
+  const [integrityChecked, setIntegrityChecked] = useState(false);
+  // Selfie-on-file flag captured at checkAccess, read after the integrity gate
+  // to decide whether a verified-intent candidate still needs the selfie step.
+  const hasSelfieRef = useRef(false);
 
   // Assessment config (questions / time limit / pass %) from GET /api/assessment/config.
   const { config: cfg, questions: cfgQuestions, minutes: cfgMinutes, passPct: cfgPassPct } = useAssessmentConfig();
@@ -237,24 +247,14 @@ export default function Assessment() {
       if (!cand.payment_verified) { setPhase('locked'); return; }
       if (cand.assessmentCompleted) { setPhase('result'); fetchResult(); return; }
 
-      // Selfie gate. The candidate's INTENDED tier (set by Dashboard from
-      // the photo modal resolution) may be 'verified' even though the
-      // backend stored tier is still 'headshot' (selfie not yet captured).
-      // If so, route to the 'selfie' phase and mount SelfieCapture before
-      // fetching questions. SelfieCapture handles upload, PATCH to
-      // 'verified', and the downgrade path; on completion it calls back
-      // to handleSelfieComplete which loads questions and proceeds.
-      const intendedTier = localStorage.getItem('atac_intended_tier');
-      const hasSelfie    = !!cand.selfie_uploaded_at;
-      if (intendedTier === 'verified' && !hasSelfie) {
-        setPhase('selfie');
-        return;
-      }
-      // Clear stale intent (e.g., candidate already finished selfie or
-      // downgraded on a previous attempt).
-      if (intendedTier) localStorage.removeItem('atac_intended_tier');
-
-      await loadQuestionsAndProceedToIntro();
+      // The identity/fraud acknowledgment now runs FIRST -- before the selfie
+      // capture and before questions load -- for every candidate. Stash whether
+      // a selfie is already on file so handleIntegrityContinue can (together
+      // with the intended tier in localStorage) route verified-intent
+      // candidates into the 'selfie' phase after they acknowledge, and everyone
+      // else straight to the questions.
+      hasSelfieRef.current = !!cand.selfie_uploaded_at;
+      setPhase('integrity_ack');
     } catch (err) {
       // Backend returns 409 AWAITING_SIMULATOR when this candidate already
       // passed the assessment and the next step is the simulator. Route
@@ -276,11 +276,11 @@ export default function Assessment() {
     setPhase('intro');
   };
 
-  // SelfieCapture completion handler. Both 'success' (verified tier
-  // promoted on the backend) and 'downgraded' (candidate continues with
-  // headshot tier) advance to the questions fetch + intro phase.
-  // SelfieCapture itself clears localStorage.atac_intended_tier before
-  // calling this back.
+  // SelfieCapture completion handler. The identity/fraud acknowledgment has
+  // already been given (it now runs before the selfie), so both 'success'
+  // (verified tier promoted) and 'downgraded' (candidate continues with
+  // headshot tier) go straight to the questions fetch + intro. SelfieCapture
+  // itself clears localStorage.atac_intended_tier before calling this back.
   const handleSelfieComplete = async () => {
     try {
       await loadQuestionsAndProceedToIntro();
@@ -294,9 +294,6 @@ export default function Assessment() {
         navigate('/simulator?auto=true');
         return;
       }
-      // Surface fetch failure but keep the user on the assessment route;
-      // a retry button is not yet wired here so the candidate would need
-      // to refresh. Acceptable for a rare post-selfie failure path.
       console.error('[Assessment] post-selfie loadQuestions failed', err);
       navigate('/dashboard');
     }
@@ -308,6 +305,50 @@ export default function Assessment() {
       setResult(res.data);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Best-effort record of the pre-assessment identity/fraud acknowledgment
+  // against the existing consent ledger. Mirrors the photo/biometric consent
+  // helpers (POST /api/consent/accept with an acceptances array). Fire-and-
+  // forget: a telemetry write must never hard-block a paid candidate, so on
+  // failure we log and let them proceed. The checked box is the user-facing
+  // acknowledgment; this row is the audit trail.
+  const recordIntegrityAck = () => {
+    API.post('/api/consent/accept', {
+      acceptances: [{ documentKey: INTEGRITY_ACK_KEY, version: INTEGRITY_ACK_VERSION, accepted: true }],
+    }).catch((err) => {
+      console.error('[Assessment] integrity ack record failed (continuing)', err);
+    });
+  };
+
+  // Continue past the integrity gate: record the acknowledgment (best-effort),
+  // then route onward. Verified-intent candidates who still owe a selfie
+  // capture it now (after acknowledging); everyone else goes straight to the
+  // questions. Questions are intentionally not fetched until this point, so the
+  // acknowledgment always precedes both the selfie and the questions.
+  const handleIntegrityContinue = async () => {
+    recordIntegrityAck();
+    const intendedTier = localStorage.getItem('atac_intended_tier');
+    if (intendedTier === 'verified' && !hasSelfieRef.current) {
+      setPhase('selfie');
+      return;
+    }
+    // Clear stale intent (e.g., candidate already finished selfie or
+    // downgraded on a previous attempt).
+    if (intendedTier) localStorage.removeItem('atac_intended_tier');
+    try {
+      await loadQuestionsAndProceedToIntro();
+    } catch (err) {
+      if (err?.response?.status === 409 && err?.response?.data?.code === 'AWAITING_SIMULATOR') {
+        const msg = err.response.data.message
+          || 'Your assessment is complete. Continue with the ATAC Call Readiness Simulator to earn your credential.';
+        showToast(msg, { type: 'info' });
+        navigate('/simulator?auto=true');
+        return;
+      }
+      console.error('[Assessment] post-integrity loadQuestions failed', err);
+      navigate('/dashboard');
     }
   };
 
@@ -557,6 +598,50 @@ export default function Assessment() {
         <button onClick={() => navigate('/')} style={btnGold}>View Pricing</button>
         <div style={{ marginTop: 12 }}>
           <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer', borderBottom: '1px solid rgba(238,233,223,0.2)', paddingBottom: 1 }}>Return to Dashboard</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* INTEGRITY ACK - identity and fraud-prevention gate; shown before questions load */
+  if (phase === 'integrity_ack') return (
+    <div style={{ ...base, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 24px' }}>
+      {hairline}
+      <div style={{ maxWidth: 640, width: '100%' }} className="vault-up">
+        <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 13, color: GOLD, letterSpacing: '0.24em', textTransform: 'uppercase', marginBottom: 16 }}>
+          Before You Begin
+        </div>
+        <div style={{ background: BG1, border: `1px solid ${BORDER}`, borderRadius: 4, padding: '36px 40px' }}>
+          <h1 style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 34, fontWeight: 300, lineHeight: 1.2, margin: '0 0 20px', color: WHITE }}>
+            Identity &amp; Fraud Protection
+          </h1>
+          <p style={{ fontSize: 15, color: 'rgba(238,233,223,0.76)', lineHeight: 1.75, margin: '0 0 16px' }}>
+            To keep ATAC credentials trustworthy, we confirm that the person taking the assessment is the person who signed up. During the assessment and the voice simulator, your device camera may capture one or more still images - used only to verify your identity and prevent fraud, never for any other purpose.
+          </p>
+          <p style={{ fontSize: 15, color: 'rgba(238,233,223,0.76)', lineHeight: 1.75, margin: '0 0 28px' }}>
+            Please stay on the assessment screens once you begin. Leaving or switching windows is recorded and may be flagged for integrity review.
+          </p>
+          <label style={{ display: 'flex', gap: 14, alignItems: 'flex-start', cursor: 'pointer', background: 'rgba(8,11,18,0.56)', border: `1px solid ${integrityChecked ? GOLD : BORDER2}`, borderRadius: 4, padding: '18px 20px', transition: 'border-color 180ms ease' }}>
+            <input
+              type="checkbox"
+              checked={integrityChecked}
+              onChange={(e) => setIntegrityChecked(e.target.checked)}
+              style={{ marginTop: 3, width: 18, height: 18, accentColor: GOLD, flexShrink: 0, cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: 14, color: WHITE, lineHeight: 1.6 }}>
+              I confirm I am the person named on this account and am completing this assessment myself, and I acknowledge the identity and fraud-prevention measures described above.
+            </span>
+          </label>
+          <button
+            onClick={handleIntegrityContinue}
+            disabled={!integrityChecked}
+            style={{ ...btnGold, width: '100%', padding: '18px 24px', fontSize: 14, letterSpacing: '0.2em', marginTop: 24, opacity: integrityChecked ? 1 : 0.4, cursor: integrityChecked ? 'pointer' : 'not-allowed' }}
+          >
+            Continue to Assessment
+          </button>
+          <div style={{ marginTop: 14, textAlign: 'center' }}>
+            <span onClick={() => navigate('/dashboard')} style={{ fontSize: 12, color: MUTED, cursor: 'pointer' }}>Return to Dashboard</span>
+          </div>
         </div>
       </div>
     </div>
