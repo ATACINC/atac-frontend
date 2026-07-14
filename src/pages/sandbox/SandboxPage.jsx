@@ -117,6 +117,14 @@ export default function SandboxPage() {
   // backend returns one, and nothing is gated on its presence.
   const [attemptToken, setAttemptToken] = useState(null);
 
+  // Scenario selection. verify-access returns allowedScenarios [{ code, name,
+  // sector }]: one entry for a normal invite, several for an internal QA code.
+  // scenarioCode is the chosen (multi) or single code; it drives the briefing
+  // fetch, voice-start, and voice-score. It stays null only while a
+  // multi-scenario invitee has not yet picked on the Ready screen.
+  const [allowedScenarios, setAllowedScenarios] = useState([]);
+  const [scenarioCode, setScenarioCode] = useState(null);
+
   // ---------- Step B: access gate ----------
   async function handleVerify(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -150,6 +158,15 @@ export default function SandboxPage() {
           setPhase('exhausted');
           return;
         }
+        // Store the allowed scenarios. One entry (or none, on an older backend)
+        // keeps the no-picker flow and its single code; more than one shows the
+        // Ready-screen picker and leaves scenarioCode null until the invitee
+        // chooses.
+        const scenarios = Array.isArray(data.allowedScenarios) ? data.allowedScenarios : [];
+        setAllowedScenarios(scenarios);
+        if (scenarios.length <= 1) {
+          setScenarioCode(scenarios[0]?.code || SANDBOX_SCENARIO_CODE);
+        }
         // Store the normalized email for the subsequent calls.
         setEmail(normEmail);
         setPhase('intro');
@@ -182,7 +199,7 @@ export default function SandboxPage() {
       const res = await fetch(`${API_BASE}/api/sandbox/voice-start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, accessCode: accessCode.trim() }),
+        body: JSON.stringify({ email, accessCode: accessCode.trim(), scenarioCode }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -194,6 +211,13 @@ export default function SandboxPage() {
       }
       if (isNoAttempts(res.status, data)) {
         setPhase('exhausted');
+        return;
+      }
+      // A scenario whose agent is not yet provisioned returns 503. Surface a
+      // plain-language message and keep the invitee on the briefing so they can
+      // pick another; attempts are counted on score, so nothing is spent here.
+      if (res.status === 503) {
+        showToast('This scenario is not available yet. Please try another, or check back shortly.', { type: 'error' });
         return;
       }
       if (!res.ok) {
@@ -251,6 +275,8 @@ export default function SandboxPage() {
           accessCode: accessCode.trim(),
           conversation_id: conversationIdRef.current,
           transcript,
+          // The scored scenario, required by the backend v2 scoring path.
+          scenarioCode,
           // Echo the attempt token when present; omitted entirely otherwise so
           // the current backend behaves exactly as it does today.
           ...(attemptToken ? { attempt_token: attemptToken } : {}),
@@ -299,21 +325,24 @@ export default function SandboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
-  // Fetch the scenario briefing config once the invitee is past the gate. The
-  // render uses the SC-002 fallback until (or unless) this resolves.
+  // Fetch the briefing config for the chosen scenario once the invitee is past
+  // the gate and a code is resolved. Waits for scenarioCode (null while a
+  // multi-scenario invitee has not yet picked). The render uses the SC-002
+  // fallback until (or unless) this resolves; picking a different scenario
+  // clears `scenario` so this re-fetches for the new code.
   useEffect(() => {
-    if (phase === 'gate' || phase === 'exhausted' || scenario) return undefined;
+    if (!scenarioCode || phase === 'gate' || phase === 'exhausted' || scenario) return undefined;
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/sandbox/scenario/${SANDBOX_SCENARIO_CODE}`);
+        const res = await fetch(`${API_BASE}/api/sandbox/scenario/${scenarioCode}`);
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
         if (!cancelled && data && typeof data === 'object' && data.persona) setScenario(data);
       } catch { /* keep the fallback */ }
     })();
     return () => { cancelled = true; };
-  }, [phase, scenario]);
+  }, [phase, scenario, scenarioCode]);
 
   // ---------- Render ----------
   if (phase === 'gate') {
@@ -518,7 +547,12 @@ export default function SandboxPage() {
   if (phase === 'intro') {
     return (
       <SandboxFrame step={0}>
-        <ReadyScreen onContinue={() => setPhase('briefing')} />
+        <ReadyScreen
+          allowedScenarios={allowedScenarios}
+          scenarioCode={scenarioCode}
+          onPick={(code) => { setScenarioCode(code); setScenario(null); }}
+          onContinue={() => setPhase('briefing')}
+        />
       </SandboxFrame>
     );
   }
@@ -581,12 +615,17 @@ export default function SandboxPage() {
  * Post-gate screens (redesign)
  * ============================================================ */
 
-function ReadyScreen({ onContinue }) {
+function ReadyScreen({ allowedScenarios = [], scenarioCode, onPick, onContinue }) {
   const preps = [
     { title: 'Find a quiet space', body: 'Background noise affects how the customer hears you.', icon: <HeadsetIcon /> },
     { title: 'Allow microphone access', body: 'Your browser will ask once the call connects.', icon: <MicIcon size={15} color={T.goldBright} /> },
     { title: 'Speak naturally', body: 'Talk to the customer the way you would on a real call.', icon: <ChatIcon /> },
   ];
+  // More than one allowed scenario (an internal QA code) requires a choice
+  // before Continue; a single-scenario invite shows no picker and continues
+  // freely on today's single code.
+  const multi = Array.isArray(allowedScenarios) && allowedScenarios.length > 1;
+  const needsChoice = multi && !scenarioCode;
   return (
     <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '56px 40px 72px' }}>
       <div style={{ width: '100%', maxWidth: 560, textAlign: 'center' }}>
@@ -600,6 +639,41 @@ function ReadyScreen({ onContinue }) {
           You will speak with a customer on a live voice call. Find a quiet spot, allow microphone access when prompted, and speak naturally.
         </p>
 
+        {multi && (
+          <div style={{ maxWidth: 440, margin: '0 auto 30px', textAlign: 'left' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 12, textAlign: 'center' }}>Choose your scenario</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {allowedScenarios.map((s) => {
+                const selected = s.code === scenarioCode;
+                return (
+                  <button
+                    key={s.code}
+                    type="button"
+                    onClick={() => onPick(s.code)}
+                    aria-pressed={selected}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
+                      width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: T.fontBody,
+                      padding: '15px 17px', borderRadius: 12,
+                      background: selected ? 'rgba(239,192,60,0.1)' : T.panel,
+                      border: `1px solid ${selected ? T.gold : T.panelLine}`,
+                      transition: 'border-color 160ms ease, background 160ms ease',
+                    }}
+                  >
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 15.5, fontWeight: 600, color: T.ink2 }}>{s.name}</span>
+                      <span style={{ display: 'block', fontSize: 13, color: T.faint, marginTop: 2 }}>{s.sector}</span>
+                    </span>
+                    <span aria-hidden="true" style={{ width: 18, height: 18, flex: '0 0 18px', borderRadius: '50%', border: `2px solid ${selected ? T.gold : 'rgba(255,255,255,0.22)'}`, background: selected ? T.gold : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {selected && <span style={{ width: 7, height: 7, borderRadius: '50%', background: T.bg }} />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 440, margin: '0 auto 34px', textAlign: 'left' }}>
           {preps.map((p) => (
             <div key={p.title} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 16px', background: T.panel, border: `1px solid ${T.panelLine}`, borderRadius: 12 }}>
@@ -612,9 +686,12 @@ function ReadyScreen({ onContinue }) {
           ))}
         </div>
 
-        <button type="button" onClick={onContinue} className="sbx-cta" style={{ ...goldCta, width: '100%', maxWidth: 440 }}>
+        <button type="button" onClick={onContinue} disabled={needsChoice} className="sbx-cta" style={{ ...goldCta, width: '100%', maxWidth: 440, opacity: needsChoice ? 0.45 : 1, cursor: needsChoice ? 'not-allowed' : 'pointer' }}>
           Continue <ArrowIcon />
         </button>
+        {needsChoice && (
+          <p style={{ fontSize: 12.5, color: T.faint, margin: '12px 0 0' }}>Choose a scenario to continue.</p>
+        )}
         <p style={{ fontSize: 12.5, color: T.faint2, margin: '16px 0 0', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           Private session <Dot /> This is a demonstration, not a graded assessment
         </p>
