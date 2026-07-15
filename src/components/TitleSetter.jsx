@@ -42,6 +42,10 @@ const ROUTE_TITLES = [
     title: `Call Readiness Simulator · ${BRAND_SUFFIX}`,
   },
   {
+    match: (p) => p === '/sandbox' || p === '/sandbox/',
+    title: `Call Readiness Simulator · ${BRAND_SUFFIX}`,
+  },
+  {
     match: (p) => /^\/simulator\/briefing\/[^/]+$/.test(p),
     title: `Scenario briefing · ${BRAND_SUFFIX}`,
   },
