@@ -63,6 +63,18 @@ export const SANDBOX_CSS = `
   .sbx-cta:active:not(:disabled) { transform: translateY(0); }
   .sbx-ghost:hover { background: rgba(255,255,255,.05) !important; border-color: rgba(239,192,60,.4) !important; }
   .sbx-end:hover { background: rgba(229,72,77,.22) !important; }
+  /* Customer account card (sandbox call screen). The card is always open on a */
+  /* desktop width: the toggle is hidden and the body is forced visible, so a */
+  /* card collapsed on a phone cannot stay hidden after a rotate to a wider */
+  /* viewport. Only at 640 and below does the toggle appear and collapse. */
+  .sbx-cpc-toggle { display: none; }
+  .sbx-cpc-body { display: flex !important; }
+  @media (max-width: 640px) {
+    .sbx-cpc-toggle { display: inline-flex; }
+    .sbx-cpc-body.is-collapsed { display: none !important; }
+    .sbx-cpc-row { flex-direction: column; align-items: flex-start !important; gap: 3px !important; }
+    .sbx-cpc-row span:last-child { text-align: left !important; }
+  }
   @media (max-width: 880px) {
     .sbx-chrome { padding-left: 22px !important; padding-right: 22px !important; }
     .sbx-brief-grid { grid-template-columns: 1fr !important; }
