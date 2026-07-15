@@ -29,6 +29,7 @@ import i18n from '../../i18n';
 // Sandbox-only presentational skin (opt-in via variant="sandbox"). The candidate
 // default path below never imports/renders these, so its look is unchanged.
 import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
+import CustomerProfileCard from '../sandbox/CustomerProfileCard';
 import { T } from '../sandbox/sandboxTheme';
 import { color as ds, font as dsFont } from '../../designSystem/tokens';
 
@@ -49,7 +50,7 @@ const VAULT_BODY    = dsFont.body;
 const MODE_LISTENING = 'listening';
 const MODE_SPEAKING  = 'speaking';
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant }) {
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -445,6 +446,9 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         )}
         <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '26px 40px 30px' }}>
           <div style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {/* Sandbox only. Renders null when the scenario has no profile, so
+                the layout below is untouched for SC-002 and legacy scenarios. */}
+            <CustomerProfileCard profile={customerProfile} />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', background: 'rgba(229,72,77,0.06)', border: '1px solid rgba(229,72,77,0.26)', borderRadius: 13, marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', background: mode === MODE_SPEAKING ? T.red : T.green, animation: live ? 'sbxPulseDot 1.4s ease-in-out infinite' : 'none' }} />

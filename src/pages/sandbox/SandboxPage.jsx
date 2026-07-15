@@ -125,6 +125,12 @@ export default function SandboxPage() {
   const [allowedScenarios, setAllowedScenarios] = useState([]);
   const [scenarioCode, setScenarioCode] = useState(null);
 
+  // CRM-style customer account card from voice-start. Populated for the
+  // vulnerability scenarios, null for SC-002 and legacy scenarios (and null
+  // whenever a start fails). Display only: it is handed to the call screen and
+  // read by nothing else -- never scored, never persisted.
+  const [customerProfile, setCustomerProfile] = useState(null);
+
   // ---------- Step B: access gate ----------
   async function handleVerify(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -195,6 +201,9 @@ export default function SandboxPage() {
   async function handleBegin() {
     if (starting) return;
     setStarting(true);
+    // Clear any previous card up front: a start that fails below must never
+    // leave the last call's account facts on screen.
+    setCustomerProfile(null);
     try {
       const res = await fetch(`${API_BASE}/api/sandbox/voice-start`, {
         method: 'POST',
@@ -235,6 +244,8 @@ export default function SandboxPage() {
       transcriptRef.current = [];
       // Hold the attempt token if voice-start minted one (else stay null).
       setAttemptToken(data.attempt_token ?? data.attemptToken ?? null);
+      // Optional account card. Absent or null for scenarios without one.
+      setCustomerProfile(data.customer_profile ?? data.customerProfile ?? null);
       setSignedUrl(url);
       setPhase('call');
     } catch {
@@ -572,9 +583,10 @@ export default function SandboxPage() {
           variant="sandbox"
           signedUrl={signedUrl}
           personaName={sc?.persona?.name}
+          customerProfile={customerProfile}
           onConversationId={(id) => { conversationIdRef.current = id; }}
           onTranscriptTurn={(turn) => { transcriptRef.current.push(turn); }}
-          onEnded={() => setPhase('results')}
+          onEnded={() => { setCustomerProfile(null); setPhase('results'); }}
         />
       </Suspense>
     );
