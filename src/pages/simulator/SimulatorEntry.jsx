@@ -127,6 +127,9 @@ export function stashSimulatorSession(assignResponseData, credentialId) {
     },
     personaName:         d.persona_name ?? d.personaName ?? null,
     personaContext:      d.persona_context ?? d.personaContext ?? null,
+    // On-screen customer account panel. null for every scenario in the current
+    // rotation, so the call screen renders nothing until profiles are seeded.
+    customerProfile:     d.customer_profile ?? d.customerProfile ?? null,
     credentialId:        credentialId || null,
     createdAt:           Date.now(),
   };

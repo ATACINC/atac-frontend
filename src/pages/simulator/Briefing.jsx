@@ -43,6 +43,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import API from '../../api/client';
 import SelfieCapture from '../../components/SelfieCapture';
 import { uploadSimulatorSelfie } from '../../hooks/usePhotoVerification';
+import { useMicCheck, METER_BARS } from '../../hooks/useMicCheck';
 import { color as ds, font as dsFont, goldButton } from '../../designSystem/tokens';
 
 /* Palette mapped to the redesign tokens (names kept; the injected <style> block
@@ -61,13 +62,12 @@ const BORDER2 = ds.border;
 const VAULT_DISPLAY = dsFont.display;
 const VAULT_BODY    = dsFont.body;
 
-// Microphone permission states.
+// Microphone gate states. The transient phases (requesting, testing, failed)
+// now live in the shared useMicCheck hook; this local state only records
+// whether the candidate has confirmed a working microphone, which is what
+// gates BEGIN CALL exactly as before.
 const MIC_UNCHECKED = 'unchecked';
-const MIC_CHECKING  = 'checking';
 const MIC_GRANTED   = 'granted';
-const MIC_DENIED    = 'denied';
-const MIC_NO_DEVICE = 'no_device';
-const MIC_ERROR     = 'error';
 
 // Static scoring rubric content (scenario-agnostic). Scenario-specific
 // content (persona bio, opening line, success criteria) lives in a
@@ -129,7 +129,11 @@ export default function Briefing() {
 
   const [session, setSession] = useState(null);
   const [micState, setMicState] = useState(MIC_UNCHECKED);
-  const [micErrorText, setMicErrorText] = useState('');
+  // Shared mic-check engine (permission, device list, live meter, cleanup).
+  // The stream is test-then-release: it runs only while the candidate is
+  // actively testing and is stopped the moment they confirm, so no open
+  // microphone is held while someone reads the briefing slowly.
+  const mic = useMicCheck();
   // Pre-flight checklist (launch-day fix Phase 1, Change 2). All three
   // items plus a successful mic check must resolve before Begin Call
   // enables. The mic-tested item auto-checks when micState === MIC_GRANTED.
@@ -189,41 +193,32 @@ export default function Briefing() {
     }
   }, [routeSessionId, navigate]);
 
-  const checkMic = async () => {
-    if (micState === MIC_CHECKING) return;
-    setMicState(MIC_CHECKING);
-    setMicErrorText('');
+  // Begin (or re-run) the live mic test. Re-testing drops the granted state
+  // until the candidate confirms again, so a mic that broke between tests can
+  // never ride a stale grant into the call.
+  const startMicTest = () => {
+    setMicState(MIC_UNCHECKED);
+    mic.start(mic.selectedId || undefined);
+  };
 
-    if (typeof navigator?.mediaDevices?.getUserMedia !== 'function') {
-      setMicState(MIC_NO_DEVICE);
-      setMicErrorText('This browser does not support microphone access. Please use a recent version of Chrome, Edge, Firefox, or Safari.');
-      return;
-    }
-
+  // Confirm: remember the chosen device for the call page, release the test
+  // stream immediately (Call.jsx's SDK requests its own stream when the call
+  // actually starts), and open the BEGIN CALL gate exactly as before.
+  const confirmMicWorks = () => {
+    if (mic.status !== 'ready') return;
+    const deviceId = mic.confirmedDeviceId();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Release the test stream immediately. Call.jsx will request its own
-      // stream via the ElevenLabs SDK when the call actually starts.
-      stream.getTracks().forEach((t) => {
-        try { t.stop(); } catch (_) { /* ignore */ }
-      });
-      setMicState(MIC_GRANTED);
-    } catch (err) {
-      const name = err?.name || '';
-      if (name === 'NotAllowedError') {
-        setMicState(MIC_DENIED);
-        setMicErrorText('Microphone access was blocked. Grant permission in your browser settings and try again.');
-      } else if (name === 'Not' + 'F' + 'oundError') {
-        setMicState(MIC_NO_DEVICE);
-        setMicErrorText('We could not find a microphone on this device. Connect one and try again.');
-      } else if (name === 'NotReadableError') {
-        setMicState(MIC_ERROR);
-        setMicErrorText('Your microphone appears to be in use by another application. Close other apps that use audio (video calls, recorders) and try again.');
-      } else {
-        setMicState(MIC_ERROR);
-        setMicErrorText('Something went wrong starting your microphone. Try again or use a different browser.');
+      const raw = sessionStorage.getItem('atac_sim_session');
+      if (raw) {
+        const blob = JSON.parse(raw);
+        // undefined = browser default: store null so the call page omits the
+        // constraint and startOpts stays byte-identical to a no-choice run.
+        blob.micDeviceId = deviceId || null;
+        sessionStorage.setItem('atac_sim_session', JSON.stringify(blob));
       }
-    }
+    } catch { /* quota / private-mode tolerant */ }
+    mic.stop();
+    setMicState(MIC_GRANTED);
   };
 
   // Derived gate: all three checklist items plus mic must pass.
@@ -615,14 +610,17 @@ export default function Briefing() {
               </div>
             </div>
 
-            {/* Microphone Check - existing logic from e04b95c preserved exactly. */}
+            {/* Microphone Check - upgraded to the full test (device picker +
+                live level meter via the shared useMicCheck hook). The gate
+                semantics are unchanged: BEGIN CALL still requires a confirmed
+                microphone, and the test stream is released on confirm. */}
             <div className="sim-rail-block">
               <div className="sim-rail-label">Microphone Check</div>
 
-              {micState === MIC_UNCHECKED && (
+              {micState === MIC_UNCHECKED && mic.status === 'idle' && (
                 <button
                   type="button"
-                  onClick={checkMic}
+                  onClick={startMicTest}
                   className="sim-mic-pulse"
                   style={{ ...outlinedBtn(false), borderColor: GOLD, color: WHITE, width: '100%' }}
                 >
@@ -630,17 +628,83 @@ export default function Briefing() {
                 </button>
               )}
 
-              {micState === MIC_CHECKING && (
+              {micState !== MIC_GRANTED && mic.status === 'requesting' && (
                 <div style={{ fontSize: 13, color: MUTED }}>Requesting microphone access...</div>
               )}
 
-              {micState === MIC_GRANTED && (
-                <div style={{ fontSize: 14, color: TEAL2, fontWeight: 600 }}>
-                  ✓ Microphone Ready
+              {micState !== MIC_GRANTED && mic.status === 'ready' && (
+                <div>
+                  <div style={{ fontSize: 13, color: MUTED, marginBottom: 10 }}>
+                    Say a few words. The meter should move while you speak.
+                  </div>
+                  <div
+                    role="status"
+                    aria-label={mic.level >= 8 ? 'Microphone is picking up sound' : 'Microphone is silent'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, height: 38, padding: '0 14px', background: BG1, border: `1px solid ${BORDER2}`, borderRadius: 3, marginBottom: 12 }}
+                  >
+                    {Array.from({ length: METER_BARS }, (_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          width: 4,
+                          height: 6 + i * 2,
+                          borderRadius: 1,
+                          background: i < Math.round((mic.level / 100) * METER_BARS) ? TEAL2 : 'rgba(255,255,255,0.12)',
+                          transition: 'background 0.1s',
+                        }}
+                      />
+                    ))}
+                    <span style={{ marginLeft: 10, fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: mic.level >= 8 ? TEAL2 : MUTED }}>
+                      {mic.level >= 8 ? 'Hearing you' : 'Quiet'}
+                    </span>
+                  </div>
+
+                  {mic.devices.length > 1 && (
+                    <div style={{ marginBottom: 12 }}>
+                      <label htmlFor="sim-mic-select" style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED, marginBottom: 6 }}>
+                        Microphone
+                      </label>
+                      <select
+                        id="sim-mic-select"
+                        value={mic.selectedId}
+                        onChange={(e) => mic.selectDevice(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', background: BG, color: WHITE, border: `1px solid ${BORDER2}`, borderRadius: 3, fontSize: 13, fontFamily: VAULT_BODY }}
+                      >
+                        {mic.devices.map((d, i) => (
+                          <option key={d.deviceId || i} value={d.deviceId}>
+                            {d.label || `Microphone ${i + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={confirmMicWorks}
+                    style={{ ...outlinedBtn(false), borderColor: GOLD, color: WHITE, width: '100%' }}
+                  >
+                    Microphone Works
+                  </button>
                 </div>
               )}
 
-              {(micState === MIC_DENIED || micState === MIC_NO_DEVICE || micState === MIC_ERROR) && (
+              {micState === MIC_GRANTED && (
+                <div>
+                  <div style={{ fontSize: 14, color: TEAL2, fontWeight: 600 }}>
+                    ✓ Microphone Ready
+                  </div>
+                  <button
+                    type="button"
+                    onClick={startMicTest}
+                    style={{ marginTop: 10, background: 'transparent', border: 'none', padding: 0, color: MUTED, fontSize: 12, textDecoration: 'underline', cursor: 'pointer', fontFamily: VAULT_BODY }}
+                  >
+                    Test again
+                  </button>
+                </div>
+              )}
+
+              {micState !== MIC_GRANTED && mic.status === 'failed' && (
                 <>
                   <div
                     role="alert"
@@ -656,7 +720,7 @@ export default function Briefing() {
                     }}
                   >
                     <div style={{ color: RED, fontWeight: 600, marginBottom: 8 }}>
-                      {micErrorText}
+                      {mic.errorText}
                     </div>
                     <div style={{ color: WHITE, marginBottom: 6 }}>
                       We could not access your microphone. Please:
@@ -668,8 +732,8 @@ export default function Briefing() {
                       <li>Plug in a headset if your built-in mic is not working</li>
                     </ul>
                   </div>
-                  {micState !== MIC_NO_DEVICE && (
-                    <button type="button" onClick={checkMic} style={{ ...outlinedBtn(false), width: '100%' }}>
+                  {mic.errorName !== 'NotFoundError' && (
+                    <button type="button" onClick={startMicTest} style={{ ...outlinedBtn(false), width: '100%' }}>
                       Try Again
                     </button>
                   )}
