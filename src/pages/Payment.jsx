@@ -457,7 +457,7 @@ export default function Payment() {
               $0.00
             </div>
             <div style={{ fontSize: 15, color: ds.body, lineHeight: 1.7, marginBottom: 24 }}>
-              No payment needed — your Charter entitlement covers this seat. You won't be asked for a card.
+              No payment needed: your Charter entitlement covers this seat. You won't be asked for a card.
             </div>
             <button
               type="button"

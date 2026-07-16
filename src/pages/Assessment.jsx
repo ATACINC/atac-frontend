@@ -1043,7 +1043,7 @@ export default function Assessment() {
               {result?.percentage}%
             </div>
             <div style={{ fontSize: 13, color: MUTED, letterSpacing: '0.1em' }}>
-              {result?.score}{cfgQuestions ? ` of ${cfgQuestions}` : ''} correct · Pass threshold {cfgPassPct != null ? `${cfgPassPct}%` : '—'}
+              {result?.score}{cfgQuestions ? ` of ${cfgQuestions}` : ''} correct · Pass threshold {cfgPassPct != null ? `${cfgPassPct}%` : '--'}
             </div>
           </div>
 
@@ -1240,7 +1240,7 @@ export default function Assessment() {
               <div>
                 <div style={{ fontFamily: VAULT_FONT_DISPLAY, fontSize: 104, color: statusColor, fontWeight: 300, lineHeight: 0.9 }}><CountUp value={scorePct} suffix="%" duration={850} /></div>
                 <div style={{ color: MUTED, fontSize: 14, margin: '16px 0 18px' }}>
-                  Pass threshold: {passMarkPct != null ? `${passMarkPct}%` : '—'}{gap != null ? ` | ${passed ? `${gap}% above threshold` : `${gap}% below threshold`}` : ''}
+                  Pass threshold: {passMarkPct != null ? `${passMarkPct}%` : '--'}{gap != null ? ` | ${passed ? `${gap}% above threshold` : `${gap}% below threshold`}` : ''}
                 </div>
                 <div style={{ height: 8, background: BORDER2, borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
                   <div className="asmt-fill" style={{ height: '100%', width: `${scorePct}%`, '--target-w': `${scorePct}%`, background: statusColor, borderRadius: 999 }} />
@@ -1250,8 +1250,8 @@ export default function Assessment() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginTop: 30 }}>
                 {[
-                  { label: 'Questions', value: questions.length || cfgQuestions || '—' },
-                  { label: 'Pass Mark', value: passMarkPct != null ? `${passMarkPct}%` : '—' },
+                  { label: 'Questions', value: questions.length || cfgQuestions || '--' },
+                  { label: 'Pass Mark', value: passMarkPct != null ? `${passMarkPct}%` : '--' },
                   { label: passed ? 'Status' : 'Gap', value: passed ? 'Ready' : `${gap}%` },
                 ].map(item => (
                   <div key={item.label} style={{ background: 'rgba(238,233,223,0.025)', border: `1px solid ${BORDER2}`, borderRadius: 4, padding: '16px 14px' }}>

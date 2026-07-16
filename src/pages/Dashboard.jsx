@@ -810,7 +810,7 @@ export default function Dashboard() {
                 { val: result.score,      lbl: cfgQuestions ? `Score / ${cfgQuestions}` : 'Score', color: GOLD },
                 { val: `${result.percentage}%`, lbl: 'Percentage', color: result.passed ? TEAL2 : RED },
                 { val: result.passed ? 'PASS' : 'FAIL', lbl: 'Status', color: result.passed ? TEAL2 : RED },
-                { val: cfgPassMark != null ? cfgPassMark : '—', lbl: 'Pass Mark',   color: GOLD },
+                { val: cfgPassMark != null ? cfgPassMark : '--', lbl: 'Pass Mark',   color: GOLD },
               ].map((s, i) => (
                 <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 3, padding: '14px', textAlign: 'center' }}>
                   <div style={{ fontFamily: VAULT_DISPLAY, fontSize: 28, color: s.color, fontWeight: 300, lineHeight: 1 }}>{s.val}</div>
