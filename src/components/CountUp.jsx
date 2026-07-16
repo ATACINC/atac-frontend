@@ -12,7 +12,7 @@
 
 import { useCountUp } from '../hooks/useCountUp';
 
-export default function CountUp({ value, suffix = '', duration = 900, placeholder = '—' }) {
+export default function CountUp({ value, suffix = '', duration = 900, placeholder = '--' }) {
   const ready = value != null && Number.isFinite(Number(value));
   const display = useCountUp(ready ? value : 0, { duration });
   if (!ready) return <>{placeholder}</>;

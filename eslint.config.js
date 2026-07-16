@@ -5,7 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // 'dist' only matches the build output at the repo root. Tooling worktrees
+  // under .claude/ carry their own dist/ and src/ copies, so linting picked up
+  // minified bundles and stale duplicates of real files. Neither is source.
+  globalIgnores(['dist', '.claude']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

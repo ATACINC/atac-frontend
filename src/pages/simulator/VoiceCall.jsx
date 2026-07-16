@@ -95,7 +95,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
     if (endedRef.current) return;
     endedRef.current = true;
     if (conversationRef.current) {
-      try { conversationRef.current.endSession(); } catch (_) { /* ignore */ }
+      try { conversationRef.current.endSession(); } catch { /* ignore */ }
       conversationRef.current = null;
     }
     if (typeof onEnded === 'function') onEnded();
@@ -131,7 +131,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
             // .getId() lookup. Try both.
             let conversationId = payload && (payload.conversationId || payload.conversation_id);
             if (!conversationId && conv && typeof conv.getId === 'function') {
-              try { conversationId = conv.getId(); } catch (_) { /* tolerate */ }
+              try { conversationId = conv.getId(); } catch { /* tolerate */ }
             }
             setConnectionStatus('live');
             startedAtRef.current = Date.now();
@@ -194,7 +194,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
 
         if (cancelled) {
           // Component unmounted before startSession resolved. Tear down.
-          try { conv.endSession(); } catch (_) { /* ignore */ }
+          try { conv.endSession(); } catch { /* ignore */ }
           return;
         }
 
@@ -222,7 +222,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
       // Defensive teardown on unmount: end the conversation (releases mic
       // and closes the WebSocket).
       if (conversationRef.current) {
-        try { conversationRef.current.endSession(); } catch (_) { /* ignore */ }
+        try { conversationRef.current.endSession(); } catch { /* ignore */ }
         conversationRef.current = null;
       }
     };
@@ -257,7 +257,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         return;
       }
       if (cancelled) {
-        stream.getTracks().forEach((t) => { try { t.stop(); } catch (_) { /* */ } });
+        stream.getTracks().forEach((t) => { try { t.stop(); } catch { /* */ } });
         return;
       }
       micStreamRef.current = stream;
@@ -348,12 +348,12 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
       }
       if (micStreamRef.current) {
         micStreamRef.current.getTracks().forEach((t) => {
-          try { t.stop(); } catch (_) { /* ignore */ }
+          try { t.stop(); } catch { /* ignore */ }
         });
         micStreamRef.current = null;
       }
       if (audioContextRef.current) {
-        try { audioContextRef.current.close(); } catch (_) { /* ignore */ }
+        try { audioContextRef.current.close(); } catch { /* ignore */ }
         audioContextRef.current = null;
       }
       analyserRef.current = null;
@@ -387,7 +387,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
     if (connectionStatus === 'ending' || endedRef.current) return;
     setConnectionStatus('ending');
     if (conversationRef.current) {
-      try { await conversationRef.current.endSession(); } catch (_) { /* ignore */ }
+      try { await conversationRef.current.endSession(); } catch { /* ignore */ }
       conversationRef.current = null;
     }
     handleEnded();
