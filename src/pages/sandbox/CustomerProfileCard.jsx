@@ -22,30 +22,12 @@
 
 import { useState } from 'react';
 import { T } from './sandboxTheme';
-
-// API key -> visible label. Order is the display order. Note the API sends the
-// singular `note`; the label is "Notes".
-const FIELDS = [
-  { key: 'company',        label: 'Company' },
-  { key: 'customer_name',  label: 'Customer' },
-  { key: 'account_number', label: 'Account number' },
-  { key: 'balance',        label: 'Balance' },
-  { key: 'last_payment',   label: 'Last payment' },
-  { key: 'note',           label: 'Notes' },
-];
+// Field list and row filtering live in customerProfile.js so that the call
+// screen can share them without this file exporting non-components.
+import { readProfileRows } from './customerProfile';
 
 const BODY_ID = 'sbx-cpc-body';
 const TITLE_ID = 'sbx-cpc-title';
-
-// Keep only fields the API actually sent as a usable string. A missing key, a
-// non-string value, or an empty/whitespace-only string is treated as absent and
-// its row is skipped rather than rendered blank. Never throws on an odd shape.
-function readRows(profile) {
-  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return [];
-  return FIELDS
-    .map(({ key, label }) => ({ label, value: profile[key] }))
-    .filter(({ value }) => typeof value === 'string' && value.trim() !== '');
-}
 
 export default function CustomerProfileCard({ profile }) {
   // Collapse is mobile-only and starts open on every call. Above 640px the
@@ -53,7 +35,7 @@ export default function CustomerProfileCard({ profile }) {
   // on a phone can never stay hidden after a rotate to a wider viewport.
   const [open, setOpen] = useState(true);
 
-  const rows = readRows(profile);
+  const rows = readProfileRows(profile);
   if (rows.length === 0) return null;
 
   return (

@@ -30,6 +30,7 @@ import i18n from '../../i18n';
 // default path below never imports/renders these, so its look is unchanged.
 import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
 import CustomerProfileCard from '../sandbox/CustomerProfileCard';
+import { hasCustomerProfile } from '../sandbox/customerProfile';
 import { T } from '../sandbox/sandboxTheme';
 import { color as ds, font as dsFont } from '../../designSystem/tokens';
 
@@ -50,7 +51,53 @@ const VAULT_BODY    = dsFont.body;
 const MODE_LISTENING = 'listening';
 const MODE_SPEAKING  = 'speaking';
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile }) {
+// ---------- Sandbox-only fullscreen toggle ----------
+// Rendered ONLY inside the variant="sandbox" branch; the candidate path never
+// mounts it, so its hooks and listeners do not exist there. Hidden entirely
+// where the Fullscreen API is unavailable (document.fullscreenEnabled false),
+// and every request uses the house best-effort pattern: silent catch, the
+// call simply continues unfullscreened.
+function SandboxFullscreenButton() {
+  const [isFs, setIsFs] = useState(!!document.fullscreenElement);
+
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  if (!document.fullscreenEnabled || typeof document.documentElement.requestFullscreen !== 'function') {
+    return null;
+  }
+
+  const toggle = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => { /* silent */ });
+    } else {
+      document.documentElement.requestFullscreen().catch(() => { /* silent */ });
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={isFs ? 'Exit fullscreen' : 'Enter fullscreen'}
+      title={isFs ? 'Exit fullscreen' : 'Fullscreen'}
+      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, padding: 0, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, color: T.muted, cursor: 'pointer' }}
+    >
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        {isFs ? (
+          <path d="M5 1v4H1M9 1v4h4M5 13V9H1M9 13V9h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        ) : (
+          <path d="M1 5V1h4M13 5V1H9M1 9v4h4M13 9v4H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile, inputDeviceId }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -188,6 +235,13 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
 
         if (lang !== 'en') {
           startOpts.overrides = { agent: { language: lang } };
+        }
+
+        // Sandbox mic check hands a confirmed device through this prop. The
+        // candidate path never passes it, so the key is omitted there and
+        // startOpts is identical to what it always was.
+        if (inputDeviceId) {
+          startOpts.inputDeviceId = inputDeviceId;
         }
 
         const conv = await Conversation.startSession(startOpts);
@@ -434,8 +488,15 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         </div>
         <span style={{ fontFamily: T.fontDisplay, fontSize: 17, color: T.ink, letterSpacing: '0.04em', minWidth: 54, textAlign: 'right' }}>{formatDuration(durationSec)}</span>
         <Bars count={5} maxH={16} width={2} gap={2} color={T.redInk} running={live} />
+        <SandboxFullscreenButton />
       </div>
     );
+
+    // At desktop widths (min-width 881) sbx-call-wrap widens and, when the
+    // account card exists, becomes a two-column grid with the card in a
+    // sticky rail beside the transcript. Mobile keeps today's single column
+    // and the card's collapse pattern untouched.
+    const hasCard = hasCustomerProfile(customerProfile);
 
     return (
       <SandboxFrame step={2} headerRight={headerRight}>
@@ -445,10 +506,15 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           </div>
         )}
         <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '26px 40px 30px' }}>
-          <div style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            {/* Sandbox only. Renders null when the scenario has no profile, so
-                the layout below is untouched for SC-002 and legacy scenarios. */}
-            <CustomerProfileCard profile={customerProfile} />
+          <div className={'sbx-call-wrap' + (hasCard ? ' sbx-call-has-rail' : '')} style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {/* Sandbox only. The rail wrapper exists only when a profile does,
+                so SC-002 and legacy scenarios keep exactly today's DOM. */}
+            {hasCard && (
+              <div className="sbx-call-rail">
+                <CustomerProfileCard profile={customerProfile} />
+              </div>
+            )}
+            <div className="sbx-call-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 18px', background: 'rgba(229,72,77,0.06)', border: '1px solid rgba(229,72,77,0.26)', borderRadius: 13, marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', background: mode === MODE_SPEAKING ? T.red : T.green, animation: live ? 'sbxPulseDot 1.4s ease-in-out infinite' : 'none' }} />
@@ -466,7 +532,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
                   return (
                     <div key={`${turn.ts}-${i}`} style={{ maxWidth: '74%', alignSelf: isUser ? 'flex-end' : 'flex-start' }}>
                       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: isUser ? '#C9A24B' : '#9A6E70', margin: isUser ? '0 6px 6px 0' : '0 0 6px 4px', textAlign: isUser ? 'right' : 'left' }}>{isUser ? 'You' : 'Your Customer'}</div>
-                      <div style={{ padding: '13px 16px', background: isUser ? 'rgba(99,170,140,0.08)' : 'rgba(229,72,77,0.07)', border: `1px solid ${isUser ? 'rgba(99,170,140,0.22)' : 'rgba(229,72,77,0.2)'}`, borderRadius: isUser ? '14px 4px 14px 14px' : '4px 14px 14px 14px', fontSize: 17, lineHeight: 1.55, color: isUser ? '#DDE7E1' : '#E6D7D8' }}>{turn.message}</div>
+                      <div className="sbx-turn-body" style={{ padding: '13px 16px', background: isUser ? 'rgba(99,170,140,0.08)' : 'rgba(229,72,77,0.07)', border: `1px solid ${isUser ? 'rgba(99,170,140,0.22)' : 'rgba(229,72,77,0.2)'}`, borderRadius: isUser ? '14px 4px 14px 14px' : '4px 14px 14px 14px', fontSize: 17, lineHeight: 1.55, color: isUser ? '#DDE7E1' : '#E6D7D8' }}>{turn.message}</div>
                     </div>
                   );
                 })
@@ -493,6 +559,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
               >
                 <PhoneOffIcon /> {connectionStatus === 'ending' ? 'Ending Call...' : 'End Call'}
               </button>
+            </div>
             </div>
           </div>
         </section>
