@@ -69,6 +69,28 @@ export const SANDBOX_CSS = `
   /* viewport. Only at 640 and below does the toggle appear and collapse. */
   .sbx-cpc-toggle { display: none; }
   .sbx-cpc-body { display: flex !important; }
+  /* Desktop widening (the min-width side of the existing 880 family). The
+     call screen widens; with an account card present it becomes a two-column
+     grid, card in a sticky rail beside the internally-scrolling transcript so
+     the card stays fully visible and End Call stays on screen. The debrief
+     widens and scales its type so all five dimensions read without zooming.
+     Nothing here fires at or below 880, so phone and tablet keep today's
+     single column and the card collapse pattern. */
+  @media (min-width: 881px) {
+    .sbx-call-wrap { max-width: 1200px !important; }
+    .sbx-call-wrap.sbx-call-has-rail {
+      display: grid !important;
+      grid-template-columns: 340px minmax(0, 1fr);
+      column-gap: 28px;
+      max-width: 1360px !important;
+    }
+    .sbx-call-has-rail .sbx-call-rail { align-self: start; position: sticky; top: 84px; }
+    .sbx-turn-body { font-size: 19px !important; }
+    .sbx-debrief-wrap { max-width: 1120px !important; }
+    .sbx-debrief-wrap .sbx-dim-name { font-size: 18px !important; }
+    .sbx-debrief-wrap .sbx-dim-bar { width: 300px !important; }
+    .sbx-debrief-wrap .sbx-dim-feedback { font-size: 17px !important; max-width: 900px !important; }
+  }
   @media (max-width: 640px) {
     .sbx-cpc-toggle { display: inline-flex; }
     .sbx-cpc-body.is-collapsed { display: none !important; }

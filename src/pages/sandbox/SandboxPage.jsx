@@ -34,6 +34,7 @@ import {
 } from './SandboxBackground';
 
 const VoiceCall = lazy(() => import('../simulator/VoiceCall'));
+const MicCheckStep = lazy(() => import('./MicCheckStep'));
 
 // Vault palette (per-file convention; the gate still uses these tokens).
 const BG    = '#080B12';
@@ -131,6 +132,12 @@ export default function SandboxPage() {
   // read by nothing else -- never scored, never persisted.
   const [customerProfile, setCustomerProfile] = useState(null);
 
+  // Pre-call mic check: shown between "Begin the call" and voice-start, so a
+  // broken mic never burns a signed URL or an attempt token. The confirmed
+  // input device (undefined = browser default) threads into the voice SDK.
+  const [micCheckOpen, setMicCheckOpen] = useState(false);
+  const [callDeviceId, setCallDeviceId] = useState(null);
+
   // ---------- Step B: access gate ----------
   async function handleVerify(e) {
     if (e && e.preventDefault) e.preventDefault();
@@ -198,9 +205,13 @@ export default function SandboxPage() {
   }
 
   // ---------- Step C: start the live demonstration ----------
-  async function handleBegin() {
+  // inputDeviceId comes from the mic check: a deviceId string, or undefined
+  // for the browser default. Held in state for the call screen to hand to the
+  // voice SDK.
+  async function handleBegin(inputDeviceId) {
     if (starting) return;
     setStarting(true);
+    setCallDeviceId(typeof inputDeviceId === 'string' && inputDeviceId ? inputDeviceId : null);
     // Clear any previous card up front: a start that fails below must never
     // leave the last call's account facts on screen.
     setCustomerProfile(null);
@@ -569,9 +580,20 @@ export default function SandboxPage() {
   }
 
   if (phase === 'briefing') {
+    // The mic check is a step inside this phase, not a new phase: the header
+    // indicator stays on the briefing step either way.
     return (
       <SandboxFrame step={1}>
-        <BriefingScreen scenario={sc} starting={starting} onBegin={handleBegin} />
+        {micCheckOpen ? (
+          <Suspense fallback={<SandboxConnecting />}>
+            <MicCheckStep
+              onConfirm={(deviceId) => { setMicCheckOpen(false); handleBegin(deviceId); }}
+              onBack={() => setMicCheckOpen(false)}
+            />
+          </Suspense>
+        ) : (
+          <BriefingScreen scenario={sc} starting={starting} onBegin={() => setMicCheckOpen(true)} />
+        )}
       </SandboxFrame>
     );
   }
@@ -584,6 +606,7 @@ export default function SandboxPage() {
           signedUrl={signedUrl}
           personaName={sc?.persona?.name}
           customerProfile={customerProfile}
+          inputDeviceId={callDeviceId || undefined}
           onConversationId={(id) => { conversationIdRef.current = id; }}
           onTranscriptTurn={(turn) => { transcriptRef.current.push(turn); }}
           onEnded={() => { setCustomerProfile(null); setPhase('results'); }}
@@ -886,7 +909,8 @@ function DebriefScreen({ breakdown, onTryAgain, onRestart }) {
 
   return (
     <section className="sbx-fade sbx-pad" style={{ flex: 1, padding: '40px 40px 60px' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      {/* sbx-debrief-wrap widens and scales type at desktop (min-width 881). */}
+      <div className="sbx-debrief-wrap" style={{ maxWidth: 760, margin: '0 auto' }}>
         <DemoBanner />
 
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 10 }}>Your Debrief</div>
@@ -932,20 +956,20 @@ function DimensionRow({ name, score, feedback }) {
   const c = scoreBand(score);
   const pct = typeof score === 'number' ? `${Math.max(0, Math.min(100, score))}%` : '0%';
   return (
-    <div style={{ padding: '21px 0', borderTop: `1px solid ${T.panelLine}` }}>
+    <div className="sbx-dim-row" style={{ padding: '21px 0', borderTop: `1px solid ${T.panelLine}` }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <span aria-hidden="true" style={{ width: 9, height: 9, flex: '0 0 9px', borderRadius: '50%', background: c.dot }} />
-          <span style={{ fontSize: 16.5, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
+          <span className="sbx-dim-name" style={{ fontSize: 16.5, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 15, flex: '0 0 auto' }}>
-          <span aria-hidden="true" style={{ width: 124, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'block', overflow: 'hidden' }}>
+          <span aria-hidden="true" className="sbx-dim-bar" style={{ width: 124, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'block', overflow: 'hidden' }}>
             <span style={{ display: 'block', height: '100%', width: pct, background: c.bar, borderRadius: 3 }} />
           </span>
           <span style={{ fontFamily: T.fontDisplay, fontSize: 23, lineHeight: 1, color: c.scoreColor, minWidth: 34, textAlign: 'right' }}>{score != null ? score : 'NA'}</span>
         </div>
       </div>
-      {feedback && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.64, color: T.muted, maxWidth: 640 }}>{feedback}</p>}
+      {feedback && <p className="sbx-dim-feedback" style={{ margin: 0, fontSize: 16, lineHeight: 1.64, color: T.muted, maxWidth: 640 }}>{feedback}</p>}
     </div>
   );
 }
