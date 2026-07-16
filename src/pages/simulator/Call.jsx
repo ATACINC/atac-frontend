@@ -69,6 +69,8 @@ export default function Call() {
     <VoiceCall
       signedUrl={session.signedUrl || null}
       personaName={session.personaName}
+      customerProfile={session.customerProfile}
+      inputDeviceId={session.micDeviceId || undefined}
       onConversationId={(conversationId) => {
         // Persist conversation_id to backend (fire-and-forget; errors here do
         // not block the candidate from continuing the call).

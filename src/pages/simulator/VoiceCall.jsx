@@ -31,6 +31,7 @@ import i18n from '../../i18n';
 import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
 import CustomerProfileCard from '../sandbox/CustomerProfileCard';
 import { hasCustomerProfile } from '../sandbox/customerProfile';
+import CustomerAccountPanel from './CustomerAccountPanel';
 import { T } from '../sandbox/sandboxTheme';
 import { color as ds, font as dsFont } from '../../designSystem/tokens';
 
@@ -237,14 +238,36 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           startOpts.overrides = { agent: { language: lang } };
         }
 
-        // Sandbox mic check hands a confirmed device through this prop. The
-        // candidate path never passes it, so the key is omitted there and
-        // startOpts is identical to what it always was.
+        // The pre-call mic check (sandbox step or credentialed briefing) hands
+        // a confirmed device through this prop. When it is absent the key is
+        // omitted and startOpts is identical to what it always was.
         if (inputDeviceId) {
           startOpts.inputDeviceId = inputDeviceId;
         }
 
-        const conv = await Conversation.startSession(startOpts);
+        // Device-gone fallback. Briefing and call are separate routes with
+        // time between them: a candidate can pick a headset, then unplug it
+        // before this page loads, and the SDK pins non-iOS devices with an
+        // exact deviceId constraint that then rejects. A stale device must
+        // never cost anyone their attempt, so if the start fails WITH a
+        // device constraint, retry once on the system default before
+        // surfacing anything. The SDK does not reliably expose a distinct
+        // overconstrained error class through startSession, so the retry
+        // gates only on "a device was supplied": one redundant retry on a
+        // genuine network failure is harmless. No telemetry endpoint exists
+        // on this path; console.warn is the record.
+        let conv;
+        try {
+          conv = await Conversation.startSession(startOpts);
+        } catch (startErr) {
+          if (!startOpts.inputDeviceId) throw startErr;
+          console.warn(
+            '[VoiceCall] start failed with pinned input device, retrying on system default',
+            startErr?.name || '', startErr?.message || ''
+          );
+          delete startOpts.inputDeviceId;
+          conv = await Conversation.startSession(startOpts);
+        }
 
         if (cancelled) {
           // Component unmounted before startSession resolved. Tear down.
@@ -663,6 +686,11 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
             {connectionStatus === 'live' ? modeLabel : 'Waiting for connection...'}
           </div>
         </div>
+
+        {/* Customer account panel. Renders nothing when the scenario has no
+            profile, which is every scenario in the current rotation, so the
+            layout below is byte-identical in production until profiles ship. */}
+        <CustomerAccountPanel profile={customerProfile} />
 
         {/* Transcript */}
         <div
