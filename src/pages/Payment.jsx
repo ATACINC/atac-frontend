@@ -13,6 +13,14 @@ const BG3   = '#141B26';
 const GOLD  = '#C9A84C';
 const TEAL  = '#1A8F69';
 const TEAL2 = '#22A67E';
+// Shown under the code entry and again after a successful resend. Plain text,
+// no em or en dashes.
+const SPAM_NOTICE =
+  'Not in your inbox? Check your spam or junk folder, and your Promotions tab '
+  + 'if you use Gmail. The message is from ATAC Global CX '
+  + '<credentials@atacglobalcx.com>. If you find it there, mark it as not spam '
+  + 'so future messages reach you.';
+
 const WHITE = '#EEE9DF';
 const MUTED = 'rgba(238,233,223,0.45)';
 const FAINT = 'rgba(238,233,223,0.04)';
@@ -559,6 +567,23 @@ export default function Payment() {
               )}
             </div>
 
+            {/* SPAM NOTICE. Visible by default, deliberately not behind a
+                "having trouble?" toggle: the people who need it are the least
+                likely to go looking for it. Adrian confirmed on 2026-08-31 that
+                some confirmation emails did land in spam, so this is a
+                statement of fact, not a hedge.
+
+                The "mark it as not spam" ask is not a courtesy line. Each one is
+                a positive engagement signal at the receiving provider and it
+                improves delivery for everyone behind this user. */}
+            <div style={{
+              fontSize: 12, lineHeight: 1.6, color: MUTED,
+              border: `1px solid ${FAINT}`, borderRadius: 6,
+              padding: '10px 12px', margin: '12px 0 0',
+            }}>
+              {SPAM_NOTICE}
+            </div>
+
             {/* Verify button */}
             <button
               onClick={handleVerifyEmail}
@@ -585,6 +610,14 @@ export default function Payment() {
                 {resendStatus && (
                   <div style={{ fontSize: 12, color: resendStatus.includes('sent') ? ds.greenText : ds.muted, marginBottom: 10 }}>
                     {resendStatus}
+                  </div>
+                )}
+                {/* Repeated after a successful resend: someone who just asked
+                    for another copy is exactly the person who could not find the
+                    first one. */}
+                {resendStatus && resendStatus.includes('sent') && (
+                  <div style={{ fontSize: 12, lineHeight: 1.6, color: MUTED, marginBottom: 10 }}>
+                    {SPAM_NOTICE}
                   </div>
                 )}
               </div>

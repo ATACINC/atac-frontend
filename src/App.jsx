@@ -11,6 +11,7 @@ import EmployerPortal from './pages/EmployerPortal';
 import Trial from './pages/Trial';
 import Verify from './pages/Verify';
 import VerifyLanding from './pages/VerifyLanding';
+import VerifyEmail from './pages/VerifyEmail';
 import { ToastProvider } from './components/ToastProvider';
 import TitleSetter from './components/TitleSetter';
 
@@ -92,6 +93,12 @@ export default function App() {
               </Suspense>
             }
           />
+          {/* Email verification landing for the one-click link in the welcome
+              email. PUBLIC on purpose: someone clicking from their inbox may
+              have no session, and the HMAC in the URL is the authentication.
+              Distinct from /verify below, which is the public CREDENTIAL
+              checker and is untouched. */}
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify" element={<VerifyLanding />} />
           <Route path="/verify/:credentialId" element={<Verify />} />
         </Routes>
