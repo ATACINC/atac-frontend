@@ -285,6 +285,23 @@ export default function Login({ defaultAction }) {
       if (isRegister) resetCaptcha();
       return true;
     }
+    // The server now REQUIRES a two-letter country on /register and answers a
+    // missing or malformed one with 400 COUNTRY_REQUIRED. The client already
+    // blocks submit without a country, so a user should never see this -- it is
+    // here so the two checks cannot silently drift apart. If this message ever
+    // reaches a real user, the client rule has stopped matching the server rule
+    // and that is the thing to go and fix.
+    //
+    // The server's own message is shown rather than a second copy of the string,
+    // so there is exactly one wording to keep in step, and it lands in the same
+    // error area the client-side check writes to. resetCaptcha() mirrors the
+    // generic 4xx path below: hCaptcha tokens are single-use, so skipping it
+    // would leave a stale token and break the retry.
+    if (res.status === 400 && data?.code === 'COUNTRY_REQUIRED') {
+      setError(data.error || 'Please select your country.');
+      if (isRegister) resetCaptcha();
+      return true;
+    }
     if (res.status === 429 && data?.code === 'TOO_MANY_ATTEMPTS') {
       const raw = parseInt(res.headers.get('Retry-After') || '', 10);
       const seconds = Number.isFinite(raw) && raw > 0 ? raw : 60;
