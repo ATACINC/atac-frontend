@@ -69,6 +69,14 @@ export default function Call() {
     <VoiceCall
       signedUrl={session.signedUrl || null}
       personaName={session.personaName}
+      scenarioBrief={{
+        personaName: session.personaName,
+        industry: session.industry,
+        difficulty: session.difficulty,
+        agentRole: session.agentRole,
+        personaBio: session.personaBio,
+        scenarioContext: session.scenarioContext,
+      }}
       customerProfile={session.customerProfile}
       inputDeviceId={session.micDeviceId || undefined}
       onConversationId={(conversationId) => {

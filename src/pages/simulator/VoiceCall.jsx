@@ -23,6 +23,9 @@
  *   showCoaching         (sandbox only) also show "What good looks like" and
  *                        the five moves in that rail. Default false. The live
  *                        candidate path never passes this.
+ *   scenarioBrief        (candidate path) persona, industry, difficulty, role,
+ *                        bio and context shown in the in-call scenario panel.
+ *                        Never includes success criteria.
  *
  * Extracted from Call.jsx so both the candidate call page and the invite-only
  * sandbox can drive the same call experience without duplicating SDK logic.
@@ -38,6 +41,7 @@ import CustomerProfileCard from '../sandbox/CustomerProfileCard';
 import ScenarioRail from '../sandbox/ScenarioRail';
 import { hasCustomerProfile } from '../sandbox/customerProfile';
 import CustomerAccountPanel from './CustomerAccountPanel';
+import ScenarioPanel from './ScenarioPanel';
 import { T } from '../sandbox/sandboxTheme';
 import { color as ds, font as dsFont } from '../../designSystem/tokens';
 
@@ -104,7 +108,7 @@ function SandboxFullscreenButton() {
   );
 }
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile, inputDeviceId, scenario, showCoaching = false }) {
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile, inputDeviceId, scenario, showCoaching = false, scenarioBrief }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -702,9 +706,13 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           </div>
         </div>
 
+        {/* Scenario panel: who the customer is, the situation, the role. No
+            success criteria here, this is the assessed call. Renders nothing
+            when the session carries none of those fields. */}
+        <ScenarioPanel brief={scenarioBrief} />
+
         {/* Customer account panel. Renders nothing when the scenario has no
-            profile, which is every scenario in the current rotation, so the
-            layout below is byte-identical in production until profiles ship. */}
+            profile. */}
         <CustomerAccountPanel profile={customerProfile} />
 
         {/* Transcript */}
