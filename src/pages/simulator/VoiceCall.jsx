@@ -18,6 +18,11 @@
  *   personaName          display name for the customer persona
  *   onConversationId(id) notified once the conversation id is known
  *   onEnded()            notified when the call ends (any reason)
+ *   scenario             (sandbox only) briefing config rendered in the in-call
+ *                        scenario rail so the tester keeps the thread
+ *   showCoaching         (sandbox only) also show "What good looks like" and
+ *                        the five moves in that rail. Default false. The live
+ *                        candidate path never passes this.
  *
  * Extracted from Call.jsx so both the candidate call page and the invite-only
  * sandbox can drive the same call experience without duplicating SDK logic.
@@ -30,6 +35,7 @@ import i18n from '../../i18n';
 // default path below never imports/renders these, so its look is unchanged.
 import { SandboxFrame, SandboxConnecting, Bars, Dot, PhoneOffIcon } from '../sandbox/SandboxBackground';
 import CustomerProfileCard from '../sandbox/CustomerProfileCard';
+import ScenarioRail from '../sandbox/ScenarioRail';
 import { hasCustomerProfile } from '../sandbox/customerProfile';
 import CustomerAccountPanel from './CustomerAccountPanel';
 import { T } from '../sandbox/sandboxTheme';
@@ -98,7 +104,7 @@ function SandboxFullscreenButton() {
   );
 }
 
-export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile, inputDeviceId }) {
+export default function VoiceCall({ signedUrl, personaName, onConversationId, onEnded, onTranscriptTurn, variant, customerProfile, inputDeviceId, scenario, showCoaching = false }) {
   const [transcript, setTranscript] = useState([]); // [{ source, message, ts }]
   const [mode, setMode] = useState(MODE_LISTENING);
   const [connectionStatus, setConnectionStatus] = useState('connecting'); // connecting | live | ending | ended | error
@@ -515,11 +521,16 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
       </div>
     );
 
-    // At desktop widths (min-width 881) sbx-call-wrap widens and, when the
-    // account card exists, becomes a two-column grid with the card in a
-    // sticky rail beside the transcript. Mobile keeps today's single column
-    // and the card's collapse pattern untouched.
+    // At desktop widths (min-width 881) sbx-call-wrap widens and becomes a
+    // grid: scenario rail on the left, transcript in the middle, and, when the
+    // account card exists, the card in a sticky rail on the right. Mobile
+    // keeps a single column with both rails stacked above the transcript and
+    // their collapse patterns untouched.
     const hasCard = hasCustomerProfile(customerProfile);
+    const hasScenario = !!(scenario && typeof scenario === 'object');
+    const railClass =
+      (hasScenario || hasCard ? ' sbx-call-has-rail' : '') +
+      (hasScenario && hasCard ? ' sbx-call-two-rails' : '');
 
     return (
       <SandboxFrame step={2} headerRight={headerRight}>
@@ -529,11 +540,15 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
           </div>
         )}
         <section className="sbx-fade sbx-pad" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '26px 40px 30px' }}>
-          <div className={'sbx-call-wrap' + (hasCard ? ' sbx-call-has-rail' : '')} style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            {/* Sandbox only. The rail wrapper exists only when a profile does,
-                so SC-002 and legacy scenarios keep exactly today's DOM. */}
+          <div className={'sbx-call-wrap' + railClass} style={{ width: '100%', maxWidth: 780, margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {/* Sandbox only. Each rail wrapper exists only when its data does. */}
+            {hasScenario && (
+              <div className="sbx-call-rail sbx-call-rail-left">
+                <ScenarioRail scenario={scenario} showCoaching={showCoaching} />
+              </div>
+            )}
             {hasCard && (
-              <div className="sbx-call-rail">
+              <div className="sbx-call-rail sbx-call-rail-right">
                 <CustomerProfileCard profile={customerProfile} />
               </div>
             )}

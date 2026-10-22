@@ -69,6 +69,10 @@ export const SANDBOX_CSS = `
   /* viewport. Only at 640 and below does the toggle appear and collapse. */
   .sbx-cpc-toggle { display: none; }
   .sbx-cpc-body { display: flex !important; }
+  /* In-call scenario rail: same pattern, but it starts collapsed so a phone */
+  /* keeps the transcript above the fold. Desktop forces it open. */
+  .sbx-srail-toggle { display: none; }
+  .sbx-srail-body { display: flex !important; }
   /* Desktop widening (the min-width side of the existing 880 family). The
      call screen widens; with an account card present it becomes a two-column
      grid, card in a sticky rail beside the internally-scrolling transcript so
@@ -84,7 +88,18 @@ export const SANDBOX_CSS = `
       column-gap: 28px;
       max-width: 1360px !important;
     }
-    .sbx-call-has-rail .sbx-call-rail { align-self: start; position: sticky; top: 84px; }
+    /* Scenario rail plus account card: rail left, transcript middle, card right. */
+    .sbx-call-wrap.sbx-call-two-rails {
+      grid-template-columns: 300px minmax(0, 1fr) 300px;
+      max-width: 1440px !important;
+    }
+    .sbx-call-two-rails .sbx-call-rail-left { grid-column: 1; }
+    .sbx-call-two-rails .sbx-call-main { grid-column: 2; }
+    .sbx-call-two-rails .sbx-call-rail-right { grid-column: 3; }
+    /* Single rail (either one): rail left, transcript right, as before. */
+    .sbx-call-has-rail:not(.sbx-call-two-rails) .sbx-call-rail { grid-column: 1; }
+    .sbx-call-has-rail:not(.sbx-call-two-rails) .sbx-call-main { grid-column: 2; }
+    .sbx-call-has-rail .sbx-call-rail { align-self: start; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; }
     .sbx-turn-body { font-size: 19px !important; }
     .sbx-debrief-wrap { max-width: 1120px !important; }
     .sbx-debrief-wrap .sbx-dim-name { font-size: 18px !important; }
@@ -94,6 +109,8 @@ export const SANDBOX_CSS = `
   @media (max-width: 640px) {
     .sbx-cpc-toggle { display: inline-flex; }
     .sbx-cpc-body.is-collapsed { display: none !important; }
+    .sbx-srail-toggle { display: inline-flex; }
+    .sbx-srail-body.is-collapsed { display: none !important; }
     .sbx-cpc-row { flex-direction: column; align-items: flex-start !important; gap: 3px !important; }
     .sbx-cpc-row span:last-child { text-align: left !important; }
   }
