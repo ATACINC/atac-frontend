@@ -48,26 +48,26 @@ export default function ScenarioPanel({ brief }) {
   if (!name && !role && !about) return null;
 
   const chip = {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     letterSpacing: '0.14em',
     textTransform: 'uppercase',
     color: MUTED,
     border: `1px solid ${BORDER2}`,
     borderRadius: 2,
-    padding: '3px 8px',
+    padding: '4px 10px',
     whiteSpace: 'nowrap',
   };
   const label = {
-    margin: '0 0 6px',
-    fontSize: 10,
+    margin: '0 0 8px',
+    fontSize: 12,
     fontWeight: 700,
     letterSpacing: '0.18em',
     textTransform: 'uppercase',
     color: GOLD,
     fontFamily: BODY,
   };
-  const para = { margin: 0, fontSize: 13, lineHeight: 1.6, color: WHITE };
+  const para = { margin: 0, fontSize: 17, lineHeight: 1.65, color: WHITE };
 
   return (
     <section
@@ -76,7 +76,7 @@ export default function ScenarioPanel({ brief }) {
         background: BG1,
         border: `1px solid ${BORDER2}`,
         borderRadius: 3,
-        padding: '16px 22px',
+        padding: '20px 26px',
         marginBottom: 22,
         fontFamily: BODY,
       }}
@@ -85,11 +85,11 @@ export default function ScenarioPanel({ brief }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
           <h2
             id="sim-scp-title"
-            style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, fontFamily: BODY }}
+            style={{ margin: 0, fontSize: 13, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, fontFamily: BODY }}
           >
             Your Scenario
           </h2>
-          {name && <span style={{ fontSize: 13, fontWeight: 600, color: WHITE }}>{name}</span>}
+          {name && <span style={{ fontSize: 19, fontWeight: 600, color: WHITE }}>{name}</span>}
           {industry && <span style={chip}>{industry}</span>}
           {difficulty && <span style={chip}>{difficulty}</span>}
         </div>
@@ -103,8 +103,8 @@ export default function ScenarioPanel({ brief }) {
             borderRadius: 2,
             background: 'transparent',
             color: MUTED,
-            padding: '4px 10px',
-            fontSize: 10,
+            padding: '6px 12px',
+            fontSize: 11,
             fontWeight: 700,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
@@ -117,7 +117,7 @@ export default function ScenarioPanel({ brief }) {
       </div>
 
       {open && (
-        <div id={BODY_ID} style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${BORDER2}` }}>
+        <div id={BODY_ID} style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${BORDER2}` }}>
           {role && (
             <div>
               <h3 style={label}>Your Role</h3>
