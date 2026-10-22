@@ -84,14 +84,14 @@ export const SANDBOX_CSS = `
     .sbx-call-wrap { max-width: 1200px !important; }
     .sbx-call-wrap.sbx-call-has-rail {
       display: grid !important;
-      grid-template-columns: 340px minmax(0, 1fr);
+      grid-template-columns: 400px minmax(0, 1fr);
       column-gap: 28px;
-      max-width: 1360px !important;
+      max-width: 1480px !important;
     }
     /* Scenario rail plus account card: rail left, transcript middle, card right. */
     .sbx-call-wrap.sbx-call-two-rails {
-      grid-template-columns: 300px minmax(0, 1fr) 300px;
-      max-width: 1440px !important;
+      grid-template-columns: 400px minmax(0, 1fr) 320px;
+      max-width: 1680px !important;
     }
     .sbx-call-two-rails .sbx-call-rail-left { grid-column: 1; }
     .sbx-call-two-rails .sbx-call-main { grid-column: 2; }

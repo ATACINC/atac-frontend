@@ -30,7 +30,7 @@ const TITLE_ID = 'sbx-srail-title';
 
 const label = {
   margin: 0,
-  fontSize: 12,
+  fontSize: 14,
   fontWeight: 700,
   letterSpacing: '0.22em',
   textTransform: 'uppercase',
@@ -39,18 +39,18 @@ const label = {
 };
 
 const chip = (accent) => ({
-  fontSize: 10.5,
+  fontSize: 12.5,
   fontWeight: 700,
   letterSpacing: '0.12em',
   textTransform: 'uppercase',
-  padding: '4px 9px',
+  padding: '5px 11px',
   borderRadius: 999,
   border: `1px solid ${accent ? 'rgba(239,192,60,0.5)' : 'rgba(255,255,255,0.14)'}`,
   color: accent ? T.goldSoft : T.muted,
   whiteSpace: 'nowrap',
 });
 
-const body = { margin: 0, fontSize: 13.5, lineHeight: 1.55, color: '#BFC2CB' };
+const body = { margin: 0, fontSize: 18, lineHeight: 1.6, color: '#BFC2CB' };
 
 function sectionCard(children, key) {
   return (
@@ -60,7 +60,7 @@ function sectionCard(children, key) {
         background: `linear-gradient(165deg, ${T.navy1}, ${T.navy2})`,
         border: '1px solid rgba(239,192,60,0.2)',
         borderRadius: 16,
-        padding: '16px 20px',
+        padding: '20px 24px',
         boxShadow: '0 30px 70px -34px rgba(0,0,0,0.8)',
         display: 'flex',
         flexDirection: 'column',
@@ -104,8 +104,8 @@ export default function ScenarioRail({ scenario, showCoaching = false }) {
             borderRadius: 8,
             background: 'rgba(255,255,255,0.02)',
             color: T.ink2,
-            padding: '6px 12px',
-            fontSize: 11,
+            padding: '7px 14px',
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
@@ -128,17 +128,17 @@ export default function ScenarioRail({ scenario, showCoaching = false }) {
               <span
                 aria-hidden="true"
                 style={{
-                  width: 42, height: 42, flex: '0 0 42px', borderRadius: '50%',
+                  width: 54, height: 54, flex: '0 0 54px', borderRadius: '50%',
                   background: T.avatarBg, border: '1px solid rgba(239,192,60,0.34)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: T.fontDisplay, fontSize: 19, color: T.goldBright,
+                  fontFamily: T.fontDisplay, fontSize: 24, color: T.goldBright,
                 }}
               >
                 {initial}
               </span>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: T.ink, lineHeight: 1.2 }}>{who}</div>
-                {p.descriptor && <div style={{ fontSize: 12.5, color: T.faint, marginTop: 2 }}>{p.descriptor}</div>}
+                <div style={{ fontSize: 22, fontWeight: 700, color: T.ink, lineHeight: 1.2 }}>{who}</div>
+                {p.descriptor && <div style={{ fontSize: 16, color: T.faint, marginTop: 3 }}>{p.descriptor}</div>}
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -167,8 +167,8 @@ export default function ScenarioRail({ scenario, showCoaching = false }) {
               <ol style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {moves.map((m) => (
                   <li key={m.n} style={{ display: 'flex', gap: 10, alignItems: 'baseline' }}>
-                    <span style={{ flex: '0 0 auto', fontFamily: T.fontDisplay, fontSize: 14, color: T.goldBright }}>{m.n}</span>
-                    <span style={{ fontSize: 13, lineHeight: 1.45, color: '#BFC2CB' }}>
+                    <span style={{ flex: '0 0 auto', fontFamily: T.fontDisplay, fontSize: 18, color: T.goldBright }}>{m.n}</span>
+                    <span style={{ fontSize: 17, lineHeight: 1.5, color: '#BFC2CB' }}>
                       <span style={{ color: T.ink2, fontWeight: 600 }}>{m.title}</span>
                       {m.body ? `: ${m.body}` : ''}
                     </span>
