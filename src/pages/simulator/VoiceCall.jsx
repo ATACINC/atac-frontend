@@ -676,7 +676,7 @@ export default function VoiceCall({ signedUrl, personaName, onConversationId, on
         </div>
       )}
 
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px 48px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 48px' }}>
         {/* Mode indicator */}
         <div
           style={{
