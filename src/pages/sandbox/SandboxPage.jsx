@@ -53,6 +53,10 @@ const API_BASE = import.meta.env.VITE_API_URL;
 // Exact registration link for the real credential (not the base domain).
 const REGISTER_URL = 'https://app.atacglobalcx.com/login?action=register';
 const SANDBOX_SCENARIO_CODE = 'SC-002';
+// The sandbox is a demo: the in-call scenario rail also shows "What good looks
+// like" and the five moves. The live candidate simulator never shows coaching
+// mid-call (it does not use this page), so this flag is sandbox-only by design.
+const SANDBOX_SHOW_COACHING = true;
 
 const DIMENSIONS = [
   { key: 'greeting',   label: 'Greeting' },
@@ -605,6 +609,8 @@ export default function SandboxPage() {
           variant="sandbox"
           signedUrl={signedUrl}
           personaName={sc?.persona?.name}
+          scenario={sc}
+          showCoaching={SANDBOX_SHOW_COACHING}
           customerProfile={customerProfile}
           inputDeviceId={callDeviceId || undefined}
           onConversationId={(id) => { conversationIdRef.current = id; }}
