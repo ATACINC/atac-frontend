@@ -35,6 +35,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import API, { getSimulatorStatus } from '../../api/client';
 import FeedbackPanel from '../../components/FeedbackPanel';
 import CountUp from '../../components/CountUp';
+import SpeakingBandLine from '../../components/SpeakingBandLine';
 import certificateSeal from '../../assets/agcx-certificate-seal-cropped.png';
 import { color as ds, font as dsFont, goldButton } from '../../designSystem/tokens';
 
@@ -324,6 +325,9 @@ export default function Results() {
   const credentialId  = statusData.credential_id || statusData.credentialId || statusData.credential?.credential_id || null;
   const passThreshold = statusData.pass_threshold ?? 70;
   const weights       = statusData.scoring_weights ?? null;
+  // Speaking band (estimated): present only when the backend stored one;
+  // SpeakingBandLine renders nothing without the VITE_SPEAKING_BAND_ENABLED flag.
+  const speakingBand  = statusData.speaking_band ?? null;
   const isPioneer     = isPioneerFlow;
   const overallNum    = overall != null ? Math.round(overall) : null;
   const deltaPts      = overallNum != null ? Math.abs(overallNum - passThreshold) : null;
@@ -339,6 +343,7 @@ export default function Results() {
         deltaPts={deltaPts}
         dimensions={dimensions}
         weights={weights}
+        speakingBand={speakingBand}
         credentialId={credentialId}
         isPioneer={isPioneer}
         sessionId={routeSessionId}
@@ -402,6 +407,8 @@ export default function Results() {
             / {passThreshold}
           </div>
         </div>
+
+        <SpeakingBandLine band={speakingBand} align="center" fontFamily={VAULT_BODY} muted={MUTED} style={{ marginBottom: 20 }} />
 
         {/* Approved body copy: actual score out of 100, with 70 to pass. */}
         <p style={{ textAlign: 'center', marginBottom: 24, fontFamily: VAULT_BODY, fontSize: 14, color: 'rgba(238,233,223,0.82)', lineHeight: 1.65 }}>
@@ -765,6 +772,7 @@ function PassedCelebration({
   deltaPts,
   dimensions,
   weights,
+  speakingBand,
   credentialId: initialCredentialId,
   isPioneer,
   sessionId,
@@ -906,6 +914,7 @@ function PassedCelebration({
               You scored {deltaPts} {pluralize(deltaPts, 'point')} above the threshold.
             </p>
           )}
+          <SpeakingBandLine band={speakingBand} align="center" muted={MUTED} style={{ marginTop: 14 }} />
         </section>
 
         {/* === Section 2: Performance breakdown === */}

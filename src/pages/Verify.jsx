@@ -5,6 +5,8 @@ import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import VerifiedBadge from '../components/VerifiedBadge';
 import Header from '../components/chrome/Header';
 import { ipfsUriToGatewayUrl } from '../utils/ipfs';
+import SpeakingBandLine from '../components/SpeakingBandLine';
+import { SPEAKING_BAND_ENABLED } from '../utils/featureFlags';
 
 const BG      = '#080B12';
 const BG1     = '#0C1018';
@@ -75,6 +77,9 @@ function normalizeResult(result) {
     verificationTierAtIssue,
     headshotUrl,
     scores,
+    // Speaking band (estimated): ships from /verify only when the simulator
+    // call behind this credential has a stored band. Null otherwise.
+    speakingBand: result?.speakingBand || result?.speaking_band || null,
     // Charter Cohort: the verify endpoint returns charter_cohort as a
     // boolean always, and charter_cohort_position (1..100) ONLY when
     // the credential is a live charter member. Missing keys (stale
@@ -340,6 +345,7 @@ export default function Verify() {
                 <Metric label="Assessment" value={assessmentText} color={TEAL} />
                 <Metric label="Simulator" value={simulatorText} color={TEAL} />
               </div>
+              <SpeakingBandLine band={credential.speakingBand} color={WHITE} muted={MUTED} accent={GOLD} fontFamily={FONT_B} style={{ marginTop: 18 }} />
             </div>
           </section>
         )}
@@ -359,6 +365,9 @@ export default function Verify() {
               </>
             ) : (
               <RecordRow label="Assessment Score" value={assessmentText || scoreText} color={TEAL} />
+            )}
+            {SPEAKING_BAND_ENABLED && credential.speakingBand && (
+              <RecordRow label="Speaking Band (Estimated)" value={`${credential.speakingBand}, pronunciation not yet assessed`} color={GOLD} />
             )}
             <RecordRow label="Blockchain Verification" value="Blockchain-verified credential" />
             {credential.tokenId && <RecordRow label="Token ID" value={credential.tokenId} mono />}
