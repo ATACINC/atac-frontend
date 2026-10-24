@@ -35,6 +35,10 @@ import SimulatorErrorBoundary from './components/SimulatorErrorBoundary';
 // stays out of the main bundle.
 const SandboxPage = lazy(() => import('./pages/sandbox/SandboxPage'));
 
+// Public Arise recruiting landing form (no login). Linked from ads and the
+// Postmark campaign; posts to /api/arise-leads. Lazy so it stays out of the main bundle.
+const AriseApply = lazy(() => import('./pages/AriseApply'));
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
   return token ? children : <Navigate to="/login" replace />;
@@ -100,6 +104,7 @@ export default function App() {
               checker and is untouched. */}
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify" element={<VerifyLanding />} />
+          <Route path="/arise/apply" element={<Suspense fallback={null}><AriseApply /></Suspense>} />
           <Route path="/verify/:credentialId" element={<Verify />} />
         </Routes>
       </BrowserRouter>
