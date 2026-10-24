@@ -21,24 +21,24 @@ const PROVINCES = [
 
 const s = {
   page: { minHeight: '100vh', background: BG, color: WHITE, fontFamily: FONT_B, padding: '24px 16px 60px' },
-  wrap: { maxWidth: 680, margin: '0 auto' },
-  brand: { fontSize: 20, fontWeight: 800, letterSpacing: 2, color: WHITE },
-  tag: { display: 'inline-block', background: GOLD, color: BG, fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase', padding: '6px 10px', borderRadius: 3, marginTop: 28 },
-  h1: { fontFamily: FONT_D, fontSize: 44, lineHeight: 1.05, fontWeight: 400, margin: '14px 0 10px', color: WHITE },
-  sub: { color: MUTED, fontSize: 15, lineHeight: 1.6, margin: 0 },
+  wrap: { maxWidth: 960, margin: '0 auto' },
+  brand: { fontSize: 28, fontWeight: 800, letterSpacing: 2, color: WHITE },
+  tag: { display: 'inline-block', background: GOLD, color: BG, fontSize: 15, fontWeight: 800, letterSpacing: 3, textTransform: 'uppercase', padding: '8px 14px', borderRadius: 3, marginTop: 32 },
+  h1: { fontFamily: FONT_D, fontSize: 64, lineHeight: 1.05, fontWeight: 400, margin: '16px 0 14px', color: WHITE },
+  sub: { color: MUTED, fontSize: 22, lineHeight: 1.6, margin: 0 },
   facts: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, margin: '22px 0 28px' },
-  fact: { background: BG2, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '12px 14px' },
-  factK: { fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: GOLD, fontWeight: 800 },
-  factV: { fontSize: 15, color: WHITE, marginTop: 4, fontWeight: 600 },
-  card: { background: BG2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '26px 24px' },
-  label: { display: 'block', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', color: MUTED, fontWeight: 700, margin: '16px 0 6px' },
-  input: { width: '100%', boxSizing: 'border-box', background: BG, color: WHITE, border: `1px solid rgba(238,233,223,0.18)`, borderRadius: 6, padding: '12px 12px', fontSize: 16, fontFamily: FONT_B, outline: 'none' },
+  fact: { background: BG2, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '16px 18px' },
+  factK: { fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', color: GOLD, fontWeight: 800 },
+  factV: { fontSize: 22, color: WHITE, marginTop: 6, fontWeight: 600 },
+  card: { background: BG2, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '34px 32px' },
+  label: { display: 'block', fontSize: 16, letterSpacing: 1, textTransform: 'uppercase', color: WHITE, fontWeight: 700, margin: '22px 0 8px' },
+  input: { width: '100%', boxSizing: 'border-box', background: BG, color: WHITE, border: `1px solid rgba(238,233,223,0.18)`, borderRadius: 6, padding: '16px 14px', fontSize: 20, fontFamily: FONT_B, outline: 'none' },
   row: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   radioRow: { display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 6 },
-  chip: (on) => ({ cursor: 'pointer', padding: '10px 14px', borderRadius: 6, border: `1px solid ${on ? TEAL : 'rgba(238,233,223,0.18)'}`, background: on ? 'rgba(26,143,105,0.18)' : BG, color: WHITE, fontSize: 14, fontWeight: 600, userSelect: 'none' }),
-  btn: (dis) => ({ width: '100%', marginTop: 22, background: dis ? 'rgba(26,143,105,0.4)' : TEAL, color: '#fff', border: 0, borderRadius: 6, padding: '16px', fontSize: 17, fontWeight: 800, fontFamily: FONT_B, cursor: dis ? 'not-allowed' : 'pointer' }),
-  err: { color: RED, fontSize: 14, marginTop: 12 },
-  fine: { color: MUTED, fontSize: 12, lineHeight: 1.6, marginTop: 16 },
+  chip: (on) => ({ cursor: 'pointer', padding: '14px 18px', borderRadius: 6, border: `1px solid ${on ? TEAL : 'rgba(238,233,223,0.18)'}`, background: on ? 'rgba(26,143,105,0.18)' : BG, color: WHITE, fontSize: 19, fontWeight: 600, userSelect: 'none' }),
+  btn: (dis) => ({ width: '100%', marginTop: 22, background: dis ? 'rgba(26,143,105,0.4)' : TEAL, color: '#fff', border: 0, borderRadius: 6, padding: '20px', fontSize: 22, fontWeight: 800, fontFamily: FONT_B, cursor: dis ? 'not-allowed' : 'pointer' }),
+  err: { color: RED, fontSize: 18, marginTop: 12 },
+  fine: { color: MUTED, fontSize: 16, lineHeight: 1.6, marginTop: 18 },
 };
 
 function YesNo({ value, onChange }) {
@@ -88,12 +88,12 @@ export default function AriseApply() {
       <div style={s.page}><div style={s.wrap}>
         <div style={s.brand}>ATAC <span style={{ color: GOLD }}>GLOBAL CX</span></div>
         <div style={{ ...s.card, marginTop: 28 }}>
-          <div style={{ fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', color: TEAL, fontWeight: 800 }}>Application received</div>
-          <h1 style={{ ...s.h1, fontSize: 36 }}>You are on the list, {f.firstName}.</h1>
+          <div style={{ fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: TEAL, fontWeight: 800 }}>Application received</div>
+          <h1 style={{ ...s.h1, fontSize: 54 }}>You are on the list, {f.firstName}.</h1>
           {done.onArise ? (
-            <p style={{ ...s.sub, color: WHITE }}>You already have an Arise profile. Log in at <a href="https://program.arise.com/" style={{ color: GOLD }}>program.arise.com</a>, confirm you are attached to <b>ATAC Anagenesis Inc. (Service Partner ID 1221605)</b>, then open the HVAC inbound customer service opportunity in the Canada portal and click Enroll. If you are not attached to us yet, reply to the confirmation email and we will fix it.</p>
+            <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>You already have an Arise profile. Log in at <a href="https://program.arise.com/" style={{ color: GOLD }}>program.arise.com</a>, confirm you are attached to <b>ATAC Anagenesis Inc. (Service Partner ID 1221605)</b>, then open the HVAC inbound customer service opportunity in the Canada portal and click Enroll. If you are not attached to us yet, reply to the confirmation email and we will fix it.</p>
           ) : (
-            <p style={{ ...s.sub, color: WHITE }}>Within one business day we will email you a personal Arise registration link. It is valid for 5 days, so use it as soon as it arrives. Want to start now? Register at <a href="https://oauth.arise.com/Account/Register" style={{ color: GOLD }}>oauth.arise.com/Account/Register</a>, enter <b>650808</b> as the referring ID, and choose <b>ATAC Anagenesis Inc. (1221605)</b> at the call center step.</p>
+            <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>Within one business day we will email you a personal Arise registration link. It is valid for 5 days, so use it as soon as it arrives. Want to start now? Register at <a href="https://oauth.arise.com/Account/Register" style={{ color: GOLD }}>oauth.arise.com/Account/Register</a>, enter <b>650808</b> as the referring ID, and choose <b>ATAC Anagenesis Inc. (1221605)</b> at the call center step.</p>
           )}
           <p style={s.fine}>A confirmation email with these steps is on its way to {f.email}. Check spam if it is not there in a few minutes. Questions: admin@atacglobalcx.com</p>
         </div>
