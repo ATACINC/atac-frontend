@@ -56,7 +56,7 @@ export default function AriseApply() {
   const source = (params.get('src') || 'landing').slice(0, 60);
   const opportunity = (params.get('opp') || 'hvac-nov16').slice(0, 60);
 
-  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: '', hasUsbHeadset: '', hasWebcam: '', classTime: '', notes: '', website: '' });
+  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: 'unset', hasUsbHeadset: 'unset', hasWebcam: 'unset', classTime: '', notes: '', website: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -73,7 +73,7 @@ export default function AriseApply() {
     try {
       const r = await fetch(`${API_BASE}/api/arise-leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, onArise: f.onArise === 'yes', source, opportunity, hcaptchaToken }),
+        body: JSON.stringify({ ...f, hasWindows11: f.hasWindows11 === 'unset' ? '' : f.hasWindows11, hasUsbHeadset: f.hasUsbHeadset === 'unset' ? '' : f.hasUsbHeadset, hasWebcam: f.hasWebcam === 'unset' ? '' : f.hasWebcam, onArise: f.onArise === 'yes', source, opportunity, hcaptchaToken }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError(j.error || 'Something went wrong. Please try again.'); if (typeof resetCaptcha === 'function') resetCaptcha(); setBusy(false); return; }
