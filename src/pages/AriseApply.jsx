@@ -56,15 +56,16 @@ export default function AriseApply() {
   const source = (params.get('src') || 'landing').slice(0, 60);
   const opportunity = (params.get('opp') || 'hvac-nov16').slice(0, 60);
 
-  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: 'unset', hasUsbHeadset: 'unset', hasWebcam: 'unset', classTime: '', notes: '', website: '' });
+  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: 'unset', hasUsbHeadset: 'unset', hasWebcam: 'unset', classTime: '', notes: '', website: '', country: '', marketingConsent: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
   const { token: hcaptchaToken, containerRef, reset: resetCaptcha } = useHcaptcha();
   const set = (k) => (e) => setF(p => ({ ...p, [k]: e && e.target ? e.target.value : e }));
 
-  const ineligible = f.province === 'QC' || f.province === 'OUTSIDE_CANADA';
-  const canSubmit = f.firstName && f.lastName && isValidEmail(f.email) && f.province && !ineligible && f.onArise !== '' && !!hcaptchaToken && !busy;
+  // Open intake: everyone can apply. Quebec / outside Canada are saved for future clients and routed to the CRSA.
+  const outside = f.province === 'OUTSIDE_CANADA';
+  const canSubmit = f.firstName && f.lastName && isValidEmail(f.email) && f.province && f.onArise !== '' && !!hcaptchaToken && !busy;
 
   async function submit(e) {
     e.preventDefault();
@@ -77,7 +78,7 @@ export default function AriseApply() {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError(j.error || 'Something went wrong. Please try again.'); if (typeof resetCaptcha === 'function') resetCaptcha(); setBusy(false); return; }
-      setDone({ onArise: f.onArise === 'yes' });
+      setDone({ onArise: f.onArise === 'yes', eligible: j.ariseEligible !== false });
     } catch {
       setError('Network error. Please try again.'); setBusy(false);
     }
@@ -90,7 +91,9 @@ export default function AriseApply() {
         <div style={{ ...s.card, marginTop: 28 }}>
           <div style={{ fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: TEAL, fontWeight: 800 }}>Application received</div>
           <h1 style={{ ...s.h1, fontSize: 54 }}>You are on the list, {f.firstName}.</h1>
-          {done.onArise ? (
+          {!done.eligible ? (
+            <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>Thanks for applying. This class is not open in your area, but we work with more than one client and we have saved your details for upcoming programs. Your best next step is the <b>CRSA (Certified Remote Service Agent)</b> credential, which puts you at the front of the line. <a href="https://app.atacglobalcx.com/signup?src=arise-nurture" style={{ color: GOLD }}>Start your CRSA</a>.</p>
+          ) : done.onArise ? (
             <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>You already have an Arise profile. Log in at <a href="https://program.arise.com/" style={{ color: GOLD }}>program.arise.com</a>, confirm you are attached to <b>ATAC Anagenesis Inc. (Service Partner ID 1221605)</b>, then open the HVAC inbound customer service opportunity in the Canada portal and click Enroll. If you are not attached to us yet, reply to the confirmation email and we will fix it.</p>
           ) : (
             <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>Within one business day we will email you a personal Arise registration link. It is valid for 5 days, so use it as soon as it arrives. Want to start now? Register at <a href="https://oauth.arise.com/Account/Register" style={{ color: GOLD }}>oauth.arise.com/Account/Register</a>, enter <b>650808</b> as the referring ID, and choose <b>ATAC Anagenesis Inc. (1221605)</b> at the call center step.</p>
@@ -106,7 +109,7 @@ export default function AriseApply() {
       <div style={s.brand}>ATAC <span style={{ color: GOLD }}>GLOBAL CX</span></div>
       <div style={s.tag}>New client opportunity</div>
       <h1 style={s.h1}>HVAC inbound customer service and sales. Work from home.</h1>
-      <p style={s.sub}>Canada only (excluding Quebec). Pick your own intervals. Earn during Phase 2 of certification. Seats are first come, first served.</p>
+      <p style={s.sub}>Pick your own intervals. Earn during Phase 2 of certification. Seats are first come, first served.</p>
       <div style={s.facts}>
         <div style={s.fact}><div style={s.factK}>Class starts</div><div style={s.factV}>Nov 16, 2026</div></div>
         <div style={s.fact}><div style={s.factK}>Register by</div><div style={s.factV}>Nov 9, 2026</div></div>
@@ -128,7 +131,10 @@ export default function AriseApply() {
           <option value="">Select</option>
           {PROVINCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        {ineligible && <div style={s.err}>{f.province === 'QC' ? 'This program is not open to residents of Quebec.' : 'This program is for residents of Canada only.'}</div>}
+        {outside && (<>
+          <label style={s.label}>Country</label>
+          <input style={s.input} value={f.country} onChange={set('country')} autoComplete="country-name" />
+        </>)}
 
         <label style={s.label}>Do you already have an Arise profile?</label>
         <div style={s.radioRow}>
@@ -159,10 +165,15 @@ export default function AriseApply() {
           <label>Website<input tabIndex={-1} autoComplete="off" value={f.website} onChange={set('website')} /></label>
         </div>
 
+        <label style={{ ...s.label, display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}>
+          <input type="checkbox" checked={f.marketingConsent} onChange={(e) => setF(p => ({ ...p, marketingConsent: e.target.checked }))} style={{ width: 22, height: 22, marginTop: 4 }} />
+          <span>Yes, email me about future work from home opportunities and the CRSA credential. You can unsubscribe at any time.</span>
+        </label>
+
         <div style={{ marginTop: 18 }}><div ref={containerRef} /></div>
         {error && <div style={s.err}>{error}</div>}
         <button type="submit" style={s.btn(!canSubmit)} disabled={!canSubmit}>{busy ? 'Sending...' : 'Apply for this opportunity'}</button>
-        <p style={s.fine}>By applying you agree to be contacted by ATAC Anagenesis Inc. (ATAC Global CX) about Arise client opportunities. This is a business-to-business opportunity on the Arise platform, not an offer of employment. Enrollment on Arise includes a background check ($43.00 CAD), photo ID verification, a PC scan and a $20.00 CAD class confirmation deposit.</p>
+        <p style={s.fine}>By applying you agree to be contacted by ATAC Anagenesis Inc. (ATAC Global CX) about this application. This is a business-to-business opportunity on the Arise platform, not an offer of employment. Enrollment on Arise includes a background check ($43.00 CAD), photo ID verification, a PC scan and a $20.00 CAD class confirmation deposit.</p>
       </form>
     </div></div>
   );
