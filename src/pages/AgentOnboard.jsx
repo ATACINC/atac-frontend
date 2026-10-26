@@ -97,7 +97,7 @@ function SignaturePad({ onChange }) {
   function up() {
     if (!drawing.current) return;
     drawing.current = false;
-    onChange(points.current > 12 ? ref.current.toDataURL('image/png') : '');
+    onChange(points.current > 3 ? ref.current.toDataURL('image/png') : '');
   }
   function clear() {
     const c = ref.current; const ctx = c.getContext('2d');
