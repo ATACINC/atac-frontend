@@ -39,6 +39,10 @@ const SandboxPage = lazy(() => import('./pages/sandbox/SandboxPage'));
 // Postmark campaign; posts to /api/arise-leads. Lazy so it stays out of the main bundle.
 const AriseApply = lazy(() => import('./pages/AriseApply'));
 
+// Public MSA + NDA signing page for ATAC Anagenesis agents. The token in the
+// URL (emailed from the admin Agent Roster) is the authentication.
+const AgentOnboard = lazy(() => import('./pages/AgentOnboard'));
+
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('atac_token');
   return token ? children : <Navigate to="/login" replace />;
@@ -105,6 +109,7 @@ export default function App() {
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/verify" element={<VerifyLanding />} />
           <Route path="/arise/apply" element={<Suspense fallback={null}><AriseApply /></Suspense>} />
+          <Route path="/arise/onboard/:token" element={<Suspense fallback={null}><AgentOnboard /></Suspense>} />
           <Route path="/verify/:credentialId" element={<Verify />} />
         </Routes>
       </BrowserRouter>
