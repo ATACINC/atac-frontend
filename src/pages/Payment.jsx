@@ -134,6 +134,19 @@ export default function Payment() {
   // show a covered state instead of the price/CTA UI, then continue the flow.
   const [charterCovered, setCharterCovered] = useState(false);
   const [charterUrl, setCharterUrl] = useState(null); // $0 Stripe checkout URL, redirected on the covered CTA click
+  // 'charter' | 'recruit' -- which entitlement covered the seat (copy only).
+  const [coveredKind, setCoveredKind] = useState('charter');
+  // Pre-click check (GET /api/stripe/entitlement): recruits (Arise applicants,
+  // roster agents) and Charter seats see "$0, covered" BEFORE any price.
+  const [seatCovered, setSeatCovered] = useState(null); // null | { kind }
+
+  useEffect(() => {
+    let cancelled = false;
+    API.get('/api/stripe/entitlement')
+      .then((res) => { if (!cancelled && res.data?.covered) setSeatCovered({ kind: res.data.kind }); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   // -- Live pricing from GET /api/stripe/plans (via the shared axios client) --
   // plans === null while loading; [] or array once resolved; plansError set on
@@ -301,6 +314,7 @@ export default function Payment() {
       // this branch is skipped and the paid flow + redirect are unchanged.
       if (data.charterCovered === true) {
         setCharterCovered(true);
+        setCoveredKind(data.coveredKind === 'recruit' ? 'recruit' : 'charter');
         setCharterUrl(data.url);
         setLoading(null);
         return;
@@ -440,6 +454,24 @@ export default function Payment() {
         </div>
       )}
 
+      {/* -- Pre-click covered banner (recruit or Charter): $0 before any price -- */}
+      {seatCovered && !charterCovered && !needsVerification && (
+        <div className="vault-up" style={{ position: 'relative', zIndex: 1, maxWidth: 640, margin: '0 auto 28px', padding: '0 24px' }}>
+          <div role="status" style={{ background: ds.panel, border: '1px solid rgba(127,203,166,0.4)', borderRadius: dsRadius.card, padding: '24px 28px', textAlign: 'center' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: ds.greenText, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>
+              {seatCovered.kind === 'recruit' ? 'ATAC Talent Pool' : 'Charter Cohort'}
+            </div>
+            <div style={{ fontSize: 16, color: ds.body, lineHeight: 1.6, marginBottom: 18 }}>
+              Your CRSA Standard assessment is covered: <b style={{ color: ds.greenText }}>$0.00</b>. No card needed.
+            </div>
+            <button type="button" onClick={() => handlePay('standard')} disabled={!!loading}
+              style={{ ...goldButton, padding: '14px 28px', borderRadius: dsRadius.sm }}>
+              {loading === 'standard' ? 'One moment...' : 'Start my covered assessment'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* -- Charter-covered state (entitled $0 seat) OR verification OR tiers -- */}
       {charterCovered ? (
         <div className="vault-up" style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto 48px', padding: '0 24px' }}>
@@ -456,16 +488,18 @@ export default function Payment() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 700, color: ds.greenText, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 14 }}>
-              Charter Cohort · Covered
+              {coveredKind === 'recruit' ? 'ATAC Talent Pool · Covered' : 'Charter Cohort · Covered'}
             </div>
             <div style={{ fontFamily: dsFont.display, fontSize: 'clamp(30px, 4vw, 44px)', fontWeight: 500, color: ds.heading, lineHeight: 1.1, marginBottom: 10 }}>
-              Charter seat covered
+              {coveredKind === 'recruit' ? 'Your assessment is covered' : 'Charter seat covered'}
             </div>
             <div style={{ fontFamily: dsFont.display, fontSize: 52, color: ds.greenText, fontWeight: 500, lineHeight: 1, marginBottom: 16 }}>
               $0.00
             </div>
             <div style={{ fontSize: 15, color: ds.body, lineHeight: 1.7, marginBottom: 24 }}>
-              No payment needed: your Charter entitlement covers this seat. You won't be asked for a card.
+              {coveredKind === 'recruit'
+                ? "No payment needed: ATAC covers the CRSA Standard assessment for agents applying to our client programs. You won't be asked for a card."
+                : "No payment needed: your Charter entitlement covers this seat. You won't be asked for a card."}
             </div>
             <button
               type="button"
