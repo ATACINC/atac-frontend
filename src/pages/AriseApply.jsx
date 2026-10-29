@@ -58,7 +58,7 @@ export default function AriseApply() {
   const source = (params.get('src') || 'landing').slice(0, 60);
   const opportunity = (params.get('opp') || 'talent-pool').slice(0, 60);
 
-  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: 'unset', hasUsbHeadset: 'unset', hasWebcam: 'unset', classTime: '', notes: '', website: '', country: '', marketingConsent: false });
+  const [f, setF] = useState({ firstName: '', lastName: '', email: '', phone: '', province: '', onArise: '', cspId: '', hasWindows11: 'unset', hasUsbHeadset: 'unset', hasWebcam: 'unset', hasWiredInternet: 'unset', classTime: '', notes: '', website: '', country: '', marketingConsent: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(null);
@@ -76,7 +76,7 @@ export default function AriseApply() {
     try {
       const r = await fetch(`${API_BASE}/api/arise-leads`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...f, hasWindows11: f.hasWindows11 === 'unset' ? '' : f.hasWindows11, hasUsbHeadset: f.hasUsbHeadset === 'unset' ? '' : f.hasUsbHeadset, hasWebcam: f.hasWebcam === 'unset' ? '' : f.hasWebcam, onArise: f.onArise === 'yes', source, opportunity, hcaptchaToken }),
+        body: JSON.stringify({ ...f, hasWindows11: f.hasWindows11 === 'unset' ? '' : f.hasWindows11, hasUsbHeadset: f.hasUsbHeadset === 'unset' ? '' : f.hasUsbHeadset, hasWebcam: f.hasWebcam === 'unset' ? '' : f.hasWebcam, hasWiredInternet: f.hasWiredInternet === 'unset' ? '' : f.hasWiredInternet, onArise: f.onArise === 'yes', source, opportunity, hcaptchaToken }),
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { setError(j.error || 'Something went wrong. Please try again.'); if (typeof resetCaptcha === 'function') resetCaptcha(); setBusy(false); return; }
@@ -120,7 +120,7 @@ export default function AriseApply() {
         <div style={s.fact}><div style={s.factK}>Step 1</div><div style={s.factV}>Apply (2 minutes)</div></div>
         <div style={s.fact}><div style={s.factK}>Step 2</div><div style={s.factV}>Free CRSA assessment</div></div>
         <div style={s.fact}><div style={s.factK}>Step 3</div><div style={s.factV}>Register on Arise</div></div>
-        <div style={s.fact}><div style={s.factK}>You need</div><div style={s.factV}>Win 11, USB headset, webcam</div></div>
+        <div style={s.fact}><div style={s.factK}>You need</div><div style={s.factV}>Win 11, USB headset, webcam, wired internet</div><div style={{ marginTop: 6 }}><a href="/equipment" style={{ color: GOLD, fontSize: 15 }}>Full equipment check</a></div></div>
       </div>
 
       <form style={s.card} onSubmit={submit} noValidate>
@@ -155,6 +155,7 @@ export default function AriseApply() {
         <label style={s.label}>Windows 11 PC, fully updated?</label><YesNo value={f.hasWindows11} onChange={set('hasWindows11')} />
         <label style={s.label}>Hardwired USB headset?</label><YesNo value={f.hasUsbHeadset} onChange={set('hasUsbHeadset')} />
         <label style={s.label}>Webcam?</label><YesNo value={f.hasWebcam} onChange={set('hasWebcam')} />
+        <label style={s.label}>Can you plug your PC into your router with an Ethernet cable? (Wi-Fi is not allowed)</label><YesNo value={f.hasWiredInternet} onChange={set('hasWiredInternet')} />
 
         <label style={s.label}>Preferred class time (Mon to Fri)</label>
         <div style={s.radioRow}>
