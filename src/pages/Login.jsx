@@ -94,8 +94,8 @@ function injectStyles() {
       border-radius: 3px;
       color: ${WHITE};
       font-family: ${VAULT_BODY};
-      font-size: 16px;
-      padding: 16px 18px;
+      font-size: 18px;
+      padding: 18px 20px;
       outline: none;
       transition: border-color 180ms ease, background 180ms ease;
     }
@@ -109,9 +109,9 @@ function injectStyles() {
       background: ${GOLD};
       color: ${BG};
       font-family: ${VAULT_BODY};
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.22em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       cursor: pointer;
       transition: transform 120ms ease, opacity 180ms ease, box-shadow 180ms ease;
@@ -125,7 +125,7 @@ function injectStyles() {
       border-radius: 3px;
       color: ${MUTED};
       font-family: ${VAULT_BODY};
-      font-size: 11px;
+      font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.22em;
       text-transform: uppercase;
@@ -139,7 +139,7 @@ function injectStyles() {
       border-color: ${GOLD};
     }
     .atac-link { color: ${GOLD}; background: none; border: none; padding: 0; cursor: pointer;
-                 font-family: ${VAULT_BODY}; font-size: 13px; border-bottom: 1px solid ${GOLD_DIM}; }
+                 font-family: ${VAULT_BODY}; font-size: 15px; border-bottom: 1px solid ${GOLD_DIM}; }
     .atac-link:hover { border-bottom-color: ${GOLD}; }
 
     /* Stat card */
@@ -684,7 +684,7 @@ export default function Login({ defaultAction }) {
           className="vault-up-2"
           style={{
             width: '100%',
-            maxWidth: 560,
+            maxWidth: 620,
             margin: '0 auto',
             background: `linear-gradient(180deg, ${BG1} 0%, ${BG2} 100%)`,
             border: `1px solid ${BORDER}`,
@@ -706,7 +706,7 @@ export default function Login({ defaultAction }) {
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 13,
                   letterSpacing: '0.32em',
                   textTransform: 'uppercase',
                   color: GOLD,
@@ -746,7 +746,7 @@ export default function Login({ defaultAction }) {
 
           <p
             style={{
-              fontSize: 14,
+              fontSize: 16,
               lineHeight: 1.6,
               color: MUTED,
               margin: 0,
@@ -815,7 +815,7 @@ export default function Login({ defaultAction }) {
                 {loading ? 'Signing in…' : 'Sign In'}
               </button>
 
-              <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: '14px 0 0' }}>
+              <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', margin: '14px 0 0' }}>
                 <Link to="/forgot-password" className="atac-link" style={{ textDecoration: 'none' }}>
                   Forgot password?
                 </Link>
@@ -823,7 +823,7 @@ export default function Login({ defaultAction }) {
 
               <Divider />
 
-              <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: 0 }}>
+              <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', margin: 0 }}>
                 New to ATAC?{' '}
                 <button type="button" className="atac-link" onClick={() => switchTab('register')}>
                   Create an account
@@ -912,7 +912,7 @@ export default function Login({ defaultAction }) {
                   }}
                 />
                 {phoneError && (
-                  <div style={{ fontSize: 12, color: RED, marginTop: 6 }}>{phoneError}</div>
+                  <div style={{ fontSize: 14, color: RED, marginTop: 6 }}>{phoneError}</div>
                 )}
               </Field>
 
@@ -936,14 +936,14 @@ export default function Login({ defaultAction }) {
                       onChange={(e) => setSmsConsent(e.target.checked)}
                       style={{
                         marginTop: 3,
-                        width: 16,
-                        height: 16,
+                        width: 20,
+                        height: 20,
                         accentColor: GOLD,
                         cursor: smsAllowed ? 'pointer' : 'not-allowed',
                         flexShrink: 0,
                       }}
                     />
-                    <span style={{ fontSize: 13, lineHeight: 1.55, color: MUTED }}>
+                    <span style={{ fontSize: 15, lineHeight: 1.55, color: MUTED }}>
                       {SMS_CONSENT_COPY}
                     </span>
                   </label>
@@ -1002,14 +1002,14 @@ export default function Login({ defaultAction }) {
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                   style={{
                     marginTop: 3,
-                    width: 16,
-                    height: 16,
+                    width: 20,
+                    height: 20,
                     accentColor: GOLD,
                     cursor: 'pointer',
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ fontSize: 13, lineHeight: 1.55, color: MUTED }}>
+                <span style={{ fontSize: 15, lineHeight: 1.55, color: MUTED }}>
                   {TERMS_COPY}
                 </span>
               </label>
@@ -1021,7 +1021,23 @@ export default function Login({ defaultAction }) {
                 <div ref={captchaRef} />
               </div>
 
-              {error && <ErrorBanner>{error}</ErrorBanner>}
+              {error && (
+                <ErrorBanner>
+                  {error}
+                  {/already exists/i.test(error) && (
+                    <>
+                      {' '}
+                      <button
+                        type="button"
+                        className="atac-link"
+                        onClick={() => { setLoginEmail(regEmail); switchTab('login'); }}
+                      >
+                        Sign in instead
+                      </button>
+                    </>
+                  )}
+                </ErrorBanner>
+              )}
 
               <button
                 type="submit"
@@ -1033,7 +1049,7 @@ export default function Login({ defaultAction }) {
 
               <Divider />
 
-              <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', margin: 0 }}>
+              <p style={{ fontSize: 15, color: MUTED, textAlign: 'center', margin: 0 }}>
                 Already have an account?{' '}
                 <button type="button" className="atac-link" onClick={() => switchTab('login')}>
                   Sign in
@@ -1055,9 +1071,9 @@ function Field({ label, children }) {
         style={{
           display: 'block',
           fontFamily: VAULT_BODY,
-          fontSize: 11,
+          fontSize: 14,
           fontWeight: 600,
-          letterSpacing: '0.22em',
+          letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: MUTED,
           marginBottom: 10,
@@ -1081,7 +1097,7 @@ function ErrorBanner({ children }) {
         border: `1px solid rgba(224,92,82,0.35)`,
         borderRadius: 3,
         color: RED,
-        fontSize: 13,
+        fontSize: 15,
         lineHeight: 1.5,
       }}
     >
