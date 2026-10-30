@@ -35,6 +35,7 @@ const ROUTE_TITLES = [
   { match: (p) => p === '/verify',     title: `Verify a credential · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/arise/apply', title: `Apply: Arise client opportunity · ${BRAND_SUFFIX}` },
   { match: (p) => p === '/equipment',   title: `Equipment check · ${BRAND_SUFFIX}` },
+  { match: (p) => p === '/help' || p === '/arise/help', title: `Arise help · ${BRAND_SUFFIX}` },
   { match: (p) => p.startsWith('/arise/onboard/'), title: `Sign your agreements · ${BRAND_SUFFIX}` },
   {
     match: (p) => /^\/verify\/[^/]+$/.test(p),
