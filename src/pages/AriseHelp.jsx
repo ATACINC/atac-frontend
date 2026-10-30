@@ -72,7 +72,8 @@ export default function AriseHelp() {
   const who = name.trim() || '[your full name]';
 
   const attachMsg = `Hello Arise Registration,\n\nPlease attach my profile to ATAC Anagenesis Inc., IBO ID ${IBO_ID} (Service Partner ID), so I can enrol in their client classes.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
-  const loginMsg = `Hello Arise Registration,\n\nI can't log in to my Arise profile and the password reset email is not arriving. Please reset my login. If my profile is inactive, please reactivate it and attach it to ATAC Anagenesis Inc., IBO ID ${IBO_ID}.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
+  const releaseMsg = `Hello,\n\nI'd like to be released from your business on the Arise platform so I can join another IBO.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
+  const loginMsg =`Hello Arise Registration,\n\nI can't log in to my Arise profile and the password reset email is not arriving. Please reset my login. If my profile is inactive, please reactivate it and attach it to ATAC Anagenesis Inc., IBO ID ${IBO_ID}.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
   const mailto = (subject, body) => `mailto:${ARISE_REG}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   return (
@@ -104,11 +105,15 @@ export default function AriseHelp() {
         <p style={s.p}>Client classes only show to agents attached to our IBO, <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span>. If you see "no matching clients" or "check back later", you're not attached yet.</p>
         <ol style={s.ol}>
           <li style={s.li}>Log in at <span style={s.b}>program.arise.com</span> on a Windows computer. Some classes don't show in the mobile app.</li>
-          <li style={s.li}>Still not there? Send this message to <span style={s.b}>{ARISE_REG}</span>:</li>
+          <li style={s.li}>Check <span style={s.b}>My Profile</span> to see which IBO (business) you're attached to.</li>
         </ol>
+        <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Attached to a different IBO?</span> Arise can't move you. Your current IBO has to release (drop) you first, and only then can you join us. Send this to your current IBO:</p>
+        <CopyBlock text={releaseMsg} />
+        <p style={{ ...s.p, marginTop: 16 }}>Once they confirm you're released, request to join <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span> in the portal, then email {ADMIN} so we can watch for it. If your old IBO was <span style={s.b}>A&amp;T Ascension Consulting Inc.</span>, that's our original company. Email us, and we'll sort it out for you.</p>
+        <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Not attached to any IBO?</span> Send this to <span style={s.b}>{ARISE_REG}</span>:</p>
         <CopyBlock text={attachMsg} mailto={mailto(`Attach CSP ${id} to IBO ${IBO_ID}`, attachMsg)} />
         <ol style={s.ol} start={3}>
-          <li style={{ ...s.li, marginTop: 14 }}>Reply to our email (or write to {ADMIN}) to say it's sent. When your request reaches us, we accept it, usually the same day.</li>
+          <li style={{ ...s.li, marginTop: 14 }}>When your request reaches us, we accept it, usually the same day.</li>
           <li style={s.li}>Sign our short contractor agreement when it arrives, then sign any Arise agreements in the portal. We finalize you, and you can enrol.</li>
         </ol>
       </div>
@@ -132,6 +137,7 @@ export default function AriseHelp() {
         <ol style={s.ol}>
           <li style={s.li}><span style={s.b}>You're enrolled in, or marked "interested" in, another opportunity.</span> Withdraw from it and the class should open. This is the most common one.</li>
           <li style={s.li}>You dropped or didn't pass a certification class in the last 60 days.</li>
+          <li style={s.li}>You didn't pass the program's proficiency assessment.</li>
           <li style={s.li}>Your Commitment Adherence score is below 90%.</li>
           <li style={s.li}>You live in a province the program doesn't cover.</li>
         </ol>
@@ -142,7 +148,8 @@ export default function AriseHelp() {
       <div style={s.card}>
         <p style={s.p}>You're welcome to move to us. Do it in this order so you don't lose a seat:</p>
         <ol style={s.ol}>
-          <li style={s.li}>Ask Arise to move you to ATAC Anagenesis Inc., IBO ID {IBO_ID} (use the "I can't see the class" message above).</li>
+          <li style={s.li}>Ask your current IBO to release (drop) you. Arise can't do this for you. Use the message in "I can't see the class" above.</li>
+          <li style={s.li}>Once you're released, request to join ATAC Anagenesis Inc., IBO ID {IBO_ID}, and email {ADMIN} so we can accept you quickly.</li>
           <li style={s.li}><span style={s.b}>Don't enrol in a class until we confirm you're finalized with us.</span> Changing IBOs can automatically drop an enrolment made under your old IBO.</li>
           <li style={s.li}>Already in a class with another IBO? Finish it first, then move. Arise advises against changing IBOs once class has started, because it can affect your attendance.</li>
         </ol>
@@ -157,7 +164,7 @@ export default function AriseHelp() {
         <Status name="Fully Enrolled: Pending Deposit">You're in. Pay the class confirmation deposit in the portal to lock in your seat.</Status>
         <div style={{ ...s.row, borderBottom: 0 }}>
           <div style={s.status}>Background check shows "Resume"</div>
-          <p style={{ ...s.p, margin: 0 }}>Click Resume and go through every screen to make sure there's no final Submit step. Watch your email and spam for the Netforce CPIC form. Once your part is submitted, the results can take several days, and that's on the vendor's side.</p>
+          <p style={{ ...s.p, margin: 0 }}>Click Resume and go through every screen to make sure there's no final Submit step. Watch your email and spam for the Netforce CPIC form. Once your part is submitted, the results can take several days, and that's on the vendor's side. Arise only accepts its own background check, so a check you did elsewhere can't be used.</p>
         </div>
       </div>
 
