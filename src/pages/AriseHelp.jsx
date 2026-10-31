@@ -5,7 +5,6 @@
 import { useState } from 'react';
 
 const IBO_ID = '1221605';
-const ARISE_REG = 'CAregistration@registration.arise.com';
 const ADMIN = 'admin@atacglobalcx.com';
 const APPLY_URL = '/arise/apply?src=help';
 
@@ -71,10 +70,9 @@ export default function AriseHelp() {
   const id = csp.trim() || '[your CSP ID]';
   const who = name.trim() || '[your full name]';
 
-  const attachMsg = `Hello Arise Registration,\n\nPlease attach my profile to ATAC Anagenesis Inc., IBO ID ${IBO_ID} (Service Partner ID), so I can enrol in their client classes.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
+  const attachMsg = `Hi,\n\nPlease attach my profile to ATAC Anagenesis Inc., IBO ID ${IBO_ID} (Service Partner ID), so I can enrol in their client classes.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
   const releaseMsg = `Hello,\n\nI'd like to be released from your business on the Arise platform so I can join another IBO.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
-  const loginMsg =`Hello Arise Registration,\n\nI can't log in to my Arise profile and the password reset email is not arriving. Please reset my login. If my profile is inactive, please reactivate it and attach it to ATAC Anagenesis Inc., IBO ID ${IBO_ID}.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
-  const mailto = (subject, body) => `mailto:${ARISE_REG}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const loginMsg =`Hi,\n\nI can't log in to my Arise profile and the password reset email is not arriving. Please reset my login. If my profile is inactive, please reactivate it and attach it to ATAC Anagenesis Inc., IBO ID ${IBO_ID}.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
 
   return (
     <div style={s.page}><div style={s.wrap}>
@@ -110,8 +108,8 @@ export default function AriseHelp() {
         <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Attached to a different IBO?</span> Arise can't move you. Your current IBO has to release (drop) you first, and only then can you join us. Send this to your current IBO:</p>
         <CopyBlock text={releaseMsg} />
         <p style={{ ...s.p, marginTop: 16 }}>Once they confirm you're released, request to join <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span> in the portal, then email {ADMIN} so we can watch for it. If your old IBO was <span style={s.b}>A&amp;T Ascension Consulting Inc.</span>, that's our original company. Email us, and we'll sort it out for you.</p>
-        <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Not attached to any IBO?</span> Send this to <span style={s.b}>{ARISE_REG}</span>:</p>
-        <CopyBlock text={attachMsg} mailto={mailto(`Attach CSP ${id} to IBO ${IBO_ID}`, attachMsg)} />
+        <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Not attached to any IBO?</span> Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</p>
+        <CopyBlock text={attachMsg} />
         <ol style={s.ol} start={3}>
           <li style={{ ...s.li, marginTop: 14 }}>When your request reaches us, we accept it, usually the same day.</li>
           <li style={s.li}>Sign our short contractor agreement when it arrives, then sign any Arise agreements in the portal. We finalize you, and you can enrol.</li>
@@ -125,9 +123,9 @@ export default function AriseHelp() {
           <li style={s.li}>Go to <span style={s.b}>program.arise.com</span> and click <span style={s.b}>Forgot Password</span>. Use the email on your Arise profile.</li>
           <li style={s.li}>Check your inbox <span style={s.b}>and spam folder</span>. It can take up to 30 minutes. If you have more than one email address, check them all.</li>
           <li style={s.li}>A blank screen when you try to register usually means you already have a profile. Don't create a second one, because two profiles can block your enrolment.</li>
-          <li style={s.li}>Nothing after 30 minutes? Send this to <span style={s.b}>{ARISE_REG}</span>:</li>
+          <li style={s.li}>Nothing after 30 minutes, or your email is blocked? Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</li>
         </ol>
-        <CopyBlock text={loginMsg} mailto={mailto(`Login reset for CSP ${id}`, loginMsg)} />
+        <CopyBlock text={loginMsg} />
         <p style={{ ...s.p, marginTop: 16 }}>Locked out of your <span style={s.b}>ATAC Global CX</span> account instead (the CRSA assessment)? Use "Forgot password" at <a style={{ color: GOLD }} href="/login">app.atacglobalcx.com/login</a>.</p>
       </div>
 
