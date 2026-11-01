@@ -39,16 +39,21 @@ const s = {
   fine: { color: MUTED, fontSize: 15, lineHeight: 1.6, marginTop: 36 },
 };
 
-function CopyBlock({ text, mailto }) {
+function CopyBlock({ text, mailto, sendTo }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2500); } catch { /* clipboard blocked: text is still selectable */ }
   };
   return (
     <>
-      <div style={s.pre}>{text}</div>
+        {sendTo && (
+          <div style={{ marginTop: 14, background: 'rgba(201,168,76,0.12)', border: `1px solid ${GOLD}`, borderRadius: 8, padding: '12px 16px', color: WHITE, fontSize: 17, lineHeight: 1.5 }}>
+            <span style={{ color: GOLD, fontWeight: 800 }}>Send this to: </span>{sendTo}
+          </div>
+        )}
+        <div style={s.pre}>{text}</div>
       <div style={s.btnRow}>
-        <button type="button" style={s.btn} onClick={copy}>{copied ? 'Copied ✓' : 'Copy message'}</button>
+        <button type="button" style={s.btn} onClick={copy}>{copied ? 'Copied ✓ Paste it where it says above' : 'Copy message'}</button>
         {mailto && <a style={s.btnGhost} href={mailto}>Open in my email</a>}
       </div>
     </>
@@ -106,10 +111,10 @@ export default function AriseHelp() {
           <li style={s.li}>Check <span style={s.b}>My Profile</span> to see which IBO (business) you're attached to.</li>
         </ol>
         <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Attached to a different IBO?</span> Arise can't move you. Your current IBO has to release (drop) you first, and only then can you join us. Send this to your current IBO:</p>
-        <CopyBlock text={releaseMsg} />
+        <CopyBlock text={releaseMsg} sendTo={<>the business (IBO) you are attached to now. Not to Arise and not to ATAC.</>} />
         <p style={{ ...s.p, marginTop: 16 }}>Once they confirm you're released, request to join <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span> in the portal, then email {ADMIN} so we can watch for it. If your old IBO was <span style={s.b}>A&amp;T Ascension Consulting Inc.</span>, that's our original company. Email us, and we'll sort it out for you.</p>
         <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Not attached to any IBO?</span> Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</p>
-        <CopyBlock text={attachMsg} />
+        <CopyBlock text={attachMsg} sendTo={<>Arise live chat (AVA) at <b>portal.arise.com</b>. Not to ATAC: we can't reset Arise logins or attach profiles.</>} />
         <ol style={s.ol} start={3}>
           <li style={{ ...s.li, marginTop: 14 }}>When your request reaches us, we accept it, usually the same day.</li>
           <li style={s.li}>Sign our short contractor agreement when it arrives, then sign any Arise agreements in the portal. We finalize you, and you can enrol.</li>
@@ -125,7 +130,7 @@ export default function AriseHelp() {
           <li style={s.li}>A blank screen when you try to register usually means you already have a profile. Don't create a second one, because two profiles can block your enrolment.</li>
           <li style={s.li}>Nothing after 30 minutes, or your email is blocked? Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</li>
         </ol>
-        <CopyBlock text={loginMsg} />
+        <CopyBlock text={loginMsg} sendTo={<>Arise live chat (AVA) at <b>portal.arise.com</b>. Not to ATAC: we can't reset Arise logins or attach profiles.</>} />
         <p style={{ ...s.p, marginTop: 16 }}>Locked out of your <span style={s.b}>ATAC Global CX</span> account instead (the CRSA assessment)? Use "Forgot password" at <a style={{ color: GOLD }} href="/login">app.atacglobalcx.com/login</a>.</p>
       </div>
 
