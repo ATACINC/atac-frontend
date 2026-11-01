@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { useToast } from '../hooks/useToast';
 import SelfieCapture from '../components/SelfieCapture';
+import SmsConsentCapture from '../components/SmsConsentCapture';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import { useAssessmentConfig } from '../hooks/useAssessmentConfig';
@@ -1262,6 +1263,19 @@ export default function Assessment() {
               </div>
             </aside>
           </section>
+
+          {/* High-intent SMS capture: assessment passed. Renders nothing when a
+              mobile number is already on file. Optional, unticked, never gates
+              the simulator or dashboard CTAs above. */}
+          {passed && (
+            <SmsConsentCapture
+              source="post_pass_v1"
+              title="Get text updates on your credential"
+              body={showSimulatorCta
+                ? 'Optional. Add your mobile and we will text you simulator reminders and your credential the moment it is issued.'
+                : 'Optional. Add your mobile and we will text you when your credential and verification details are ready.'}
+            />
+          )}
 
           <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(360px, 0.65fr)', gap: 28, alignItems: 'start' }}>
             {domainRows.length > 0 && (

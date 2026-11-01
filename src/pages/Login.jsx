@@ -27,7 +27,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { isValidEmail } from '../utils/validation';
-import { dialPrefix, normalizeToE164, isValidPhone, getPhoneError } from '../utils/phone';
+import { dialPrefix, normalizeToE164, isValidPhone } from '../utils/phone';
+import { SmsConsentFields, SMS_CONSENT_VERSION } from '../components/SmsConsentCapture';
 import brandLogo from '../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../assets/agcx-certificate-seal-cropped.png';
 import COUNTRIES from '../data/countries';
@@ -43,10 +44,8 @@ const TERMS_COPY =
   'I understand that credential fraud voids my certification permanently and may result in public ' +
   'revocation on the blockchain.';
 
-const SMS_CONSENT_VERSION = '1.0';
-const SMS_CONSENT_COPY =
-  'Text me about my ATAC credential, deadlines, and offers at this number. ' +
-  'Msg & data rates may apply. Reply STOP to opt out. Consent is not a condition of registration.';
+// SMS_CONSENT_VERSION / SMS_CONSENT_COPY live in components/SmsConsentCapture.jsx
+// (shared with the post-payment and assessment-passed capture screens).
 
 /* ── Vault Design Tokens ─────────────────────────────────────────────── */
 const BG       = '#080B12';
@@ -893,62 +892,16 @@ export default function Login({ defaultAction }) {
 
               {/* Optional mobile number + CASL SMS consent. Neither field ever
                   blocks account creation; the payload records consent only when
-                  a valid number is present AND the box is checked. */}
-              <Field label="Mobile Number (optional)">
-                <input
-                  type="tel"
-                  className="atac-input"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={20}
-                  placeholder="+1 555 123 4567"
-                  value={phone}
-                  onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
-                  onBlur={() => {
-                    const e164 = normalizeToE164(phone, country);
-                    if (e164) setPhone(e164);
-                    setPhoneError(getPhoneError(e164, country));
-                    if (!isValidPhone(e164, country)) setSmsConsent(false);
-                  }}
-                />
-                {phoneError && (
-                  <div style={{ fontSize: 14, color: RED, marginTop: 6 }}>{phoneError}</div>
-                )}
-              </Field>
-
-              {(() => {
-                const smsAllowed = isValidPhone(normalizeToE164(phone, country), country);
-                return (
-                  <label
-                    style={{
-                      display: 'flex',
-                      gap: 12,
-                      alignItems: 'flex-start',
-                      margin: '2px 0 18px',
-                      cursor: smsAllowed ? 'pointer' : 'not-allowed',
-                      opacity: smsAllowed ? 1 : 0.5,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={smsConsent}
-                      disabled={!smsAllowed}
-                      onChange={(e) => setSmsConsent(e.target.checked)}
-                      style={{
-                        marginTop: 3,
-                        width: 20,
-                        height: 20,
-                        accentColor: GOLD,
-                        cursor: smsAllowed ? 'pointer' : 'not-allowed',
-                        flexShrink: 0,
-                      }}
-                    />
-                    <span style={{ fontSize: 15, lineHeight: 1.55, color: MUTED }}>
-                      {SMS_CONSENT_COPY}
-                    </span>
-                  </label>
-                );
-              })()}
+                  a valid number is present AND the box is checked. Shared
+                  component (same markup/copy as the high-intent screens). */}
+              <SmsConsentFields
+                phone={phone} setPhone={setPhone}
+                smsConsent={smsConsent} setSmsConsent={setSmsConsent}
+                country={country}
+                phoneError={phoneError} setPhoneError={setPhoneError}
+                Field={Field}
+                inputClassName="atac-input"
+              />
 
               <Field label="Email Address">
                 <input
