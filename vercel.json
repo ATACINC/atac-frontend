@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/w", "destination": "https://atac-backend-production.up.railway.app/c?src=sms&seq=welcome", "statusCode": 302 }
+  ],
   "rewrites": [
     { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/(.*)",        "destination": "/index.html" }

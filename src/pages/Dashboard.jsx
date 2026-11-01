@@ -9,6 +9,7 @@ import CharterCounter from '../components/CharterCounter';
 import CharterCohortBlock from '../components/CharterCohortBlock';
 import CandidateStateRenderer from '../utils/CandidateStateRenderer';
 import RegistryConsentCard from '../components/RegistryConsentCard';
+import SmsConsentCapture from '../components/SmsConsentCapture';
 import { useAssessmentConfig } from '../hooks/useAssessmentConfig';
 import CountUp from '../components/CountUp';
 import { color as ds, font as dsFont, goldButton } from '../designSystem/tokens';
@@ -430,6 +431,17 @@ export default function Dashboard() {
               {startingAssessment ? 'Starting...' : 'Start Assessment →'}
             </button>
           </div>
+        )}
+
+        {/* -- High-intent SMS capture: post-payment confirmation. Renders
+             nothing when a mobile number is already on file. Optional,
+             unticked, never gates the assessment. -- */}
+        {paymentSuccess && isStartAssessmentStep && (
+          <SmsConsentCapture
+            source="post_payment_v1"
+            title="Get text updates on your assessment"
+            body="Optional. Add your mobile and we will text you your results, deadlines and next steps."
+          />
         )}
 
         {/* -- Payment cancelled banner -- */}
