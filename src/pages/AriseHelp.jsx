@@ -77,6 +77,7 @@ export default function AriseHelp() {
 
   const attachMsg = `Hi,\n\nPlease attach my profile to ATAC Anagenesis Inc., IBO ID ${IBO_ID} (Service Partner ID), so I can enrol in their client classes.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
   const releaseMsg = `Hello,\n\nI'd like to be released from your business on the Arise platform so I can join another IBO.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
+  const incMsg = `Hi, this is ${who}, CSP ID ${id}. I am registered under a business that is closed or is not responding to my release request, and I have no way to reach them. Please verify the business status, and if it is inactive, please create an INC and escalate my release to the contracting team so I can join ATAC Anagenesis Inc., IBO ID ${IBO_ID}.`;
   const loginMsg =`Hi,\n\nI can't log in to my Arise profile and the password reset email is not arriving. Please reset my login. If my profile is inactive, please reactivate it and attach it to ATAC Anagenesis Inc., IBO ID ${IBO_ID}.\n\nFull name: ${who}\nCSP ID: ${id}\n\nThank you.`;
 
   return (
@@ -105,7 +106,7 @@ export default function AriseHelp() {
 
       <h2 id="cant-see" style={s.h2}>I can't see the class</h2>
       <div style={s.card}>
-        <p style={s.p}>Client classes only show to agents attached to our IBO, <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span>. If you see "no matching clients" or "check back later", you're not attached yet.</p>
+        <p style={s.p}>Client classes only show to service partners attached to our IBO, <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span>. If you see "no matching clients" or "check back later", you're not attached yet.</p>
         <ol style={s.ol}>
           <li style={s.li}>Log in at <span style={s.b}>program.arise.com</span> on a Windows computer. Some classes don't show in the mobile app.</li>
           <li style={s.li}>Check <span style={s.b}>My Profile</span> to see which IBO (business) you're attached to.</li>
@@ -113,11 +114,13 @@ export default function AriseHelp() {
         <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Attached to a different IBO?</span> Arise can't move you. Your current IBO has to release (drop) you first, and only then can you join us. Send this to your current IBO:</p>
         <CopyBlock text={releaseMsg} sendTo={<>the business (IBO) you are attached to now. Not to Arise and not to ATAC.</>} />
         <p style={{ ...s.p, marginTop: 16 }}>Once they confirm you're released, request to join <span style={s.b}>ATAC Anagenesis Inc. (IBO ID {IBO_ID})</span> in the portal, then email {ADMIN} so we can watch for it. If your old IBO was <span style={s.b}>A&amp;T Ascension Consulting Inc.</span>, that's our original company. Email us, and we'll sort it out for you.</p>
+        <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Is that IBO closed, or not answering?</span> Arise will only act on this if the request comes from you, not from ATAC, and the wording matters. Open <span style={s.b}>portal.arise.com</span>, click the <span style={s.b}>Arise Virtual Assistant (AVA)</span>, then <span style={s.b}>Message Us</span>, ask for a live specialist and paste this. If they say only the owner can release you, ask directly: "Can you please create an INC for the contracting team?"</p>
+        <CopyBlock text={incMsg} sendTo={<>Arise live chat (AVA) at <b>portal.arise.com</b>. Reply to us with what they say and any INC number.</>} />
         <p style={{ ...s.p, marginTop: 16 }}><span style={s.b}>Not attached to any IBO?</span> Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</p>
         <CopyBlock text={attachMsg} sendTo={<>Arise live chat (AVA) at <b>portal.arise.com</b>. Not to ATAC: we can't reset Arise logins or attach profiles.</>} />
         <ol style={s.ol} start={3}>
           <li style={{ ...s.li, marginTop: 14 }}>When your request reaches us, we accept it, usually the same day.</li>
-          <li style={s.li}>Sign our short contractor agreement when it arrives, then sign any Arise agreements in the portal. We finalize you, and you can enrol.</li>
+          <li style={s.li}>Sign our short contractor agreement when it arrives, then sign any Arise agreements in the portal. We finalize your agreement, and you can choose to enrol.</li>
         </ol>
       </div>
 
@@ -128,7 +131,9 @@ export default function AriseHelp() {
           <li style={s.li}>Go to <span style={s.b}>program.arise.com</span> and click <span style={s.b}>Forgot Password</span>. Use the email on your Arise profile.</li>
           <li style={s.li}>Check your inbox <span style={s.b}>and spam folder</span>. It can take up to 30 minutes. If you have more than one email address, check them all.</li>
           <li style={s.li}>A blank screen when you try to register usually means you already have a profile. Don't create a second one, because two profiles can block your enrolment.</li>
-          <li style={s.li}>Nothing after 30 minutes, or your email is blocked? Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</li>
+          <li style={s.li}>Reset emails never arrive? Email <span style={s.b}>Servicedeskplus@arise.com</span> with your full name, CSP ID and "password reset emails are not arriving." This is the address Arise gave us for login problems.</li>
+          <li style={s.li}>Was your last Arise class before 2021? Arise inactivated those profiles in July 2026, and a reset will never arrive. Email {ADMIN} and we will send you a referral link to register a fresh profile attached to our IBO.</li>
+          <li style={s.li}>Still nothing, or your email is blocked? Open <span style={s.b}>portal.arise.com</span> (you don't need to be logged in), click the <span style={s.b}>Arise Virtual Assistant (AVA)</span> in the bottom right corner, then <span style={s.b}>Message Us</span>. Ask for a live chat specialist and paste this message. Arise no longer handles this by email.</li>
         </ol>
         <CopyBlock text={loginMsg} sendTo={<>Arise live chat (AVA) at <b>portal.arise.com</b>. Not to ATAC: we can't reset Arise logins or attach profiles.</>} />
         <p style={{ ...s.p, marginTop: 16 }}>Locked out of your <span style={s.b}>ATAC Global CX</span> account instead (the CRSA assessment)? Use "Forgot password" at <a style={{ color: GOLD }} href="/login">app.atacglobalcx.com/login</a>.</p>
@@ -140,10 +145,11 @@ export default function AriseHelp() {
         <ol style={s.ol}>
           <li style={s.li}><span style={s.b}>You're enrolled in, or marked "interested" in, another opportunity.</span> Withdraw from it and the class should open. This is the most common one.</li>
           <li style={s.li}>You dropped or didn't pass a certification class in the last 60 days.</li>
-          <li style={s.li}>You didn't pass the program's proficiency assessment.</li>
+          <li style={s.li}>The program's proficiency assessment is marked as not passed. Arise does not reset assessment results, even if you believe you never took it. Disputes go to Harver (the assessment company): log in to the Harver portal and click Help, or go to <span style={s.b}>support.harver.com</span>. Otherwise you can express interest in another client opportunity and retake after 30 days.</li>
           <li style={s.li}>Your Commitment Adherence score is below 90%.</li>
           <li style={s.li}>You live in a province the program doesn't cover.</li>
         </ol>
+        <p style={{ ...s.p, marginTop: 14 }}><span style={s.b}>"We do not have an opportunity that matches your skillset, try again on [date]"</span> means the same thing: an assessment is marked as not passed, and the date shown is when you can retake it. It is not a hold on your profile and nothing on our side blocks it.</p>
         <p style={{ ...s.p, marginTop: 14 }}>Tap the <span style={s.b}>(i)</span> button under "Learn More" on the class card. It often shows the exact reason. Send us a screenshot, and if it can be fixed, we'll work through it with you. If it can't, you go first in line for the next class.</p>
       </div>
 
@@ -151,7 +157,7 @@ export default function AriseHelp() {
       <div style={s.card}>
         <p style={s.p}>You're welcome to move to us. Do it in this order so you don't lose a seat:</p>
         <ol style={s.ol}>
-          <li style={s.li}>Ask your current IBO to release (drop) you. Arise can't do this for you. Use the message in "I can't see the class" above.</li>
+          <li style={s.li}>Ask your current IBO to release (drop) you. Arise can't do this for you. Use the message in "I can't see the class" above. If that IBO is closed or not answering, use the AVA message in the same section instead.</li>
           <li style={s.li}>Once you're released, request to join ATAC Anagenesis Inc., IBO ID {IBO_ID}, and email {ADMIN} so we can accept you quickly.</li>
           <li style={s.li}><span style={s.b}>Don't enrol in a class until we confirm you're finalized with us.</span> Changing IBOs can automatically drop an enrolment made under your old IBO.</li>
           <li style={s.li}>Already in a class with another IBO? Finish it first, then move. Arise advises against changing IBOs once class has started, because it can affect your attendance.</li>
@@ -164,6 +170,7 @@ export default function AriseHelp() {
         <Status name="Agent has to sign agreement(s)">Sign the agreements or waivers waiting for you in the Arise portal. If the portal says "no agreements found", you're likely done. Tell us, and we'll clear it with Arise.</Status>
         <Status name="Finalization">You've signed everything. We're finalizing you, usually the same day.</Status>
         <Status name="Dropped: Service Partner Released Agent">This can show up right after you change IBOs. Don't re-enrol on your own. Email us, and we'll ask Arise to reinstate your seat. It's often fixed within minutes.</Status>
+        <Status name="Canceled: Failed Proficiency Assessment">Arise has marked the program's assessment as not passed and will not reset it. See "You are not eligible" above for the Harver dispute route and the 30-day retake. Your agreement with us stays in place, and we will email you when the next client program opens.</Status>
         <Status name="Fully Enrolled: Pending Deposit">You're in. Arise asks for the class confirmation deposit in the portal to lock in your seat.</Status>
         <div style={{ ...s.row, borderBottom: 0 }}>
           <div style={s.status}>Background check shows "Resume"</div>
