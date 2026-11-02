@@ -45,8 +45,8 @@ export default function Equipment() {
     <div style={s.page}><div style={s.wrap}>
       <div style={s.brand}>ATAC GLOBAL CX</div>
       <div style={s.tag}>Equipment check</div>
-      <h1 style={s.h1}>What you need to work from home on a client program.</h1>
-      <p style={s.sub}>These are the Arise platform minimums for 2026. Your PC goes through an automatic scan before class, so check this list first. If you are missing something, apply anyway. It just needs to be in place before class starts.</p>
+      <h1 style={s.h1}>What Arise requires to service a client program from home.</h1>
+      <p style={s.sub}>These are the Arise platform minimums for 2026. Your PC goes through an automatic scan before class, so check this list first. If you are missing something, you can still register your interest. It just needs to be in place before class starts.</p>
 
       <h2 style={s.h2}>Your computer</h2>
       <div style={s.card}>
@@ -75,7 +75,7 @@ export default function Equipment() {
       <h2 style={s.h2}>Headset, webcam and phone</h2>
       <div style={s.card}>
         <Row k="Headset" v="Hard-wired USB headset with phone-quality audio and a noise-cancelling mic. Bluetooth and 3.5 mm jack headsets will not pass. Examples: Plantronics Blackwire 3320, Logitech H570e, Jabra UC Voice. Typically $24 to $55." />
-        <Row k="Webcam" v="Required for our client classes. You are on camera for class, role plays and a quick daily check-in." />
+        <Row k="Webcam" v="Required by the client program for certification. Arise has you on camera for class, role plays and a quick daily check-in." />
         <Row k="Smartphone" v="Any iOS or Android phone with a working camera, used only for the login code (multi-factor authentication). You cannot attend class or take calls on a phone." />
         <Row k="Keyboard and mouse" v="Hard-wired recommended." />
       </div>
@@ -91,7 +91,7 @@ export default function Equipment() {
       </div>
 
       <a href={APPLY_URL} style={s.btn}>Join the talent pool</a>
-      <p style={s.fine}>Some client programs have extra requirements, which we tell you about before you enrol. This checklist is based on the Arise System and Equipment Policy effective January 1, 2026. Equipment examples are for convenience only; ATAC Anagenesis Inc. is not affiliated with any retailer. Business opportunity on the Arise platform through ATAC Anagenesis Inc., not an offer of employment.</p>
+      <p style={s.fine}>Some client programs have extra requirements, listed in Arise's opportunity announcement so you can decide before you enrol. This checklist is based on the Arise System and Equipment Policy effective January 1, 2026. Equipment examples are for convenience only; ATAC Anagenesis Inc. is not affiliated with any retailer. Business opportunity on the Arise platform through ATAC Anagenesis Inc., not an offer of employment.</p>
     </div></div>
   );
 }

@@ -164,7 +164,7 @@ export default function AriseHelp() {
         <Status name="Agent has to sign agreement(s)">Sign the agreements or waivers waiting for you in the Arise portal. If the portal says "no agreements found", you're likely done. Tell us, and we'll clear it with Arise.</Status>
         <Status name="Finalization">You've signed everything. We're finalizing you, usually the same day.</Status>
         <Status name="Dropped: Service Partner Released Agent">This can show up right after you change IBOs. Don't re-enrol on your own. Email us, and we'll ask Arise to reinstate your seat. It's often fixed within minutes.</Status>
-        <Status name="Fully Enrolled: Pending Deposit">You're in. Pay the class confirmation deposit in the portal to lock in your seat.</Status>
+        <Status name="Fully Enrolled: Pending Deposit">You're in. Arise asks for the class confirmation deposit in the portal to lock in your seat.</Status>
         <div style={{ ...s.row, borderBottom: 0 }}>
           <div style={s.status}>Background check shows "Resume"</div>
           <p style={{ ...s.p, margin: 0 }}>Click Resume and go through every screen to make sure there's no final Submit step. Watch your email and spam for the Netforce CPIC form. Once your part is submitted, the results can take several days, and that's on the vendor's side. Arise only accepts its own background check, so a check you did elsewhere can't be used.</p>

@@ -91,17 +91,17 @@ export default function AriseApply() {
       <div style={s.page}><div style={s.wrap}>
         <div style={s.brand}>ATAC <span style={{ color: GOLD }}>GLOBAL CX</span></div>
         <div style={{ ...s.card, marginTop: 28 }}>
-          <div style={{ fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: TEAL, fontWeight: 800 }}>Application received</div>
+          <div style={{ fontSize: 16, letterSpacing: 3, textTransform: 'uppercase', color: TEAL, fontWeight: 800 }}>Request received</div>
           <h1 style={{ ...s.h1, fontSize: 54 }}>You are on the list, {f.firstName}.</h1>
           {!done.eligible ? (
-            <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>Thanks for applying. This class is not open in your area, but we work with more than one client and we have saved your details for upcoming programs. Your next step is the free <b>CRSA readiness assessment</b>, which puts you at the front of the line. Use this same email ({f.email}) and it is covered automatically. <a href={CRSA_URL} style={{ color: GOLD }}>Start my free CRSA</a>.</p>
+            <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>Thanks for your interest. This class is not open in your area, but we work with more than one client and we have saved your details for upcoming programs. Your next step is the free <b>CRSA readiness assessment</b>, which puts you at the front of the line. Use this same email ({f.email}) and it is covered automatically. <a href={CRSA_URL} style={{ color: GOLD }}>Start my free CRSA</a>.</p>
           ) : (
             <>
-              <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>You are in our talent pool for upcoming client classes. <b>Step 1 is your free CRSA readiness assessment.</b> Create your account with this same email ({f.email}) and it is covered automatically, no card needed.</p>
+              <p style={{ ...s.sub, color: WHITE, fontSize: 24 }}>You are on our list for upcoming client programs on the Arise Platform. <b>Step 1 is your free CRSA readiness assessment.</b> Create your account with this same email ({f.email}) and it is covered automatically, no card needed.</p>
               <a href={CRSA_URL} style={{ ...s.btn(false), display: 'block', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Start my free CRSA</a>
               <p style={{ ...s.sub, fontSize: 20, marginTop: 18 }}>{done.onArise
                 ? <>Already on Arise? Log in at <a href="https://program.arise.com/" style={{ color: GOLD }}>program.arise.com</a> and make sure you are attached to <b>ATAC Anagenesis Inc. (Service Partner ID 1221605)</b>.</>
-                : <>Once your CRSA is done, we will email you a personal Arise registration link. Classes fill first come, first served, so ready agents are placed first.</>}</p>
+                : <>Once your CRSA is done, we will email you a personal Arise registration link. Arise fills classes first come, first served, so service partners who are ready can enrol first.</>}</p>
             </>
           )}
           <p style={s.fine}>A confirmation email with these steps is on its way to {f.email}. Check spam if it is not there in a few minutes. Questions: admin@atacglobalcx.com</p>
@@ -114,10 +114,10 @@ export default function AriseApply() {
     <div style={s.page}><div style={s.wrap}>
       <div style={s.brand}>ATAC <span style={{ color: GOLD }}>GLOBAL CX</span></div>
       <div style={s.tag}>Now building our next class</div>
-      <h1 style={s.h1}>Customer service from home. Get ready for the next class.</h1>
-      <p style={s.sub}>Client classes fill first come, first served. Join our talent pool now, take the free CRSA readiness assessment, and be first in line when the next class opens.</p>
+      <h1 style={s.h1}>Your own customer service business from home. Get ready for the next class.</h1>
+      <p style={s.sub}>An independent business opportunity on the Arise Platform through our IBO, ATAC Anagenesis Inc. Arise fills client classes first come, first served. Join our talent pool, take the free CRSA readiness assessment, and be ready to enrol when the next class opens. You decide if and when you service, and from where.</p>
       <div style={s.facts}>
-        <div style={s.fact}><div style={s.factK}>Step 1</div><div style={s.factV}>Apply (2 minutes)</div></div>
+        <div style={s.fact}><div style={s.factK}>Step 1</div><div style={s.factV}>Register your interest (2 minutes)</div></div>
         <div style={s.fact}><div style={s.factK}>Step 2</div><div style={s.factV}>Free CRSA assessment</div></div>
         <div style={s.fact}><div style={s.factK}>Step 3</div><div style={s.factV}>Register on Arise</div></div>
         <div style={s.fact}><div style={s.factK}>You need</div><div style={s.factV}>Win 11, USB headset, webcam, wired internet</div><div style={{ marginTop: 6 }}><a href="/equipment" style={{ color: GOLD, fontSize: 15 }}>Full equipment check</a></div></div>
@@ -174,13 +174,13 @@ export default function AriseApply() {
 
         <label style={{ ...s.label, display: 'flex', gap: 12, alignItems: 'flex-start', cursor: 'pointer' }}>
           <input type="checkbox" checked={f.marketingConsent} onChange={(e) => setF(p => ({ ...p, marketingConsent: e.target.checked }))} style={{ width: 22, height: 22, marginTop: 4 }} />
-          <span>Yes, email me about future work from home opportunities and the CRSA credential. You can unsubscribe at any time.</span>
+          <span>Yes, email me about future independent business opportunities on the Arise Platform and the CRSA credential. You can unsubscribe at any time.</span>
         </label>
 
         <div style={{ marginTop: 18 }}><div ref={containerRef} /></div>
         {error && <div style={s.err}>{error}</div>}
         <button type="submit" style={s.btn(!canSubmit)} disabled={!canSubmit}>{busy ? 'Sending...' : 'Join the talent pool'}</button>
-        <p style={s.fine}>By applying you agree to be contacted by ATAC Anagenesis Inc. (ATAC Global CX) about this application and upcoming client classes. This is a business-to-business opportunity on the Arise platform, not an offer of employment. Enrollment on Arise includes a background check ($43.00 CAD), photo ID verification, a PC scan and a $20.00 CAD class confirmation deposit.</p>
+        <p style={s.fine}>By sending this request you agree to be contacted by ATAC Anagenesis Inc. (ATAC Global CX) about it and about upcoming client programs. ATAC Anagenesis Inc. is an Independent Business Operator (IBO) on the Arise Platform. Service partners who join our IBO do so as independent contractors under our Independent Contractor Master Services Agreement. They choose whether to enrol, where they work from and which intervals they service, and they provide their own equipment. Nothing on this page is an offer of employment. Arise's enrolment steps include a background check ($43.00 CAD), photo ID verification, a PC scan and a $20.00 CAD class confirmation deposit, which are costs of your own business.</p>
       </form>
     </div></div>
   );
