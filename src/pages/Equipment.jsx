@@ -43,7 +43,7 @@ function Row({ k, v, rec }) {
 export default function Equipment() {
   return (
     <div style={s.page}><div style={s.wrap}>
-      <div style={s.brand}>ATAC GLOBAL CX</div>
+      <div style={s.brand}>ATAC ANAGENESIS INC.</div>
       <div style={s.tag}>Equipment check</div>
       <h1 style={s.h1}>What Arise requires to service a client program from home.</h1>
       <p style={s.sub}>These are the Arise platform minimums for 2026. Your PC goes through an automatic scan before class, so check this list first. If you are missing something, you can still register your interest. It just needs to be in place before class starts.</p>

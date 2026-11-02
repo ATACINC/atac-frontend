@@ -82,7 +82,7 @@ export default function AriseHelp() {
 
   return (
     <div style={s.page}><div style={s.wrap}>
-      <div style={s.brand}>ATAC GLOBAL CX</div>
+      <div style={s.brand}>ATAC ANAGENESIS INC.</div>
       <div style={s.tag}>Arise help</div>
       <h1 style={s.h1}>Stuck on the Arise portal? Fix it in 2 minutes.</h1>
       <p style={s.sub}>Most issues come down to three things: your profile isn't attached to our IBO yet, you can't log in, or a status message you don't recognize. Pick yours below.</p>
@@ -181,10 +181,10 @@ export default function AriseHelp() {
       <h2 style={s.h2}>Still stuck?</h2>
       <div style={s.card}>
         <p style={s.p}>Email <a style={{ color: GOLD }} href={`mailto:${ADMIN}?subject=${encodeURIComponent(`Arise help: CSP ${id}`)}`}>{ADMIN}</a> with your CSP ID and a screenshot of what you see. A real person answers, and we follow up with Arise for you.</p>
-        <p style={{ ...s.p, margin: 0 }}>Not on Arise yet? <a style={{ color: GOLD }} href={APPLY_URL}>Join our talent pool</a>. It takes 2 minutes, and you get a free CRSA readiness assessment. You can also check your setup against our <a style={{ color: GOLD }} href="/equipment">equipment list</a>.</p>
+        <p style={{ ...s.p, margin: 0 }}>Not on Arise yet? <a style={{ color: GOLD }} href={APPLY_URL}>Register your interest with ATAC Anagenesis Inc.</a>. It takes 2 minutes. You can also check your setup against our <a style={{ color: GOLD }} href="/equipment">equipment list</a>.</p>
       </div>
 
-      <p style={s.fine}>Arise, the Arise portal and its statuses belong to Arise Virtual Solutions. This page is general guidance from ATAC Anagenesis Inc. and Arise's own instructions take priority. Business opportunity on the Arise platform through ATAC Anagenesis Inc., not an offer of employment.</p>
+      <p style={s.fine}>Arise, the Arise portal and its statuses belong to Arise Virtual Solutions. This page is general guidance from ATAC Anagenesis Inc. and Arise's own instructions take priority. ATAC Anagenesis Inc. is an Independent Business Operator (IBO) on the Arise Platform (IBO ID 1221605). Service partners who join our IBO do so as independent contractors. Nothing on this page is an offer of employment.</p>
     </div></div>
   );
 }
