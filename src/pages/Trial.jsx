@@ -67,6 +67,11 @@ const injectKF = () => {
       .vt-tip   { display: none; }
     }
 
+    /* Large monitors: scale the whole page up so it fills the screen. Phones unchanged. */
+    @media (min-width: 1600px) { .vt-scale { zoom: 1.18; } }
+    @media (min-width: 1900px) { .vt-scale { zoom: 1.32; } }
+    @media (min-width: 2400px) { .vt-scale { zoom: 1.55; } }
+
     .vt-domain { transition: border-color .2s, background .2s, transform .2s; cursor:pointer; }
     .vt-domain:hover, .vt-domain.on { border-color:${BORDER} !important; background: rgba(201,168,76,0.06) !important; transform: translateX(4px); }
     .vt-domain .vt-blurb { max-height:0; opacity:0; overflow:hidden; transition: max-height .25s ease, opacity .25s ease, margin .25s ease; }
@@ -244,7 +249,7 @@ export default function Trial() {
 
   /* ── INTRO ── */
   if (phase === 'intro') return shell(
-    <main style={{ flex: 1, padding: 'clamp(28px, 6vw, 72px) 16px 64px' }}>
+    <main className="vt-scale" style={{ flex: 1, padding: 'clamp(28px, 6vw, 72px) 16px 64px' }}>
       <div style={{ maxWidth: 1120, margin: '0 auto' }}>
         <section className="vt-hero">
           {/* Left: pitch */}
@@ -325,7 +330,7 @@ export default function Trial() {
   if (phase === 'questions' && q) {
     const dom = DOMAINS.find(d => d.key === q.domain);
     return shell(
-      <main style={{ flex: 1, padding: 'clamp(24px, 5vw, 56px) 16px 56px' }}>
+      <main className="vt-scale" style={{ flex: 1, padding: 'clamp(24px, 5vw, 56px) 16px 56px' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           {/* Segmented progress, one segment per domain */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${questions.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
@@ -401,7 +406,7 @@ export default function Trial() {
   if (phase === 'result' && result) {
     const band = bandFor(result.score, result.total);
     return shell(
-      <main style={{ flex: 1, padding: 'clamp(24px, 5vw, 56px) 16px 64px' }}>
+      <main className="vt-scale" style={{ flex: 1, padding: 'clamp(24px, 5vw, 56px) 16px 64px' }}>
         <div style={{ maxWidth: 920, margin: '0 auto' }}>
           {/* Score header */}
           <section className="vt-up" style={{ display: 'flex', gap: 'clamp(20px, 4vw, 48px)', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', marginBottom: 'clamp(28px, 5vw, 48px)' }}>
