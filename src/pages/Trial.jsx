@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from '../hooks/useToast';
-import CharterCounter from '../components/CharterCounter';
 import Header from '../components/chrome/Header';
 
 /* ── Vault Design Tokens ─────────────────────────────────── */
@@ -43,6 +42,16 @@ const injectKF = () => {
 /* ── Phase: intro | questions | result ── */
 export default function Trial() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Carry tracking (utm_*) and referral (ref) codes from /try into registration.
+  const registerHref = (() => {
+    const incoming = new URLSearchParams(location.search);
+    const out = new URLSearchParams({ action: 'register' });
+    incoming.forEach((v, k) => { if (k === 'ref' || k.startsWith('utm_')) out.set(k, v); });
+    // Login.jsx stores `ref` as the signup attribution source.
+    if (!out.has('ref')) out.set('ref', 'try');
+    return `/login?${out.toString()}`;
+  })();
   const { showToast } = useToast();
 
   const [phase,      setPhase]      = useState('intro');
@@ -138,13 +147,13 @@ export default function Trial() {
             </div>
             <div style={{ width: 40, height: 1, background: GOLD, opacity: 0.3, margin: '0 auto 20px' }} />
             <div style={{ fontSize: 14, color: MUTED, lineHeight: 1.8, maxWidth: 420, margin: '0 auto' }}>
-              Answer 5 professional CX questions, one from each competency domain. No account required. See your score instantly.
+              Answer 5 practice questions, one from each competency domain. No account required. See your score instantly.
             </div>
           </div>
 
           {/* Domain pills */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 36 }}>
-            {['Professionalism','Communication','CX Operations','Technology','Health & Safety'].map((d, i) => (
+            {['Professionalism','Communication','CX Operations','Technology','Compliance & Safety'].map((d, i) => (
               <div key={i} style={{ fontSize: 10, padding: '5px 14px', background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 1, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 {d}
               </div>
@@ -164,8 +173,6 @@ export default function Trial() {
               </div>
             ))}
           </div>
-
-          <CharterCounter variant="full" />
 
           <button
             onClick={loadQuestions}
@@ -332,12 +339,11 @@ export default function Trial() {
               Get Your Full Assessment
             </div>
             <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.7, marginBottom: 20 }}>
-              The full 40-question Remote CX Readiness Assessment covers all 5 domains in depth. Pass and receive your blockchain-verified credential. Any employer worldwide can verify it.
+              The full CRSA covers every core domain with a 40-question assessment and a live voice simulation. Complete both to earn your blockchain-verified credential, with a public page anyone can check.
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginBottom: 16 }}>
               {[
-                { tier: 'Standard', price: '$39', copy: '40-question assessment + blockchain credential + PDF certificate' },
-                { tier: 'Pro',      price: '$59', copy: 'Everything in Standard + gap analysis + CRSA program credit' },
+                { tier: 'CRSA', price: '$39, once', copy: '40-question assessment + live voice simulation + blockchain-verified credential' },
               ].map((p, i) => (
                 <div key={i} style={{ background: FAINT, border: `1px solid ${BORDER2}`, borderRadius: 2, padding: '16px' }}>
                   <div style={{ fontSize: 11, color: WHITE, marginBottom: 4 }}>{p.tier}</div>
@@ -347,7 +353,7 @@ export default function Trial() {
               ))}
             </div>
             <button
-              onClick={() => navigate('/login?action=register')}
+              onClick={() => navigate(registerHref)}
               style={{ width: '100%', background: GOLD, color: BG, border: 'none', borderRadius: 2, padding: '15px', fontSize: 12, fontWeight: 600, cursor: 'pointer', letterSpacing: '0.16em', textTransform: 'uppercase', fontFamily: VAULT_BODY }}>
               Create Account & Get Certified
             </button>
