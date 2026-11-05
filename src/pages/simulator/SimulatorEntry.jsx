@@ -26,6 +26,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { assignSimulator } from '../../api/client';
+import { useConsent } from '../../hooks/useConsent';
 import ScenarioPicker from './ScenarioPicker';
 import SimulatorLoadingScreen from './SimulatorLoadingScreen';
 
@@ -167,8 +168,15 @@ export default function SimulatorEntry() {
   const pollRef = useRef(null);
   const repollArgsRef = useRef({ scenarioCode: null, credentialId: null });
 
-  // Concurrent-assignment protection runs once on mount.
-  useEffect(() => {
+  // Call Recording Consent gate. The call is recorded, so the candidate
+  // accepts the current voice_recording terms before anything is assigned.
+  // The backend enforces the same rule on POST /api/sim-live/assign (428).
+  // Declining returns the candidate to the dashboard; nothing is assigned.
+  const recordingConsent = useConsent({ required: ['voice_recording'] });
+  const [consentReady, setConsentReady] = useState(false);
+
+  // Concurrent-assignment protection. Runs once, after consent is current.
+  const startEntry = () => {
     // Validate any existing sessionStorage payload is parseable; drop if not.
     const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (existing) {
@@ -210,6 +218,21 @@ export default function SimulatorEntry() {
       });
       setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
     }
+  };
+
+  // Run once on mount: consent first, then the original entry logic.
+  useEffect(() => {
+    let cancelled = false;
+    recordingConsent.ensure('simulator').then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        setConsentReady(true);
+        startEntry();
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -299,6 +322,15 @@ export default function SimulatorEntry() {
   // enterQueue keeps re-polling /assign in the background and will transition
   // straight into the briefing the moment a line opens. Takes precedence over
   // the picker and loading states.
+  // Consent pending: show only the consent modal over the plain background.
+  if (!consentReady) {
+    return (
+      <div style={{ minHeight: '100vh', background: BG }}>
+        {recordingConsent.modal}
+      </div>
+    );
+  }
+
   if (queued) {
     return (
       <QueueWaitView

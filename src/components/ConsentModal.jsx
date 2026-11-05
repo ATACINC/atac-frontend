@@ -22,7 +22,7 @@
  * Props:
  *   isOpen         : boolean
  *   documents      : [ { key, version, title, url, description } ]  — required array
- *   mode           : 'checkout' | 'registration' | 'reacceptance' | 'employer_onboarding'
+ *   mode           : 'checkout' | 'registration' | 'reacceptance' | 'employer_onboarding' | 'simulator'
  *   onAccept       : (acceptances) => Promise  — caller persists via /api/consent/accept
  *   onCancel       : () => void                 — close without accepting
  *   submitting     : boolean
@@ -71,6 +71,7 @@ export default function ConsentModal({
     registration:        'Accept Our Terms to Create Your Account',
     reacceptance:        'Our Legal Terms Have Been Updated',
     employer_onboarding: 'Employer Agreement Required',
+    simulator:           'Before Your Call',
   }[mode];
 
   const subheading = {
@@ -78,9 +79,12 @@ export default function ConsentModal({
     registration:        'Four separate agreements govern your use of ATAC Global CX. Please review each one before accepting.',
     reacceptance:        'We have updated one or more of our legal documents. Please review and accept the current versions before continuing.',
     employer_onboarding: 'As an employer purchasing seats on behalf of your team, you must accept the Master Services Agreement and supporting terms.',
+    simulator:           'Your voice simulation call is recorded so it can be scored. Please review and accept the call recording terms before you start.',
   }[mode];
 
-  const acceptLabel = mode === 'checkout' ? 'Accept & Continue to Payment' : 'Accept All';
+  const acceptLabel = mode === 'checkout' ? 'Accept & Continue to Payment'
+    : mode === 'simulator' ? 'Accept and Continue'
+    : 'Accept All';
 
   return (
     // closeOnEsc / closeOnBackdrop false: required-consent gate — no backdrop/Esc

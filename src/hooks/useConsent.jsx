@@ -33,6 +33,14 @@ This record is permanent and publicly verifiable. By proceeding, you acknowledge
   cookies_analytics: 'Optional - allow ATAC to use analytics cookies to measure page performance and improve the platform.',
   cookies_marketing: 'Optional - allow marketing cookies used for retargeting and conversion tracking.',
   marketing_email: 'Optional - receive occasional emails about new certifications, platform updates, and industry content. You can unsubscribe anytime.',
+  voice_recording: `Your voice simulation call is recorded so it can be scored.
+WHAT IS RECORDED: The audio of the call, both your voice and the simulated customer's voice, and a written transcript.
+WHO PROCESSES IT: Our voice technology provider, listed as a subprocessor in our Privacy Policy, records and transcribes the call on our behalf.
+HOW WE USE IT: To score your call, including how clearly and fluently you speak; to check that your result is genuine; to review any dispute you raise; and to test and improve the accuracy of our scoring. When we test accuracy, reviewers hear short clips with your name removed.
+WHAT WE DO NOT DO: We do not sell your recording, use it for advertising, create a copy of your voice, or use it to identify you by voice. It is never placed on the blockchain and is not shared with employers. Employers see your scores, not your recording.
+RETENTION: Recordings are kept for 365 days from the call, then deleted. Your scores and credential are not affected when the recording is deleted.
+DELETION: To ask for your recording to be deleted sooner, contact support@atacglobalcx.com. We will delete it within 30 days. A recording deleted before your call is scored cannot be scored.
+By proceeding, you acknowledge and consent to this disclosure under call recording consent version 1.0.0.`,
   photo_consent: `By selecting a Headshot or Verified Identity tier, you authorize the following photo collection.
 
 WHAT IS CAPTURED: For the Headshot tier, a profile photo you upload before starting your assessment. For the Verified Identity tier, the headshot above plus a selfie captured by your device camera at the moment your assessment begins.
@@ -83,6 +91,8 @@ async function apiPost(path, body) {
 }
 
 // ---- The hook -----------------------------------------------------------
+const MODAL_MODES = ['checkout', 'registration', 'reacceptance', 'employer_onboarding', 'simulator'];
+
 export function useConsent({ required }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [documents, setDocuments] = useState([]);
@@ -90,10 +100,13 @@ export function useConsent({ required }) {
   const [error, setError] = useState(null);
   const pendingResolveRef = useRef(null);
   const currentContextRef = useRef(null);
+  // Modal mode lives in state (not read from the ref during render).
+  const [modalMode, setModalMode] = useState('checkout');
 
   const ensure = useCallback(async (context = 'checkout') => {
     setError(null);
     currentContextRef.current = context;
+    setModalMode(MODAL_MODES.includes(context) ? context : 'checkout');
 
     try {
       const status = await apiGet('/api/consent/status');
@@ -166,10 +179,7 @@ export function useConsent({ required }) {
     <ConsentModal
       isOpen={modalOpen}
       documents={documents}
-      mode={currentContextRef.current === 'registration' ? 'registration'
-          : currentContextRef.current === 'reacceptance' ? 'reacceptance'
-          : currentContextRef.current === 'employer_onboarding' ? 'employer_onboarding'
-          : 'checkout'}
+      mode={modalMode}
       onAccept={handleAccept}
       onCancel={handleCancel}
       submitting={submitting}
