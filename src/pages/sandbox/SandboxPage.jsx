@@ -552,7 +552,7 @@ export default function SandboxPage() {
                   </button>
                 </form>
 
-                <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(238,233,223,0.5)', margin: '16px 0 0' }}>Private session. Nothing recorded without your consent.</p>
+                <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(238,233,223,0.5)', margin: '16px 0 0' }}>Private session. Your call is recorded so it can be scored and kept for 365 days. By entering, you agree to our <a href="https://atacglobalcx.com/call-recording" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>call recording terms</a>.</p>
               </div>
             </section>
 
