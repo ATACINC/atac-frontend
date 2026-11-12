@@ -10,7 +10,9 @@
  * breakdown on screen. No credential is issued.
  *
  * Backend: POST /api/sandbox/verify-access, /voice-start, /voice-score, and
- * GET /api/sandbox/scenario/:code (generic briefing config).
+ * GET /api/sandbox/scenario/:code (generic briefing config). When the access
+ * code has language bands on, voice-score also returns `language` and the
+ * debrief polls GET /api/sandbox/language/:token (see LanguageBands.jsx).
  *
  * State is kept in React only for the session. The email and access code are
  * never written to localStorage or sessionStorage.
@@ -28,6 +30,7 @@ import { getEmailError, normalizeEmail } from '../../utils/validation';
 import brandLogo from '../../assets/atac-globalcx-logo-header.png';
 import certificateSeal from '../../assets/agcx-certificate-seal-cropped.png';
 import { T, scoreBand, goldCta, ghostCta } from './sandboxTheme';
+import LanguageBands from './LanguageBands';
 import {
   SandboxFrame, SandboxConnecting, MicOrb, ScoreDonut, Dot,
   InfoIcon, CheckIcon, WarnIcon, ArrowIcon, MicIcon,
@@ -644,6 +647,8 @@ export default function SandboxPage() {
       {scoreState.status === 'done' && (
         <DebriefScreen
           breakdown={scoreState.breakdown}
+          attemptToken={attemptToken}
+          email={normalizeEmail(email)}
           onTryAgain={() => setPhase('briefing')}
           onRestart={() => setPhase('intro')}
         />
@@ -902,7 +907,7 @@ function ExhaustedScreen() {
   );
 }
 
-function DebriefScreen({ breakdown, onTryAgain, onRestart }) {
+function DebriefScreen({ breakdown, attemptToken, email, onTryAgain, onRestart }) {
   const data = breakdown || {};
   const overall = typeof data.overall === 'number' ? Math.round(data.overall) : null;
   const band = data.band || '';
@@ -938,6 +943,9 @@ function DebriefScreen({ breakdown, onTryAgain, onRestart }) {
             {summary && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.62, color: T.muted }}>{summary}</p>}
           </div>
         </div>
+
+        {/* Language bands (estimated): only for codes with them switched on. */}
+        {data.language && <LanguageBands key={attemptToken || 'lang'} initial={data.language} attemptToken={attemptToken} email={email} />}
 
         {/* Breakdown */}
         <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, margin: '30px 0 0' }}>Breakdown</div>
