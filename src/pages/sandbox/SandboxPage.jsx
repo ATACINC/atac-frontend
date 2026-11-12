@@ -907,6 +907,18 @@ function ExhaustedScreen() {
   );
 }
 
+// Debrief layout (Nov 12 2026): two columns from 1100px wide so the whole
+// debrief fits one desktop screen; one column below that. Areas are set in
+// SANDBOX_CSS (.sbx-debrief-grid). Larger type throughout for readability.
+const DEBRIEF_CARD = {
+  background: `linear-gradient(165deg, ${T.navy1}, ${T.navy2})`,
+  border: '1px solid rgba(239,192,60,0.18)',
+  borderRadius: 16,
+  padding: '15px 24px',
+  boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)',
+};
+const DEBRIEF_EYEBROW = { fontSize: 13, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft };
+
 function DebriefScreen({ breakdown, attemptToken, email, onTryAgain, onRestart }) {
   const data = breakdown || {};
   const overall = typeof data.overall === 'number' ? Math.round(data.overall) : null;
@@ -919,86 +931,97 @@ function DebriefScreen({ breakdown, attemptToken, email, onTryAgain, onRestart }
     : DIMENSIONS.map((d) => ({ name: d.label, score: data[d.key], feedback: (data.feedback || {})[d.key] || '' }));
 
   return (
-    <section className="sbx-fade sbx-pad" style={{ flex: 1, padding: '40px 40px 60px' }}>
-      {/* sbx-debrief-wrap widens and scales type at desktop (min-width 881). */}
+    <section className="sbx-fade sbx-pad" style={{ flex: 1, padding: '14px 40px 24px' }}>
       <div className="sbx-debrief-wrap" style={{ maxWidth: 760, margin: '0 auto' }}>
-        <DemoBanner />
-
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 10 }}>Your Debrief</div>
-        <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(30px, 3.8vw, 44px)', lineHeight: 1.1, margin: '0 0 26px', color: T.ink }}>Here is how that call landed</h1>
-
-        {/* Overall */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap', background: `linear-gradient(165deg, ${T.navy1}, ${T.navy2})`, border: '1px solid rgba(239,192,60,0.2)', borderRadius: 18, padding: '26px 30px', marginBottom: 8, boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)' }}>
-          <div style={{ flex: '0 0 auto', width: 122, height: 122, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ScoreDonut value={overall} />
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px 20px', flexWrap: 'wrap', marginBottom: 12 }}>
+          <div>
+            <div style={{ ...DEBRIEF_EYEBROW, letterSpacing: '0.26em', marginBottom: 6 }}>Your Debrief</div>
+            <h1 className="sbx-h" style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 'clamp(30px, 3vw, 40px)', lineHeight: 1.1, margin: 0, color: T.ink }}>Here is how that call landed</h1>
           </div>
-          <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 11 }}>Demonstration Score</div>
-            {band && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 13px', borderRadius: 999, background: pill.pillBg, border: `1px solid ${pill.pillBorder}`, marginBottom: 13 }}>
-                <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: pill.dot }} />
-                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: pill.pillInk }}>{band}</span>
-              </span>
-            )}
-            {summary && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.62, color: T.muted }}>{summary}</p>}
-          </div>
+          <DemoBanner />
         </div>
 
-        {/* Language bands (estimated): only for codes with them switched on. */}
-        {data.language && <LanguageBands key={attemptToken || 'lang'} initial={data.language} attemptToken={attemptToken} email={email} />}
+        <div className="sbx-debrief-grid">
+          {/* Overall */}
+          <div className="sbx-dg-score" style={{ ...DEBRIEF_CARD, display: 'flex', alignItems: 'center', gap: 22, flexWrap: 'wrap' }}>
+            <div style={{ flex: '0 0 auto', width: 122, height: 122, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ScoreDonut value={overall} />
+            </div>
+            <div style={{ flex: '1 1 240px', minWidth: 0 }}>
+              <div style={{ ...DEBRIEF_EYEBROW, marginBottom: 10 }}>Demonstration Score</div>
+              {band && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 13px', borderRadius: 999, background: pill.pillBg, border: `1px solid ${pill.pillBorder}`, marginBottom: 10 }}>
+                  <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: '50%', background: pill.dot }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: pill.pillInk }}>{band}</span>
+                </span>
+              )}
+              {summary && <p style={{ margin: 0, fontSize: 17, lineHeight: 1.5, color: T.muted }}>{summary}</p>}
+            </div>
+          </div>
 
-        {/* Breakdown */}
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, margin: '30px 0 0' }}>Breakdown</div>
-        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: 30 }}>
-          {dims.map((d, i) => (
-            <DimensionRow key={`${d.name}-${i}`} name={d.name} score={typeof d.score === 'number' ? Math.round(d.score) : null} feedback={typeof d.feedback === 'string' ? d.feedback : ''} />
-          ))}
-        </div>
+          {/* Language bands (estimated): only for codes with them switched on. */}
+          {data.language && (
+            <div className="sbx-dg-bands" style={DEBRIEF_CARD}>
+              <LanguageBands key={attemptToken || 'lang'} initial={data.language} attemptToken={attemptToken} email={email} />
+            </div>
+          )}
 
-        <CredentialUpsell />
+          {/* Breakdown */}
+          <div className="sbx-dg-breakdown" style={DEBRIEF_CARD}>
+            <div style={{ ...DEBRIEF_EYEBROW, marginBottom: 2 }}>Breakdown</div>
+            {dims.map((d, i) => (
+              <DimensionRow key={`${d.name}-${i}`} first={i === 0} name={d.name} score={typeof d.score === 'number' ? Math.round(d.score) : null} feedback={typeof d.feedback === 'string' ? d.feedback : ''} />
+            ))}
+          </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 440 }}>
-          <button type="button" onClick={onTryAgain} className="sbx-cta" style={goldCta}>Try this scenario again</button>
-          <button type="button" onClick={onRestart} className="sbx-ghost" style={ghostCta}>Start a new demonstration</button>
+          <div className="sbx-dg-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            <button type="button" onClick={onTryAgain} className="sbx-cta" style={{ ...goldCta, width: 'auto', flex: '1 1 220px' }}>Try this scenario again</button>
+            <button type="button" onClick={onRestart} className="sbx-ghost" style={{ ...ghostCta, width: 'auto', flex: '1 1 220px' }}>Start a new demonstration</button>
+          </div>
+
+          <div className="sbx-dg-cta">
+            <CredentialUpsell />
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function DimensionRow({ name, score, feedback }) {
+function DimensionRow({ name, score, feedback, first = false }) {
   const c = scoreBand(score);
   const pct = typeof score === 'number' ? `${Math.max(0, Math.min(100, score))}%` : '0%';
   return (
-    <div className="sbx-dim-row" style={{ padding: '21px 0', borderTop: `1px solid ${T.panelLine}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+    <div className="sbx-dim-row" style={{ padding: first ? '6px 0 9px' : '9px 0', borderTop: first ? 'none' : `1px solid ${T.panelLine}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: feedback ? 4 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <span aria-hidden="true" style={{ width: 9, height: 9, flex: '0 0 9px', borderRadius: '50%', background: c.dot }} />
-          <span className="sbx-dim-name" style={{ fontSize: 16.5, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
+          <span className="sbx-dim-name" style={{ fontSize: 19, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 15, flex: '0 0 auto' }}>
-          <span aria-hidden="true" className="sbx-dim-bar" style={{ width: 124, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'block', overflow: 'hidden' }}>
+          <span aria-hidden="true" className="sbx-dim-bar" style={{ width: 150, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'block', overflow: 'hidden' }}>
             <span style={{ display: 'block', height: '100%', width: pct, background: c.bar, borderRadius: 3 }} />
           </span>
-          <span style={{ fontFamily: T.fontDisplay, fontSize: 23, lineHeight: 1, color: c.scoreColor, minWidth: 34, textAlign: 'right' }}>{score != null ? score : 'NA'}</span>
+          <span style={{ fontFamily: T.fontDisplay, fontSize: 27, lineHeight: 1, color: c.scoreColor, minWidth: 36, textAlign: 'right' }}>{score != null ? score : 'NA'}</span>
         </div>
       </div>
-      {feedback && <p className="sbx-dim-feedback" style={{ margin: 0, fontSize: 16, lineHeight: 1.64, color: T.muted, maxWidth: 640 }}>{feedback}</p>}
+      {feedback && <p className="sbx-dim-feedback" style={{ margin: '0 0 0 20px', fontSize: 16, lineHeight: 1.5, color: T.muted }}>{feedback}</p>}
     </div>
   );
 }
 
 function CredentialUpsell() {
   return (
-    <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #13223d, #0a1320)', border: '1px solid rgba(239,192,60,0.3)', borderRadius: 18, padding: '30px 32px', marginBottom: 34, boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)' }}>
-      <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', right: -46, top: '50%', transform: 'translateY(-50%)', width: 200, height: 'auto', opacity: 0.12, pointerEvents: 'none' }} />
-      <div style={{ position: 'relative', maxWidth: 540 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 12 }}>Make it count</div>
-        <h3 style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 26, lineHeight: 1.18, margin: '0 0 12px', color: T.ink }}>Want the real, blockchain-verified credential?</h3>
-        <p style={{ margin: '0 0 22px', fontSize: 16, lineHeight: 1.62, color: '#AEB1BA' }}>
-          This was a demonstration. Take the full assessment to earn a CRSA(TM) credential you can share with employers, verifiable on-chain and issued by ATAC Global CX.
-        </p>
-        <a href={REGISTER_URL} className="sbx-cta" style={{ ...goldCta, textDecoration: 'none' }}>
+    <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #13223d, #0a1320)', border: '1px solid rgba(239,192,60,0.3)', borderRadius: 16, padding: '15px 24px', boxShadow: '0 30px 70px -36px rgba(0,0,0,0.8)' }}>
+      <img src={certificateSeal} alt="" aria-hidden="true" style={{ position: 'absolute', right: -40, top: '50%', transform: 'translateY(-50%)', width: 150, height: 'auto', opacity: 0.1, pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px 20px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+          <h3 style={{ fontFamily: T.fontDisplay, fontWeight: 500, fontSize: 23, lineHeight: 1.2, margin: '0 0 6px', color: T.ink }}>Want the real, blockchain-verified credential?</h3>
+          <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.5, color: '#AEB1BA' }}>
+            Take the full assessment to earn a CRSA(TM) credential you can share with employers, verifiable on-chain and issued by ATAC Global CX.
+          </p>
+        </div>
+        <a href={REGISTER_URL} className="sbx-cta" style={{ ...goldCta, width: 'auto', flex: '0 0 auto', textDecoration: 'none' }}>
           Get your credential <ArrowIcon />
         </a>
       </div>
@@ -1008,9 +1031,9 @@ function CredentialUpsell() {
 
 function DemoBanner() {
   return (
-    <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 18px', background: 'rgba(239,192,60,0.06)', border: '1px solid rgba(239,192,60,0.26)', borderRadius: 12, marginBottom: 28, textAlign: 'left' }}>
+    <div role="status" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '9px 16px', background: 'rgba(239,192,60,0.06)', border: '1px solid rgba(239,192,60,0.26)', borderRadius: 999, textAlign: 'left' }}>
       <InfoIcon size={17} color={T.goldSoft} />
-      <span style={{ fontSize: 14, lineHeight: 1.5, color: '#E9D9AE' }}>
+      <span style={{ fontSize: 15, lineHeight: 1.4, color: '#E9D9AE' }}>
         <strong style={{ color: T.goldSoft, fontWeight: 700 }}>This is a demonstration.</strong> No credential has been issued. This debrief is for your eyes only.
       </span>
     </div>

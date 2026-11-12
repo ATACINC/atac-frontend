@@ -11,6 +11,9 @@
  * panel polls GET /api/sandbox/language/:token?email= every 5 seconds, for at
  * most 5 minutes.
  *
+ * The speaking row is shown only when the response includes `speaking`; a
+ * code set to fluency only leaves it out on the server.
+ *
  * Copy rules: "estimated", "aligned to CEFR descriptors". Never "certified" or
  * "certificate" as a claim. No vendor names. No dashes.
  */
@@ -61,9 +64,9 @@ export default function LanguageBands({ initial, attemptToken, email }) {
 
   if (!lang) return null;
 
-  const sp = lang.speaking || {};
+  const sp = lang.speaking || null;
   const fl = lang.fluency || {};
-  const scaleLine = sp.scales
+  const scaleLine = sp && sp.scales
     ? SCALE_LABELS.filter(([k]) => sp.scales[k]).map(([k, label]) => `${label} ${sp.scales[k]}`).join(', ')
     : '';
 
@@ -87,15 +90,19 @@ export default function LanguageBands({ initial, attemptToken, email }) {
   }
 
   return (
-    <div className="sbx-fade" style={{ marginTop: 30 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft }}>Language Bands (Estimated)</div>
+    <div className="sbx-fade">
+      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: T.goldSoft, marginBottom: 4 }}>Language Bands (Estimated)</div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {sp && (
+          <BandRow
+            first
+            name="Speaking"
+            band={sp.status === 'ok' ? sp.band : null}
+            note={sp.status === 'ok' ? scaleLine : 'The speaking band could not be estimated for this call.'}
+          />
+        )}
         <BandRow
-          name="Speaking"
-          band={sp.status === 'ok' ? sp.band : null}
-          note={sp.status === 'ok' ? scaleLine : 'The speaking band could not be estimated for this call.'}
-        />
-        <BandRow
+          first={!sp}
           name="Fluency"
           band={fluencyBand}
           measuring={fl.status === 'pending' && !gaveUp}
@@ -108,31 +115,31 @@ export default function LanguageBands({ initial, attemptToken, email }) {
           note="When added, this will assess how clearly you are understood, not your accent."
         />
       </div>
-      <p style={{ margin: '14px 0 0', fontSize: 13.5, lineHeight: 1.6, color: T.faint }}>
+      <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.55, color: T.faint }}>
         Estimated from this one call and aligned to CEFR descriptors. This is an indicator for screening, not a CEFR certificate.
       </p>
     </div>
   );
 }
 
-function BandRow({ name, band, label, note, measuring = false }) {
+function BandRow({ name, band, label, note, measuring = false, first = false }) {
   const shown = band || label || (measuring ? 'Measuring' : 'Not available');
   const isBand = !!band;
   return (
-    <div style={{ padding: '19px 0', borderTop: `1px solid ${T.panelLine}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: note ? 8 : 0 }}>
-        <span style={{ fontSize: 16.5, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
+    <div style={{ padding: first ? '8px 0 12px' : '12px 0', borderTop: first ? 'none' : `1px solid ${T.panelLine}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginBottom: note ? 5 : 0 }}>
+        <span style={{ fontSize: 19, fontWeight: 700, color: '#EFEADD' }}>{name}</span>
         <span
           aria-live={measuring ? 'polite' : undefined}
           style={isBand
-            ? { fontFamily: T.fontDisplay, fontSize: 23, lineHeight: 1, color: T.goldBright, minWidth: 34, textAlign: 'right' }
-            : { fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted }}
+            ? { fontFamily: T.fontDisplay, fontSize: 32, lineHeight: 1, color: T.goldBright, minWidth: 40, textAlign: 'right' }
+            : { fontSize: 13, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted, textAlign: 'right' }}
         >
           {shown}
           {measuring && <span aria-hidden="true" style={{ display: 'inline-block', width: 7, height: 7, marginLeft: 9, borderRadius: '50%', background: T.goldSoft, animation: 'sbxPulseDot 1.4s ease-in-out infinite', verticalAlign: 'middle' }} />}
         </span>
       </div>
-      {note && <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: T.muted, maxWidth: 640 }}>{note}</p>}
+      {note && <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: T.muted, maxWidth: 640 }}>{note}</p>}
     </div>
   );
 }
