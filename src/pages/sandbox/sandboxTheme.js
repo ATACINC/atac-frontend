@@ -101,10 +101,26 @@ export const SANDBOX_CSS = `
     .sbx-call-has-rail:not(.sbx-call-two-rails) .sbx-call-main { grid-column: 2; }
     .sbx-call-has-rail .sbx-call-rail { align-self: start; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow-y: auto; }
     .sbx-turn-body { font-size: 19px !important; }
-    .sbx-debrief-wrap { max-width: 1120px !important; }
-    .sbx-debrief-wrap .sbx-dim-name { font-size: 18px !important; }
-    .sbx-debrief-wrap .sbx-dim-bar { width: 300px !important; }
-    .sbx-debrief-wrap .sbx-dim-feedback { font-size: 17px !important; max-width: 900px !important; }
+    .sbx-debrief-wrap { max-width: 960px !important; }
+  }
+  /* Debrief grid (Nov 12 2026). One column by default: score, bands,
+     breakdown, credential offer, actions. From 1100px: two columns so the
+     whole debrief fits one desktop screen. Left: score and bands. Right: the
+     breakdown. Bottom row: actions under the left column, credential offer
+     under the right. An absent bands card leaves its area empty. */
+  .sbx-debrief-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "score" "bands" "breakdown" "cta" "actions"; }
+  .sbx-dg-score { grid-area: score; } .sbx-dg-bands { grid-area: bands; } .sbx-dg-breakdown { grid-area: breakdown; }
+  .sbx-dg-actions { grid-area: actions; } .sbx-dg-cta { grid-area: cta; }
+  @media (min-width: 1100px) {
+    .sbx-debrief-wrap { max-width: 1560px !important; }
+    .sbx-debrief-grid { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: 22px; align-items: start;
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas: "score breakdown" "bands breakdown" "actions cta"; }
+    .sbx-dg-actions { align-self: center; }
+  }
+  @media (max-width: 560px) {
+    .sbx-dim-bar { width: 84px !important; }
   }
   @media (max-width: 640px) {
     .sbx-cpc-toggle { display: inline-flex; }
